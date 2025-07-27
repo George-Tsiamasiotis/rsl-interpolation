@@ -1,7 +1,7 @@
 [package]
 name = "rsl-interpolation"
 authors = ["George Tsiamasiotis"]
-version = "0.1.0"
+version = "0.1.0-pre.1"
 edition = "2024"
 keywords = ["math", "science", "interpolation"]
 readme = "README.md"
@@ -11,3 +11,4 @@ repository = "https://github.com/George-Tsiamasiotis/rsl-interpolation.git"
 description = "A re-write of GSL's Interpolation Routines in Rust."
 
 [dependencies]
+thiserror = "2.0.12"
