@@ -41,6 +41,7 @@ impl Accelerator {
     }
 
     #[allow(dead_code)]
+    #[doc(alias = "gsl_interp_bsearch")]
     /// This function returns the index i of the array `xarray` such that
     /// `xarray[i] <= x <= xarray[i+1]`. The index is searched for in the range [ilo, ihi].
     pub(crate) fn bsearch(&self, xarray: &[f64], x: f64, ilo: usize, ihi: usize) -> usize {
@@ -57,7 +58,25 @@ impl Accelerator {
         ilo
     }
 
+    #[allow(dead_code)]
+    #[doc(alias = "gsl_interp_accel_find")]
+    /// Performs a lookup action on the data array. Returns an index i such that
+    /// xarray[i] <= x < xarray[i+1].
+    pub(crate) fn find(&mut self, xarray: &[f64], x: f64) -> usize {
+        if x < xarray[self.cache] {
+            self.misses += 1;
+            self.cache = self.bsearch(xarray, x, 0, self.cache);
+        } else if x >= xarray[self.cache + 1] {
+            self.misses += 1;
+            self.cache = self.bsearch(xarray, x, self.cache, xarray.len() - 1);
+        } else {
+            self.hits += 1;
+        }
+        self.cache
+    }
+
     /// Resets the Accelerator's stats to 0.
+    #[doc(alias = "gsl_interp_accel_reset")]
     pub fn reset(&mut self) {
         self.cache = 0;
         self.hits = 0;
@@ -72,6 +91,12 @@ impl std::fmt::Debug for Accelerator {
             .field("hits", &self.hits)
             .field("misses", &self.misses)
             .finish()
+    }
+}
+
+impl Default for Accelerator {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -102,5 +127,10 @@ mod test {
         let acc = Accelerator::new();
         let _ = format!("{:?}", acc);
         let _ = format!("{:#?}", acc);
+    }
+
+    #[test]
+    fn test_default_trait() {
+        let _ = Accelerator::default();
     }
 }

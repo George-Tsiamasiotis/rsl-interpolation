@@ -43,9 +43,9 @@
 	
 ---
 
-- [ ] Acceleration
-	- [ ] Instantiation [`gsl_interp_accel_alloc()`, `gsl_interp_accel_reset()`, `gsl_interp_accel_free()`]
-	- [ ] Lookup [`gsl_interp_bsearch()` (built-in) `gsl_interp_accel_find()`]
+- [x] Acceleration
+	- [x] Instantiation [`gsl_interp_accel_alloc()`, `gsl_interp_accel_reset()`, `gsl_interp_accel_free()`]
+	- [x] Lookup [`gsl_interp_bsearch()`, `gsl_interp_accel_find()`]
 
 
 [^1]: `_e()` evaluation functions are probably not gonna be implemented.
