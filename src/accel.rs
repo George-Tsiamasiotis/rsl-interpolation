@@ -44,7 +44,10 @@ impl Accelerator {
     #[doc(alias = "gsl_interp_bsearch")]
     /// This function returns the index i of the array `xarray` such that
     /// `xarray[i] <= x <= xarray[i+1]`. The index is searched for in the range [ilo, ihi].
-    pub(crate) fn bsearch(&self, xarray: &[f64], x: f64, ilo: usize, ihi: usize) -> usize {
+    pub(crate) fn bsearch<T>(&self, xarray: &[T], x: T, ilo: usize, ihi: usize) -> usize
+    where
+        T: num::Float,
+    {
         let mut ilo = ilo;
         let mut ihi = ihi;
         while ihi > ilo + 1 {
@@ -62,7 +65,10 @@ impl Accelerator {
     #[doc(alias = "gsl_interp_accel_find")]
     /// Performs a lookup action on the data array. Returns an index i such that
     /// xarray[i] <= x < xarray[i+1].
-    pub(crate) fn find(&mut self, xarray: &[f64], x: f64) -> usize {
+    pub(crate) fn find<T>(&mut self, xarray: &[T], x: T) -> usize
+    where
+        T: num::Float,
+    {
         if x < xarray[self.cache] {
             self.misses += 1;
             self.cache = self.bsearch(xarray, x, 0, self.cache);

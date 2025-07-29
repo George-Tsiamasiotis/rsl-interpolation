@@ -11,4 +11,5 @@ repository = "https://github.com/George-Tsiamasiotis/rsl-interpolation.git"
 description = "A re-write of GSL's Interpolation Routines in Rust."
 
 [dependencies]
+num = "0.4.3"
 thiserror = "2.0.12"
