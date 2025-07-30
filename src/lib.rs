@@ -4,11 +4,15 @@
 
 mod accel;
 mod error;
-mod interp_types;
+mod interp;
+
+mod types;
+
+pub use error::*;
+pub use interp::Interpolation;
+
+pub use accel::Accelerator;
+pub use types::*;
 
 #[cfg(test)]
 mod gsl_tests;
-
-pub use accel::Accelerator;
-pub use error::InterpError;
-pub use interp_types::InterpolationType;

@@ -2,7 +2,7 @@
 
 - [ ] 1D Interpolation
 	- [ ] Instantiation [`gsl_interp_alloc()`, `gsl_interp_init()`, `gsl_interp_free()`]
-	- [ ] 1D Interpolation types [`gsl_interp_type`]
+	- [x] 1D Interpolation types [`gsl_interp_type`]
 		- [ ] Linear [`gsl_interp_linear`]
 		- [ ] Polynomial [`gsl_interp_polynomial`]
 		- [ ] Cubic [`gsl_interp_cspline`]
@@ -10,14 +10,14 @@
 		- [ ] Akima [`gsl_interp_akima`]
 		- [ ] Akima Periodic [`gsl_interp_akima_periodic`]
 		- [ ] Steffen [`gsl_interp_steffen`]
-	- [ ] Evaluation [^1]
-		- [ ] f(x) evaluation [`gsl_interp_eval()`]
-		- [ ] f'(x) evaluation [`gsl_interp_eval_deriv()`]
- 		- [ ] f''(x) evaluation [`gsl_interp_eval_deriv2()`]
- 		- [ ] Numerical Integral [`gsl_interp_integ()`]
-	- [ ] Utility functions
-		- [ ] Name [`gsl_interp_name()`]
-		- [ ] Minimum number of points [`gsl_interp_min_size()` and `gsl_interp_type_min_size()`]
+	- [x] Evaluation [^1]
+		- [x] f(x) evaluation [`gsl_interp_eval()`]
+		- [x] f'(x) evaluation [`gsl_interp_eval_deriv()`]
+ 		- [x] f''(x) evaluation [`gsl_interp_eval_deriv2()`]
+ 		- [x] Numerical Integral [`gsl_interp_integ()`]
+	- [x] Utility functions
+		- [x] Name [`gsl_interp_name()`]
+		- [x] Minimum number of points [`gsl_interp_min_size()` and `gsl_interp_type_min_size()`]
 	- [ ] Higher level Interface (Splines)
 
 ---

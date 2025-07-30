@@ -5,7 +5,7 @@
 ///
 /// The performance boost can be significant when continuously evalulating splines around the same
 /// area as the previous point. Moreover, the same Accelerator can be shared across multiple
-/// Splines, if they are defined over the same x points. This is especially useful ODE solvers,
+/// Splines, if they are defined over the same x points. This is especially useful in ODE solvers,
 /// as the solver's step size is usually much smaller that the xarray spacing.
 ///
 /// See [`GSL's Acceleration section`].
