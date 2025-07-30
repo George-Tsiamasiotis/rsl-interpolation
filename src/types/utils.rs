@@ -27,6 +27,19 @@ where
     Ok(())
 }
 
+/// Calculates the n-th discrete difference: out[i] = s[i+1]-s[i].
+pub(crate) fn diff<T>(s: &[T]) -> Vec<T>
+where
+    T: num::Float,
+{
+    s.windows(2)
+        .map(|xy| {
+            let [x, y] = xy else { unreachable!() };
+            *y - *x
+        })
+        .collect::<Vec<T>>()
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -65,5 +78,13 @@ mod test {
             check_if_inbounds(&xa, 3.0).unwrap_err(),
             DomainError
         ));
+    }
+
+    #[test]
+    fn test_diff() {
+        let s = [0.0, 1.0, -2.0, 3.0];
+        let sdiff = diff(&s);
+
+        assert_eq!(sdiff, vec![1.0, -3.0, 5.0]);
     }
 }
