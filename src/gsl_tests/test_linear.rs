@@ -15,7 +15,7 @@ fn test_linear() {
     let dytest = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0];
     let iytest = [0.0, 0.125, 0.5, 9.0 / 8.0, 25.0 / 8.0, 9.0 / 2.0];
 
-    let data_table = XYTable { x: &xa, y: &xa };
+    let data_table = XYTable { x: &xa, y: &ya };
 
     let test_e_table = XYTable {
         x: &xtest,

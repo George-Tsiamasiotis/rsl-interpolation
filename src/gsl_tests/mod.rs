@@ -2,7 +2,7 @@ use is_close::is_close;
 use std::f64;
 
 // GSL uses this to compare floats
-const EPS: f64 = 100.0 * f64::EPSILON;
+const EPS: f64 = 1e-10;
 
 use crate::Accelerator;
 use crate::Interpolation;

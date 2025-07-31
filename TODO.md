@@ -3,9 +3,9 @@
 - [ ] 1D Interpolation
 	- [ ] Instantiation [`gsl_interp_alloc()`, `gsl_interp_init()`, `gsl_interp_free()`]
 	- [x] 1D Interpolation types [`gsl_interp_type`]
-		- [ ] Linear [`gsl_interp_linear`]
+		- [x] Linear [`gsl_interp_linear`]
 		- [ ] Polynomial [`gsl_interp_polynomial`]
-		- [ ] Cubic [`gsl_interp_cspline`]
+		- [x] Cubic [`gsl_interp_cspline`]
 		- [ ] Cubic Periodic [`gsl_interp_cspline_periodic`]
 		- [ ] Akima [`gsl_interp_akima`]
 		- [ ] Akima Periodic [`gsl_interp_akima_periodic`]
@@ -26,7 +26,7 @@
 	- [ ] Instantiation [`gsl_interp2d_alloc()`, `gsl_interp2d_init()`, `gsl_interp2d_free()`]
 	- [ ] 2D Interpolation Grids [`gsl_interp2d_set`, `gsl_interp2d_get()`, `gsl_interp2d_idx`]
 	- [ ] 1D Interpolation types [`gsl_interp2d_type`]
-		- [ ] Biinear [`gsl_interp2d_bilinear`]
+		- [ ] Bilinear [`gsl_interp2d_bilinear`]
 		- [ ] Bicubic [`gsl_interp2d_bicubic`]
 	- [ ] Utility functions
 		- [ ] Name [`gsl_interp2d_name()`]
