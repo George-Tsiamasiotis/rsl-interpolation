@@ -127,22 +127,7 @@ where
     }
 
     fn eval(&self, xa: &[T], ya: &[T], x: T, acc: &mut Accelerator) -> Result<T, DomainError> {
-        check_if_inbounds(xa, x)?;
-        let index = acc.find(xa, x);
-
-        let xlo = xa[index];
-        let xhi = xa[index + 1];
-        let ylo = ya[index];
-        let yhi = ya[index + 1];
-
-        let dx = xhi - xlo;
-        let dy = yhi - ylo;
-
-        let delx = x - xlo;
-        let (b, c, d) = coeff_calc(&self.c, dx, dy, index);
-
-        debug_assert!(dx >= T::zero());
-        Ok(ylo + delx * (b + delx * (c + delx * d)))
+        cubic_eval(xa, ya, &self.c, x, acc)
     }
 
     fn eval_deriv(
@@ -152,25 +137,7 @@ where
         x: T,
         acc: &mut Accelerator,
     ) -> Result<T, DomainError> {
-        check_if_inbounds(xa, x)?;
-        let index = acc.find(xa, x);
-
-        let xlo = xa[index];
-        let xhi = xa[index + 1];
-        let ylo = ya[index];
-        let yhi = ya[index + 1];
-
-        let dx = xhi - xlo;
-        let dy = yhi - ylo;
-
-        let delx = x - xlo;
-        let (b, c, d) = coeff_calc(&self.c, dx, dy, index);
-
-        let two = T::from(2).unwrap();
-        let three = T::from(3).unwrap();
-
-        debug_assert!(dx >= T::zero());
-        Ok(b + delx * (two * c + three * d * delx))
+        cubic_eval_deriv(xa, ya, &self.c, x, acc)
     }
 
     fn eval_deriv2(
@@ -180,25 +147,7 @@ where
         x: T,
         acc: &mut Accelerator,
     ) -> Result<T, DomainError> {
-        check_if_inbounds(xa, x)?;
-        let index = acc.find(xa, x);
-
-        let xlo = xa[index];
-        let xhi = xa[index + 1];
-        let ylo = ya[index];
-        let yhi = ya[index + 1];
-
-        let dx = xhi - xlo;
-        let dy = yhi - ylo;
-
-        let delx = x - xlo;
-        let (_, c, d) = coeff_calc(&self.c, dx, dy, index);
-
-        let two = T::from(2).unwrap();
-        let six = T::from(6).unwrap();
-
-        debug_assert!(dx >= T::zero());
-        Ok(two * c + six * delx * d)
+        cubic_eval_deriv2(xa, ya, &self.c, x, acc)
     }
 
     fn eval_integ(
@@ -209,44 +158,238 @@ where
         b: T,
         acc: &mut Accelerator,
     ) -> Result<T, DomainError> {
-        check_if_inbounds(xa, a)?;
-        check_if_inbounds(xa, b)?;
-        let index_a = acc.find(xa, a);
-        let index_b = acc.find(xa, b);
-
-        let mut result = T::zero();
-
-        for i in index_a..=index_b {
-            let xlo = xa[i];
-            let xhi = xa[i + 1];
-            let ylo = ya[i];
-            let yhi = ya[i + 1];
-
-            let dx = xhi - xlo;
-            let dy = yhi - ylo;
-
-            // If two x points are the same
-            if dx.is_zero() {
-                continue;
-            }
-
-            let (bi, ci, di) = coeff_calc(&self.c, dx, dy, i);
-            let quarter = T::from(0.25).unwrap();
-            let half = T::from(0.5).unwrap();
-            let third = T::from(1.0 / 3.0).unwrap();
-
-            if (i == index_a) | (i == index_b) {
-                let x1 = if i == index_a { a } else { xlo };
-                let x2 = if i == index_b { b } else { xhi };
-                result += integ_eval(ylo, bi, ci, di, xlo, x1, x2);
-            } else {
-                result += dx * (ylo + dx * (half * bi + dx * (third * ci + quarter * di * dx)))
-            }
-        }
-        Ok(result)
+        cubic_eval_integ(xa, ya, &self.c, a, b, acc)
     }
 }
 
+//=================================================================================================
+
+/// Cubic Periodic Spline.
+///
+/// Cubic Spline with periodic boundary conditions. The resulting curve is piecewise cubic on each
+/// interval, with matching first and second derivatives at the supplied data-points. The
+/// derivatives at the first and last points are also matched. Note that the last point in the data
+/// must have the same y-value as the first point, otherwise the resulting periodic interpolation
+/// will have a discontinuity at the boundary.
+///
+/// ## Example
+///
+/// ```ignore
+/// # use rsl_interpolation::Interpolation;
+/// # use rsl_interpolation::InterpolationError;
+/// # use rsl_interpolation::Cubic;
+/// # use rsl_interpolation::Accelerator;
+/// #
+/// # fn main() -> Result<(), InterpolationError>{
+/// let xa = [0.0, 1.0, 2.0];
+/// let ya = [0.0, 2.0, 4.0];
+/// let interp = CubicPeriodic::new(&xa, &ya)?;
+/// # Ok(())
+/// # }
+/// ```
+///
+/// ## Reference
+///
+/// Numerical Algorithms with C - Gisela Engeln-Mullges, Frank Uhlig - 1996 -
+/// Algorithm 10.2, pg 255
+#[allow(dead_code)]
+pub struct CubicPeriodic<T>
+where
+    T: num::Float + std::fmt::Debug,
+{
+    c: Vec<T>,
+    g: Vec<T>,
+    diag: Vec<T>,
+    offdiag: Vec<T>,
+}
+
+impl<T> Interpolation<T> for CubicPeriodic<T>
+where
+    T: num::Float + Debug + Scalar + Lapack,
+{
+    const MIN_SIZE: usize = 3;
+    const NAME: &'static str = "cubic";
+
+    fn new(xa: &[T], ya: &[T]) -> Result<Self, crate::InterpolationError>
+    where
+        Self: Sized,
+    {
+        check_data(xa, ya, Self::MIN_SIZE)?;
+
+        // Engeln-Mullges G. - Uhlig F.: Algorithm 10.2, pg 255
+
+        todo!()
+    }
+
+    fn eval(&self, xa: &[T], ya: &[T], x: T, acc: &mut Accelerator) -> Result<T, DomainError> {
+        cubic_eval(xa, ya, &self.c, x, acc)
+    }
+
+    fn eval_deriv(
+        &self,
+        xa: &[T],
+        ya: &[T],
+        x: T,
+        acc: &mut Accelerator,
+    ) -> Result<T, DomainError> {
+        cubic_eval_deriv(xa, ya, &self.c, x, acc)
+    }
+
+    fn eval_deriv2(
+        &self,
+        xa: &[T],
+        ya: &[T],
+        x: T,
+        acc: &mut Accelerator,
+    ) -> Result<T, DomainError> {
+        cubic_eval_deriv2(xa, ya, &self.c, x, acc)
+    }
+
+    fn eval_integ(
+        &self,
+        xa: &[T],
+        ya: &[T],
+        a: T,
+        b: T,
+        acc: &mut Accelerator,
+    ) -> Result<T, DomainError> {
+        cubic_eval_integ(xa, ya, &self.c, a, b, acc)
+    }
+}
+
+//=================================================================================================
+
+fn cubic_eval<T>(xa: &[T], ya: &[T], c: &[T], x: T, acc: &mut Accelerator) -> Result<T, DomainError>
+where
+    T: num::Float + Debug + Scalar + Lapack,
+{
+    check_if_inbounds(xa, x)?;
+    let index = acc.find(xa, x);
+
+    let xlo = xa[index];
+    let xhi = xa[index + 1];
+    let ylo = ya[index];
+    let yhi = ya[index + 1];
+
+    let dx = xhi - xlo;
+    let dy = yhi - ylo;
+
+    let delx = x - xlo;
+    let (b, c, d) = coeff_calc(c, dx, dy, index);
+
+    debug_assert!(dx >= T::zero());
+    Ok(ylo + delx * (b + delx * (c + delx * d)))
+}
+
+fn cubic_eval_deriv<T>(
+    xa: &[T],
+    ya: &[T],
+    c: &[T],
+    x: T,
+    acc: &mut Accelerator,
+) -> Result<T, DomainError>
+where
+    T: num::Float + Debug + Scalar + Lapack,
+{
+    check_if_inbounds(xa, x)?;
+    let index = acc.find(xa, x);
+
+    let xlo = xa[index];
+    let xhi = xa[index + 1];
+    let ylo = ya[index];
+    let yhi = ya[index + 1];
+
+    let dx = xhi - xlo;
+    let dy = yhi - ylo;
+
+    let delx = x - xlo;
+    let (b, c, d) = coeff_calc(c, dx, dy, index);
+
+    let two = T::from(2).unwrap();
+    let three = T::from(3).unwrap();
+
+    debug_assert!(dx >= T::zero());
+    Ok(b + delx * (two * c + three * d * delx))
+}
+
+fn cubic_eval_deriv2<T>(
+    xa: &[T],
+    ya: &[T],
+    c: &[T],
+    x: T,
+    acc: &mut Accelerator,
+) -> Result<T, DomainError>
+where
+    T: num::Float + Debug + Scalar + Lapack,
+{
+    check_if_inbounds(xa, x)?;
+    let index = acc.find(xa, x);
+
+    let xlo = xa[index];
+    let xhi = xa[index + 1];
+    let ylo = ya[index];
+    let yhi = ya[index + 1];
+
+    let dx = xhi - xlo;
+    let dy = yhi - ylo;
+
+    let delx = x - xlo;
+    let (_, c, d) = coeff_calc(c, dx, dy, index);
+
+    let two = T::from(2).unwrap();
+    let six = T::from(6).unwrap();
+
+    debug_assert!(dx >= T::zero());
+    Ok(two * c + six * delx * d)
+}
+
+fn cubic_eval_integ<T>(
+    xa: &[T],
+    ya: &[T],
+    c: &[T],
+    a: T,
+    b: T,
+    acc: &mut Accelerator,
+) -> Result<T, DomainError>
+where
+    T: num::Float + Debug + Scalar + Lapack,
+{
+    check_if_inbounds(xa, a)?;
+    check_if_inbounds(xa, b)?;
+    let index_a = acc.find(xa, a);
+    let index_b = acc.find(xa, b);
+
+    let mut result = T::zero();
+
+    for i in index_a..=index_b {
+        let xlo = xa[i];
+        let xhi = xa[i + 1];
+        let ylo = ya[i];
+        let yhi = ya[i + 1];
+
+        let dx = xhi - xlo;
+        let dy = yhi - ylo;
+
+        // If two x points are the same
+        if dx.is_zero() {
+            continue;
+        }
+
+        let (bi, ci, di) = coeff_calc(c, dx, dy, i);
+        let quarter = T::from(0.25).unwrap();
+        let half = T::from(0.5).unwrap();
+        let third = T::from(1.0 / 3.0).unwrap();
+
+        if (i == index_a) | (i == index_b) {
+            let x1 = if i == index_a { a } else { xlo };
+            let x2 = if i == index_b { b } else { xhi };
+            result += integ_eval(ylo, bi, ci, di, xlo, x1, x2);
+        } else {
+            result += dx * (ylo + dx * (half * bi + dx * (third * ci + quarter * di * dx)))
+        }
+    }
+    Ok(result)
+}
 /// Function for common coefficient determination.
 fn coeff_calc<T>(carray: &[T], dx: T, dy: T, index: usize) -> (T, T, T)
 where
