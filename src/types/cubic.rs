@@ -1,12 +1,12 @@
 //! Implementor for Cubic Interpolator.
 
-use std::cmp::Ordering;
 use std::fmt::Debug;
 
 use ndarray::Array1;
 use ndarray_linalg::{Lapack, MatrixLayout, Scalar, SolveTridiagonal, Tridiagonal};
 use num::One;
 
+use crate::Accelerator;
 use crate::DomainError;
 use crate::Interpolation;
 use crate::InterpolationError;
@@ -126,13 +126,7 @@ where
         Ok(cubic)
     }
 
-    fn eval(
-        &self,
-        xa: &[T],
-        ya: &[T],
-        x: T,
-        acc: &mut crate::Accelerator,
-    ) -> Result<T, crate::DomainError> {
+    fn eval(&self, xa: &[T], ya: &[T], x: T, acc: &mut Accelerator) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         let index = acc.find(xa, x);
 
@@ -147,11 +141,8 @@ where
         let delx = x - xlo;
         let (b, c, d) = coeff_calc(&self.c, dx, dy, index);
 
-        if let Some(Ordering::Greater) = dx.partial_cmp(&T::zero()) {
-            Ok(ylo + delx * (b + delx * (c + delx * d)))
-        } else {
-            Err(DomainError)
-        }
+        debug_assert!(dx >= T::zero());
+        Ok(ylo + delx * (b + delx * (c + delx * d)))
     }
 
     fn eval_deriv(
@@ -159,8 +150,8 @@ where
         xa: &[T],
         ya: &[T],
         x: T,
-        acc: &mut crate::Accelerator,
-    ) -> Result<T, crate::DomainError> {
+        acc: &mut Accelerator,
+    ) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         let index = acc.find(xa, x);
 
@@ -178,11 +169,8 @@ where
         let two = T::from(2).unwrap();
         let three = T::from(3).unwrap();
 
-        if let Some(Ordering::Greater) = dx.partial_cmp(&T::zero()) {
-            Ok(b + delx * (two * c + three * d * delx))
-        } else {
-            Err(DomainError)
-        }
+        debug_assert!(dx >= T::zero());
+        Ok(b + delx * (two * c + three * d * delx))
     }
 
     fn eval_deriv2(
@@ -190,8 +178,8 @@ where
         xa: &[T],
         ya: &[T],
         x: T,
-        acc: &mut crate::Accelerator,
-    ) -> Result<T, crate::DomainError> {
+        acc: &mut Accelerator,
+    ) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         let index = acc.find(xa, x);
 
@@ -209,11 +197,8 @@ where
         let two = T::from(2).unwrap();
         let six = T::from(6).unwrap();
 
-        if let Some(Ordering::Greater) = dx.partial_cmp(&T::zero()) {
-            Ok(two * c + six * delx * d)
-        } else {
-            Err(DomainError)
-        }
+        debug_assert!(dx >= T::zero());
+        Ok(two * c + six * delx * d)
     }
 
     fn eval_integ(
@@ -222,8 +207,8 @@ where
         ya: &[T],
         a: T,
         b: T,
-        acc: &mut crate::Accelerator,
-    ) -> Result<T, crate::DomainError> {
+        acc: &mut Accelerator,
+    ) -> Result<T, DomainError> {
         check_if_inbounds(xa, a)?;
         check_if_inbounds(xa, b)?;
         let index_a = acc.find(xa, a);

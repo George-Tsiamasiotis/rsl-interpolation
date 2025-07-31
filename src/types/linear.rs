@@ -1,6 +1,5 @@
 //! Implementor for Linear Interpolator.
 
-use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
@@ -59,11 +58,8 @@ where
 
         let dx = xhi - xlo;
 
-        if let Some(Ordering::Greater) = dx.partial_cmp(&T::zero()) {
-            Ok(ylo + (x - xlo) / dx * (yhi - ylo))
-        } else {
-            Err(DomainError)
-        }
+        debug_assert!(dx >= T::zero());
+        Ok(ylo + (x - xlo) / dx * (yhi - ylo))
     }
 
     fn eval_deriv(
@@ -84,11 +80,8 @@ where
         let dx = xhi - xlo;
         let dy = yhi - ylo;
 
-        if let Some(Ordering::Greater) = dy.partial_cmp(&T::zero()) {
-            Ok(dy / dx)
-        } else {
-            Err(DomainError)
-        }
+        debug_assert!(dx >= T::zero());
+        Ok(dy / dx)
     }
 
     #[allow(unused_variables)]
