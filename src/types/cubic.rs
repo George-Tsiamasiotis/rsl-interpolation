@@ -85,6 +85,11 @@ where
             diag.push(two * (h[i] + h[i + 1]));
             offdiag.push(h[i + 1]);
         }
+        // The last element of offdiag is not actually valid, by definition. Popping it is not
+        // really needed though, since the solver ignores it. However, it is needed in the
+        // CubicPeriodic case, since it represents the cyclical term.
+        offdiag.pop();
+        debug_assert_eq!(diag.len(), offdiag.len() + 1);
 
         let matrix = Tridiagonal {
             l: MatrixLayout::C {
@@ -174,10 +179,10 @@ where
 ///
 /// ## Example
 ///
-/// ```ignore
+/// ```
 /// # use rsl_interpolation::Interpolation;
 /// # use rsl_interpolation::InterpolationError;
-/// # use rsl_interpolation::Cubic;
+/// # use rsl_interpolation::CubicPeriodic;
 /// # use rsl_interpolation::Accelerator;
 /// #
 /// # fn main() -> Result<(), InterpolationError>{
@@ -208,8 +213,9 @@ where
     T: num::Float + Debug + Scalar + Lapack,
 {
     const MIN_SIZE: usize = 3;
-    const NAME: &'static str = "cubic";
+    const NAME: &'static str = "cubic-periodic";
 
+    #[allow(unused_variables)]
     fn new(xa: &[T], ya: &[T]) -> Result<Self, crate::InterpolationError>
     where
         Self: Sized,
@@ -217,8 +223,112 @@ where
         check_data(xa, ya, Self::MIN_SIZE)?;
 
         // Engeln-Mullges G. - Uhlig F.: Algorithm 10.2, pg 255
+        let sys_size = xa.len() - 1;
 
-        todo!()
+        let h = diff(xa);
+        debug_assert!(h.len() == xa.len() - 1);
+
+        let two = T::from(2).unwrap();
+        let three = T::from(3).unwrap();
+
+        // Ac=g setup
+        let mut c = Vec::<T>::with_capacity(xa.len());
+        let mut g = Vec::<T>::with_capacity(sys_size);
+        let mut diag = Vec::<T>::with_capacity(sys_size);
+        let mut offdiag = Vec::<T>::with_capacity(sys_size);
+
+        if sys_size == 2 {
+            let h0 = xa[1] - xa[0];
+            let h1 = xa[2] - xa[1];
+
+            let a = two * (h0 + h1);
+            let b = h0 + h1;
+
+            g.push(three * ((ya[2] - ya[1]) / h1 - (ya[1] - ya[0]) / h0));
+            g.push(three * ((ya[1] - ya[2]) / h0 - (ya[2] - ya[1]) / h1));
+
+            let det = three * (h0 + h1) * (h0 + h1);
+            c.push((-b * g[0] + a * g[1]) / det);
+            c.push((a * g[0] - b * g[1]) / det);
+            c.push(c[0]);
+        } else {
+            // Same as in Cubic case
+            for i in 0..sys_size - 1 {
+                g.push(if h[i].is_zero() {
+                    T::zero()
+                } else {
+                    three * (ya[i + 2] - ya[i + 1]) / h[i + 1] - three * (ya[i + 1] - ya[i]) / h[i]
+                });
+                diag.push(two * (h[i] + h[i + 1]));
+                offdiag.push(h[i + 1]);
+            }
+
+            // But we must add the last point
+            let i = sys_size - 1;
+            let hi = xa[i + 1] - xa[i];
+            let hiplus1 = xa[1] - xa[0];
+            let ydiffi = ya[i + 1] - ya[i];
+            let ydiffplus1 = ya[1] - ya[0];
+            let gi = if !hi.is_zero() {
+                T::one() / hi
+            } else {
+                T::zero()
+            };
+            let giplus1 = if !hiplus1.is_zero() {
+                T::one() / hiplus1
+            } else {
+                T::zero()
+            };
+            offdiag.push(hiplus1);
+            diag.push(two * (hiplus1 + hi));
+            g.push(three * (ydiffplus1 * giplus1 - ydiffi * gi));
+            // offdiag's last element represents the cyclical term
+            debug_assert_eq!(diag.len(), offdiag.len());
+
+            let matrix = Tridiagonal {
+                l: MatrixLayout::C {
+                    row: (sys_size) as i32,
+                    lda: (sys_size) as i32,
+                },
+                d: diag.clone(),
+                dl: offdiag.clone(),
+                du: offdiag.clone(),
+            };
+
+            // Ac=g solving
+            c.push(T::zero());
+            if sys_size.is_one() {
+                c.push(g[0] / diag[0]);
+            } else {
+                // This must solve a cyclically tridiagonal matrix, but its not implemented yet :(
+                // The corner element is stored at the end of the offdiag vec.
+                let coeffs = match matrix.solve_tridiagonal(&Array1::from_vec(g.clone())) {
+                    Ok(coeffs) => coeffs,
+                    Err(err) => {
+                        return Err(InterpolationError::BLASTridiagError {
+                            which_interp: "Cubic".into(),
+                            source: err,
+                        });
+                    }
+                };
+                c = [c, coeffs.to_vec()].concat();
+            }
+            c[0] = c[sys_size];
+            panic!(
+                "\nNot implemented: Cubic Periodic Splines with more than 3 points require a solver for\
+                cyclically tridiagonal matrices, which is currently not implemented by ndarray_linalg.\n"
+            )
+        }
+
+        // g, diag, and offdiag are only needed for the calculation of c and are not used anywere
+        // else from this point, but lets keep them.
+        let cubic_periodic = CubicPeriodic {
+            c,
+            g,
+            diag,
+            offdiag,
+        };
+        Ok(cubic_periodic)
     }
 
     fn eval(&self, xa: &[T], ya: &[T], x: T, acc: &mut Accelerator) -> Result<T, DomainError> {

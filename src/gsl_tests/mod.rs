@@ -9,6 +9,7 @@ use crate::Interpolation;
 
 mod test_accel;
 mod test_cubic;
+mod test_cubic_periodic;
 mod test_linear;
 
 /// A Primitive 2D table for holding the x and y values. Don't bother with num::Float here

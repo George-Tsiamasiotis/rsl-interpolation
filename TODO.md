@@ -6,7 +6,7 @@
 		- [x] Linear [`gsl_interp_linear`]
 		- [ ] Polynomial [`gsl_interp_polynomial`]
 		- [x] Cubic [`gsl_interp_cspline`]
-		- [ ] Cubic Periodic [`gsl_interp_cspline_periodic`]
+		- [x] Cubic Periodic [`gsl_interp_cspline_periodic`] **only works for 3 points at the moment; the general case is missing a cyclically tridiagonal matrix solver, which is currently not implemented by [`ndarray_linalg`]**.
 		- [ ] Akima [`gsl_interp_akima`]
 		- [ ] Akima Periodic [`gsl_interp_akima_periodic`]
 		- [ ] Steffen [`gsl_interp_steffen`]
@@ -47,5 +47,6 @@
 	- [x] Instantiation [`gsl_interp_accel_alloc()`, `gsl_interp_accel_reset()`, `gsl_interp_accel_free()`]
 	- [x] Lookup [`gsl_interp_bsearch()`, `gsl_interp_accel_find()`]
 
+[`ndarray_linalg`]: https://docs.rs/ndarray-linalg/latest/
 
 [^1]: `_e()` evaluation functions are probably not gonna be implemented.
