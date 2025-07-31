@@ -24,7 +24,6 @@ use crate::types::utils::check_if_inbounds;
 /// # use rsl_interpolation::Accelerator;
 /// #
 /// # fn main() -> Result<(), InterpolationError>{
-/// let mut acc = Accelerator::new();
 /// let xa = [0.0, 1.0, 2.0];
 /// let ya = [0.0, 2.0, 4.0];
 /// let interp = Linear::new(&xa, &ya)?;
@@ -37,7 +36,7 @@ pub struct Linear<T> {
 
 impl<T> Interpolation<T> for Linear<T>
 where
-    T: num::Float + Debug,
+    T: num::Float + Debug + std::ops::AddAssign,
 {
     const MIN_SIZE: usize = 2;
     const NAME: &'static str = "linear";
@@ -129,14 +128,16 @@ where
             let d = (yhi - ylo) / dx;
             let half = T::from(0.5).unwrap();
 
-            if !dx.is_zero() {
-                if (i == index_a) | (i == index_b) {
-                    let x1 = if i == index_a { a } else { xlo };
-                    let x2 = if i == index_b { b } else { xhi };
-                    result = result + (x2 - x1) * (ylo + half * d * ((x2 - xlo) + (x1 - xlo)));
-                } else {
-                    result = result + half * dx * (ylo + yhi);
-                }
+            if dx.is_zero() {
+                continue;
+            }
+
+            if (i == index_a) | (i == index_b) {
+                let x1 = if i == index_a { a } else { xlo };
+                let x2 = if i == index_b { b } else { xhi };
+                result += (x2 - x1) * (ylo + half * d * ((x2 - xlo) + (x1 - xlo)));
+            } else {
+                result += half * dx * (ylo + yhi);
             }
         }
         Ok(result)

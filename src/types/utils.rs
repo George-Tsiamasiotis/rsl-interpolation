@@ -40,6 +40,28 @@ where
         .collect::<Vec<T>>()
 }
 
+/// Function for doing the spline integral evaluation, which is common to both the cspline and
+/// akima methods.
+pub(crate) fn integ_eval<T>(ai: T, bi: T, ci: T, di: T, xi: T, a: T, b: T) -> T
+where
+    T: num::Float + std::fmt::Debug,
+{
+    let quarter = T::from(0.25).unwrap();
+    let half = T::from(0.5).unwrap();
+    let third = T::from(1.0 / 3.0).unwrap();
+
+    let r1 = a - xi;
+    let r2 = b - xi;
+    let r12 = r1.powi(2);
+    let r22 = r2.powi(2);
+    let rsum = r1 + r2;
+    let bterm = half * bi * rsum;
+    let cterm = third * ci * (r12 + r22 + r1 * r2);
+    let dterm = quarter * di * rsum * (r12 + r22);
+
+    (b - a) * (ai + bterm + cterm + dterm)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

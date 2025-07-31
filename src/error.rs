@@ -12,6 +12,14 @@ pub enum InterpolationError {
     /// Supplied array size is less than the interpolation type's minimum size.
     #[error("Supplied array size is less than the interpolation type's minimum size.")]
     NotEnoughPoints,
+
+    /// BLAS error solving Tridiagonal linear system.
+    #[error("Blass error solving Tridiagonal matrix of {which_interp} Interpolator: {source}")]
+    BLASTridiagError {
+        which_interp: String,
+        #[source]
+        source: ndarray_linalg::error::LinalgError,
+    },
 }
 
 #[derive(thiserror::Error, Debug)]
