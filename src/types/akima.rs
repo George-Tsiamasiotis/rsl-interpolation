@@ -67,7 +67,7 @@ where
         m.push_front(two * m[0] - m[1]);
         m.push_front(three * m[1] - two * m[2]);
         m.push_back(two * m[size] - m[size - 1]);
-        m.push_back(three * m[size - 1] - two * m[size - 2]);
+        m.push_back(three * m[size] - two * m[size - 1]);
         let m = m.make_contiguous().to_vec();
 
         let (b, c, d) = akima_calc(xa, &m);
@@ -159,7 +159,29 @@ where
     where
         Self: Sized,
     {
-        todo!()
+        check_data(xa, ya, Self::MIN_SIZE)?;
+
+        let size = xa.len();
+        let two = T::from(2.0).unwrap();
+        let three = T::from(3.0).unwrap();
+
+        // All m indeces are shifted by +2
+        let mut m = VecDeque::<T>::with_capacity(size);
+        for i in 0..=size - 2 {
+            m.push_back((ya[i + 1] - ya[i]) / (xa[i + 1] - xa[i]));
+        }
+
+        // Non-periodic boundary conditions
+        m.push_front(m[size - 1]);
+        m.push_front(m[size]);
+        m.push_back(two * m[size] - m[size - 1]);
+        m.push_back(three * m[size - 1] - two * m[size - 2]);
+        let m = m.make_contiguous().to_vec();
+
+        let (b, c, d) = akima_calc(xa, &m);
+
+        let akima = AkimaPeriodic { b, c, d, m };
+        Ok(akima)
     }
 
     fn eval(&self, xa: &[T], ya: &[T], x: T, acc: &mut Accelerator) -> Result<T, DomainError> {
