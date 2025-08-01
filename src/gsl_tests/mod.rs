@@ -8,6 +8,7 @@ use crate::Accelerator;
 use crate::Interpolation;
 
 mod test_accel;
+mod test_akima;
 mod test_cubic;
 mod test_cubic_periodic;
 mod test_linear;

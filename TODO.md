@@ -7,7 +7,7 @@
 		- [ ] Polynomial [`gsl_interp_polynomial`]
 		- [x] Cubic [`gsl_interp_cspline`]
 		- [x] Cubic Periodic [`gsl_interp_cspline_periodic`] **only works for 3 points at the moment; the general case is missing a cyclically tridiagonal matrix solver, which is currently not implemented by [`ndarray_linalg`]**.
-		- [ ] Akima [`gsl_interp_akima`]
+		- [x] Akima [`gsl_interp_akima`], could use some better testing
 		- [ ] Akima Periodic [`gsl_interp_akima_periodic`]
 		- [ ] Steffen [`gsl_interp_steffen`]
 	- [x] Evaluation [^1]

@@ -215,7 +215,6 @@ where
     const MIN_SIZE: usize = 3;
     const NAME: &'static str = "cubic-periodic";
 
-    #[allow(unused_variables)]
     fn new(xa: &[T], ya: &[T]) -> Result<Self, crate::InterpolationError>
     where
         Self: Sized,
@@ -469,6 +468,10 @@ where
     let index_a = acc.find(xa, a);
     let index_b = acc.find(xa, b);
 
+    let quarter = T::from(0.25).unwrap();
+    let half = T::from(0.5).unwrap();
+    let third = T::from(1.0 / 3.0).unwrap();
+
     let mut result = T::zero();
 
     for i in index_a..=index_b {
@@ -486,9 +489,6 @@ where
         }
 
         let (bi, ci, di) = coeff_calc(c, dx, dy, i);
-        let quarter = T::from(0.25).unwrap();
-        let half = T::from(0.5).unwrap();
-        let third = T::from(1.0 / 3.0).unwrap();
 
         if (i == index_a) | (i == index_b) {
             let x1 = if i == index_a { a } else { xlo };
