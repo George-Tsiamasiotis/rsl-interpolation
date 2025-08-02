@@ -5,7 +5,7 @@ use crate::tests::test_interp;
 
 /// Custom against GSL, for f(x) = 1 + x^2.
 #[test]
-fn test_akima2() {
+fn test_akima() {
     let xa = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0];
 
     #[rustfmt::skip]

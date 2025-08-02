@@ -123,15 +123,15 @@ where
 ///
 /// ## Example
 ///
-/// ```no_run
+/// ```
 /// # use rsl_interpolation::Interpolation;
 /// # use rsl_interpolation::InterpolationError;
 /// # use rsl_interpolation::AkimaPeriodic;
 /// # use rsl_interpolation::Accelerator;
 /// #
 /// # fn main() -> Result<(), InterpolationError>{
-/// let xa = [0.0, 1.0, 2.0];
-/// let ya = [0.0, 2.0, 4.0];
+/// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
+/// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
 /// let interp = AkimaPeriodic::new(&xa, &ya)?;
 /// # Ok(())
 /// # }
@@ -154,7 +154,6 @@ where
     const MIN_SIZE: usize = 5;
     const NAME: &'static str = "akima-periodic";
 
-    #[allow(unused_variables)]
     fn new(xa: &[T], ya: &[T]) -> Result<Self, crate::InterpolationError>
     where
         Self: Sized,
@@ -162,26 +161,24 @@ where
         check_data(xa, ya, Self::MIN_SIZE)?;
 
         let size = xa.len();
-        let two = T::from(2.0).unwrap();
-        let three = T::from(3.0).unwrap();
 
         // All m indeces are shifted by +2
-        let mut m = VecDeque::<T>::with_capacity(size);
+        let mut m = VecDeque::<T>::with_capacity(size + 3);
         for i in 0..=size - 2 {
             m.push_back((ya[i + 1] - ya[i]) / (xa[i + 1] - xa[i]));
         }
 
-        // Non-periodic boundary conditions
-        m.push_front(m[size - 1]);
-        m.push_front(m[size]);
-        m.push_back(two * m[size] - m[size - 1]);
-        m.push_back(three * m[size - 1] - two * m[size - 2]);
+        // Periodic boundary conditions
+        m.push_front(m[size - 1 - 1]);
+        m.push_front(m[size - 1 - 1]);
+        m.push_back(m[2]);
+        m.push_back(m[3]);
         let m = m.make_contiguous().to_vec();
 
         let (b, c, d) = akima_calc(xa, &m);
 
-        let akima = AkimaPeriodic { b, c, d, m };
-        Ok(akima)
+        let akima_periodic = AkimaPeriodic { b, c, d, m };
+        Ok(akima_periodic)
     }
 
     fn eval(&self, xa: &[T], ya: &[T], x: T, acc: &mut Accelerator) -> Result<T, DomainError> {
@@ -362,11 +359,11 @@ where
         } else {
             let hi = xa[i + 1] - xa[i];
             let nenext = (m[i + 4] - m[i + 3]).abs() + (m[i + 2] - m[i + 1]).abs();
-            let ai = (m[i + 1] - m[i]) / ne;
+            let ai = (m[i + 1] - m[i]).abs() / ne;
             let ai_plus1: T;
             let tli_plus1: T;
             if nenext.is_zero() {
-                tli_plus1 = m[i];
+                tli_plus1 = m[i + 2];
             } else {
                 ai_plus1 = (m[i + 2] - m[i + 1]).abs() / nenext;
                 tli_plus1 = (T::one() - ai_plus1) * m[i + 2] + ai_plus1 * m[i + 3];

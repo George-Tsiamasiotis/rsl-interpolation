@@ -9,6 +9,7 @@ use crate::Accelerator;
 use crate::Interpolation;
 
 mod test_akima;
+mod test_akima_periodic;
 
 /// A Primitive 2D table for holding the x and y values. Don't bother with num::Float here
 pub(crate) struct XYTable<'a> {
@@ -42,40 +43,17 @@ pub(crate) fn test_interp<I>(
         let s4 = interp
             .eval_integ(data_table.x, data_table.y, test_e_table.x[0], *x, &mut acc)
             .unwrap();
-        println!(
-            "x={}: s={}, test={}, (diff={})",
-            x,
-            s2,
-            test_d_table.y[i],
-            (s2 - test_d_table.y[i]).abs()
-        );
 
         // We need to specify an absolute tolerance, since is_close!() with abs_tol = 0 always
         // fails on 0.0, as described in https://docs.python.org/3/library/math.html#math.isclose.
         // is_close uses the python implementation.
-        assert!(is_close!(
-            s1,
-            test_e_table.y[i],
-            rel_tol = EPS,
-            abs_tol = ATOL
-        ));
-        assert!(is_close!(
-            s2,
-            test_d_table.y[i],
-            rel_tol = EPS,
-            abs_tol = ATOL
-        ));
-        assert!(is_close!(
-            s3,
-            test_d2_table.y[i],
-            rel_tol = EPS,
-            abs_tol = ATOL
-        ));
-        assert!(is_close!(
-            s4,
-            test_i_table.y[i],
-            rel_tol = EPS,
-            abs_tol = ATOL
-        ));
+        #[rustfmt::skip]
+        assert!(is_close!( s1, test_e_table.y[i], rel_tol = EPS, abs_tol = ATOL));
+        #[rustfmt::skip]
+        assert!(is_close!( s2, test_d_table.y[i], rel_tol = EPS, abs_tol = ATOL));
+        #[rustfmt::skip]
+        assert!(is_close!( s3, test_d2_table.y[i], rel_tol = EPS, abs_tol = ATOL));
+        #[rustfmt::skip]
+        assert!(is_close!( s4, test_i_table.y[i], rel_tol = EPS, abs_tol = ATOL));
     }
 }

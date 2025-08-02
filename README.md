@@ -10,3 +10,11 @@ The crates documentation can be found [`here`]
 ## Current status:
 
 See [todo](TODO.md) list.
+
+## Testing
+
+All of GSL's tests have been transfered in this crate.
+
+Additionally, some extra tests have been added, with data computed directly from GSL. Source code can be found [`here`].
+
+[`here`]: https://github.com/George-Tsiamasiotis/rsl-testing.git
