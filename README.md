@@ -15,6 +15,6 @@ See [todo](TODO.md) list.
 
 All of GSL's tests have been transfered in this crate.
 
-Additionally, some extra tests have been added, with data computed directly from GSL. Source code can be found [`here`].
+Additionally, some extra tests have been added, with data computed directly from GSL ([`source`]).
 
-[`here`]: https://github.com/George-Tsiamasiotis/rsl-testing.git
+[`source`]: https://github.com/George-Tsiamasiotis/rsl-testing.git
