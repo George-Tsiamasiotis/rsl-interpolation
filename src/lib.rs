@@ -15,7 +15,4 @@ pub use accel::Accelerator;
 pub use types::*;
 
 #[cfg(test)]
-mod gsl_tests;
-
-#[cfg(test)]
 mod tests;

@@ -1,7 +1,7 @@
 ## GSL features to be implemented
 
 - [ ] 1D Interpolation
-	- [ ] Instantiation [`gsl_interp_alloc()`, `gsl_interp_init()`, `gsl_interp_free()`]
+	- [x] Instantiation [`gsl_interp_alloc()`, `gsl_interp_init()`, `gsl_interp_free()`]
 	- [x] 1D Interpolation types [`gsl_interp_type`]
 		- [x] Linear [`gsl_interp_linear`]
 		- [ ] Polynomial [`gsl_interp_polynomial`]
@@ -9,7 +9,7 @@
 		- [x] Cubic Periodic [`gsl_interp_cspline_periodic`] **only works for 3 points at the moment; the general case is missing a cyclically tridiagonal matrix solver, which is currently not implemented by [`ndarray_linalg`]**.
 		- [x] Akima [`gsl_interp_akima`], could use some better testing
 		- [x] Akima Periodic [`gsl_interp_akima_periodic`]
-		- [ ] Steffen [`gsl_interp_steffen`]
+		- [x] Steffen [`gsl_interp_steffen`]
 	- [x] Evaluation [^1]
 		- [x] f(x) evaluation [`gsl_interp_eval()`]
 		- [x] f'(x) evaluation [`gsl_interp_eval_deriv()`]

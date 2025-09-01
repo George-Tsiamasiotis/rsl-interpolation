@@ -1,7 +1,7 @@
 use crate::CubicPeriodic;
 use crate::Interpolation;
-use crate::gsl_tests::XYTable;
-use crate::gsl_tests::test_interp;
+use crate::tests::XYTable;
+use crate::tests::test_interp;
 
 // Not implemented: Cubic Periodic Splines with more than 3 points require a solver for cyclically
 // tridiagonal matrices, which is currently not implemented by ndarray_linalg.

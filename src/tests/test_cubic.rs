@@ -1,7 +1,7 @@
 use crate::Cubic;
 use crate::Interpolation;
-use crate::gsl_tests::XYTable;
-use crate::gsl_tests::test_interp;
+use crate::tests::XYTable;
+use crate::tests::test_interp;
 
 #[test]
 fn test_cubic1() {
