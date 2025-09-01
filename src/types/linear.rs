@@ -58,7 +58,7 @@ where
 
         let dx = xhi - xlo;
 
-        debug_assert!(dx >= T::zero());
+        debug_assert!(dx > T::zero());
         Ok(ylo + (x - xlo) / dx * (yhi - ylo))
     }
 
@@ -80,7 +80,7 @@ where
         let dx = xhi - xlo;
         let dy = yhi - ylo;
 
-        debug_assert!(dx >= T::zero());
+        debug_assert!(dx > T::zero());
         Ok(dy / dx)
     }
 

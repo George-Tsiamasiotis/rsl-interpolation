@@ -67,7 +67,7 @@ where
         let sys_size = xa.len() - 2;
 
         let h = diff(xa);
-        debug_assert!(h.len() == xa.len() - 1);
+        debug_assert_eq!(h.len(), xa.len() - 1);
 
         let two = T::from(2).unwrap();
         let three = T::from(3).unwrap();
@@ -386,7 +386,7 @@ where
     let delx = x - xlo;
     let (b, c, d) = coeff_calc(c, dx, dy, index);
 
-    debug_assert!(dx >= T::zero());
+    debug_assert!(dx > T::zero());
     Ok(ylo + delx * (b + delx * (c + delx * d)))
 }
 
@@ -417,7 +417,7 @@ where
     let two = T::from(2).unwrap();
     let three = T::from(3).unwrap();
 
-    debug_assert!(dx >= T::zero());
+    debug_assert!(dx > T::zero());
     Ok(b + delx * (two * c + three * d * delx))
 }
 
@@ -448,7 +448,7 @@ where
     let two = T::from(2).unwrap();
     let six = T::from(6).unwrap();
 
-    debug_assert!(dx >= T::zero());
+    debug_assert!(dx > T::zero());
     Ok(two * c + six * delx * d)
 }
 
