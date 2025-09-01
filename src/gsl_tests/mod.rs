@@ -12,6 +12,7 @@ mod test_akima;
 mod test_cubic;
 mod test_cubic_periodic;
 mod test_linear;
+mod test_steffen;
 
 /// A Primitive 2D table for holding the x and y values. Don't bother with num::Float here
 pub(crate) struct XYTable<'a> {
