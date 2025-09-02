@@ -36,7 +36,6 @@ where
     T: num::Float + std::fmt::Debug,
 {
     const MIN_SIZE: usize = 2;
-
     const NAME: &'static str = "linear";
 
     #[allow(unused_variables)]

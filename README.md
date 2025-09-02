@@ -11,6 +11,13 @@ The crates documentation can be found [`here`]
 
 See [todo](TODO.md) list.
 
+## Notes
+
+> # **Important**
+>
+> In 2d Interpolation, the `za` array must be defined in **column-major (Fortran)** style. This is 
+> done to comply with GSL's interface.
+
 ## Testing
 
 All of GSL's tests have been transferred in this crate.

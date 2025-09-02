@@ -11,7 +11,7 @@ mod types;
 
 pub use error::*;
 pub use interp::Interpolation;
-pub use interp2d::Interpolation2d;
+pub use interp2d::{Interpolation2d, z_get, z_idx, z_set};
 
 pub use accel::Accelerator;
 pub use types::*;

@@ -56,7 +56,7 @@ fn test_bilinear_asymmetric_z() {
         0.0, 0.5, 1.0, 1.5, 2.5, 3.0, 0.265371, 2.13849, 1.62114, 1.22198, 0.724681, 0.0596087,
     ];
 
-    /* results computed using Mathematica 9.0.1.0 */
+    // results computed using Mathematica 9.0.1.0
     #[rustfmt::skip]
     let ztest = [
         1.0, 1.2, 1.4, 1.55, 2.025, 2.3, 1.2191513, 1.7242442248,

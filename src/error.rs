@@ -23,7 +23,7 @@ pub enum InterpolationError {
 }
 
 #[derive(thiserror::Error, Debug)]
-#[error("Supplied value is outside the range of the supplied xdata.")]
+#[error("Supplied value is outside the range of the supplied xdata or ydata.")]
 #[non_exhaustive]
-/// Returned  when the supplied value is outside the range of the supplied xdata.
+/// Returned  when the supplied value is outside the range of the supplied xdata or ydata.
 pub struct DomainError;

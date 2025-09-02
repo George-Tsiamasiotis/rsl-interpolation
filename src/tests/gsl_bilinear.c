@@ -1,3 +1,8 @@
+/*
+ * Test for bilinear interpolator, including all the derivatives and iteration
+ * over all (x, y) pairs.
+ * */
+
 #include <stdio.h>
 #include <stdlib.h>
 

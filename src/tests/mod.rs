@@ -26,6 +26,7 @@ pub(crate) struct XYTable<'a> {
 
 /// Test function for eval(), eval_deriv() and eval_integ() for 1d interpolation. Corresponds to
 /// the transferred GSL tests.
+#[rustfmt::skip]
 pub(crate) fn test_interp<I>(
     data_table: XYTable,
     test_e_table: XYTable,
@@ -38,15 +39,9 @@ pub(crate) fn test_interp<I>(
     let mut acc = Accelerator::new();
 
     for (i, x) in test_e_table.x.iter().enumerate() {
-        let s1 = interp
-            .eval(data_table.x, data_table.y, *x, &mut acc)
-            .unwrap();
-        let s2 = interp
-            .eval_deriv(data_table.x, data_table.y, *x, &mut acc)
-            .unwrap();
-        let s3 = interp
-            .eval_integ(data_table.x, data_table.y, test_e_table.x[0], *x, &mut acc)
-            .unwrap();
+        let s1 = interp.eval(data_table.x, data_table.y, *x, &mut acc).unwrap();
+        let s2 = interp.eval_deriv(data_table.x, data_table.y, *x, &mut acc).unwrap();
+        let s3 = interp.eval_integ(data_table.x, data_table.y, test_e_table.x[0], *x, &mut acc).unwrap();
 
         // No deriv2 tests apparently
         assert!(is_close!(s1, test_e_table.y[i], rel_tol = EPS));
@@ -56,6 +51,7 @@ pub(crate) fn test_interp<I>(
 }
 
 /// Test function for extra tests with GSL data. Includes eval_deriv2() testing.
+#[rustfmt::skip]
 pub(crate) fn test_interp_extra<I>(
     data_table: XYTable,
     test_e_table: XYTable,
@@ -69,30 +65,18 @@ pub(crate) fn test_interp_extra<I>(
     let mut acc = Accelerator::new();
 
     for (i, x) in test_e_table.x.iter().enumerate() {
-        let s1 = interp
-            .eval(data_table.x, data_table.y, *x, &mut acc)
-            .unwrap();
-        let s2 = interp
-            .eval_deriv(data_table.x, data_table.y, *x, &mut acc)
-            .unwrap();
-        let s3 = interp
-            .eval_deriv2(data_table.x, data_table.y, *x, &mut acc)
-            .unwrap();
-        let s4 = interp
-            .eval_integ(data_table.x, data_table.y, test_e_table.x[0], *x, &mut acc)
-            .unwrap();
+        let s1 = interp.eval(data_table.x, data_table.y, *x, &mut acc).unwrap();
+        let s2 = interp.eval_deriv(data_table.x, data_table.y, *x, &mut acc).unwrap();
+        let s3 = interp.eval_deriv2(data_table.x, data_table.y, *x, &mut acc).unwrap();
+        let s4 = interp.eval_integ(data_table.x, data_table.y, test_e_table.x[0], *x, &mut acc).unwrap();
 
         // We need to specify an absolute tolerance, since is_close!() with abs_tol = 0 always
         // fails on 0.0, as described in https://docs.python.org/3/library/math.html#math.isclose.
         // is_close uses the python implementation.
-        #[rustfmt::skip]
-        assert!(is_close!( s1, test_e_table.y[i], rel_tol = EPS, abs_tol = ATOL));
-        #[rustfmt::skip]
-        assert!(is_close!( s2, test_d_table.y[i], rel_tol = EPS, abs_tol = ATOL));
-        #[rustfmt::skip]
-        assert!(is_close!( s3, test_d2_table.y[i], rel_tol = EPS, abs_tol = ATOL));
-        #[rustfmt::skip]
-        assert!(is_close!( s4, test_i_table.y[i], rel_tol = EPS, abs_tol = ATOL));
+        assert!(is_close!(s1, test_e_table.y[i], rel_tol = EPS, abs_tol = ATOL));
+        assert!(is_close!(s2, test_d_table.y[i], rel_tol = EPS, abs_tol = ATOL));
+        assert!(is_close!(s3, test_d2_table.y[i], rel_tol = EPS, abs_tol = ATOL));
+        assert!(is_close!(s4, test_i_table.y[i], rel_tol = EPS, abs_tol = ATOL));
     }
 }
 
@@ -106,6 +90,7 @@ pub(crate) struct XYZTable<'a> {
 }
 
 /// Test function for eval(), for 2d interpolation. Corresponds to the transferred GSL tests.
+#[rustfmt::skip]
 pub(crate) fn test_interp2d<I>(data_table: XYZTable, test_e_table: XYZTable, interp: I)
 where
     I: Interpolation2d<f64>,
@@ -115,17 +100,7 @@ where
 
     for (i, x) in test_e_table.x.iter().enumerate() {
         let y = test_e_table.y[i];
-        let s1 = interp
-            .eval(
-                data_table.x,
-                data_table.y,
-                data_table.z,
-                *x,
-                y,
-                &mut xacc,
-                &mut yacc,
-            )
-            .unwrap();
+        let s1 = interp.eval(data_table.x, data_table.y, data_table.z, *x, y, &mut xacc, &mut yacc).unwrap();
 
         // No deriv tests apparently
         let expected = test_e_table.z[i];
@@ -133,7 +108,8 @@ where
     }
 }
 
-/// Test function for eval(), for 2d interpolation. Corresponds to the transferred GSL tests.
+/// Test function including all derivatives and iteration over all (x, y) pairs,  for use with extra 
+/// 2d testing.
 #[rustfmt::skip]
 pub(crate) fn test_interp2d_extra<I>(
     data_table: XYZTable,
