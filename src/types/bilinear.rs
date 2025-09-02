@@ -1,0 +1,199 @@
+use std::marker::PhantomData;
+
+use crate::Accelerator;
+use crate::DomainError;
+use crate::Interpolation2d;
+use crate::interp2d::{acc_indeces, partials, xy_grid_indeces, z_grid_indeces};
+use crate::types::utils::check_data;
+use crate::types::utils::check_if_inbounds;
+
+/// BiLinear Interpolation
+///
+/// The simplest type of 2d Interpolation.
+///
+/// # Example
+///
+/// ```
+/// # use rsl_interpolation::Interpolation2d;
+/// # use rsl_interpolation::InterpolationError;
+/// # use rsl_interpolation::BiLinear;
+/// # use rsl_interpolation::Accelerator;
+/// #
+/// # fn main() -> Result<(), InterpolationError>{
+/// let xa = [0.0, 1.0, 2.0];
+/// let ya = [0.0, 2.0, 4.0];
+/// let za = [0.0, 4.0, 8.0];
+/// let interp = BiLinear::new(&xa, &ya, &za)?;
+/// # Ok(())
+/// # }
+/// ```
+pub struct BiLinear<T> {
+    _variable_type: PhantomData<T>,
+}
+
+impl<T> Interpolation2d<T> for BiLinear<T>
+where
+    T: num::Float + std::fmt::Debug,
+{
+    const MIN_SIZE: usize = 2;
+
+    const NAME: &'static str = "linear";
+
+    #[allow(unused_variables)]
+    fn new(xa: &[T], ya: &[T], za: &[T]) -> Result<Self, crate::InterpolationError>
+    where
+        Self: Sized,
+    {
+        check_data(xa, ya, Self::MIN_SIZE)?;
+        Ok(Self {
+            _variable_type: PhantomData,
+        })
+    }
+
+    fn eval_extrap(
+        &self,
+        xa: &[T],
+        ya: &[T],
+        za: &[T],
+        x: T,
+        y: T,
+        xacc: &mut Accelerator,
+        yacc: &mut Accelerator,
+    ) -> Result<T, DomainError> {
+        let (xi, yi) = acc_indeces(xa, ya, x, y, xacc, yacc);
+        let (xlo, xhi, ylo, yhi) = xy_grid_indeces(xa, ya, xi, yi);
+        let (zlolo, zlohi, zhilo, zhihi) = z_grid_indeces(za, xa.len(), ya.len(), xi, yi)?;
+        let (dx, dy) = partials(xlo, xhi, ylo, yhi);
+
+        debug_assert!(dx > T::zero());
+        debug_assert!(dy > T::zero());
+
+        let t = (x - xlo) / dx;
+        let u = (y - ylo) / dy;
+
+        let one = T::one();
+        let result = (one - t) * (one - u) * zlolo
+            + t * (one - u) * zhilo
+            + (one - t) * u * zlohi
+            + t * u * zhihi;
+        Ok(result)
+    }
+
+    fn eval_deriv_x(
+        &self,
+        xa: &[T],
+        ya: &[T],
+        za: &[T],
+        x: T,
+        y: T,
+        xacc: &mut Accelerator,
+        yacc: &mut Accelerator,
+    ) -> Result<T, DomainError> {
+        check_if_inbounds(xa, x)?;
+        check_if_inbounds(ya, y)?;
+
+        let (xi, yi) = acc_indeces(xa, ya, x, y, xacc, yacc);
+        let (xlo, xhi, ylo, yhi) = xy_grid_indeces(xa, ya, xi, yi);
+        let (zlolo, zlohi, zhilo, zhihi) = z_grid_indeces(za, xa.len(), ya.len(), xi, yi)?;
+        let (dx, dy) = partials(xlo, xhi, ylo, yhi);
+
+        debug_assert!(dx > T::zero());
+        debug_assert!(dy > T::zero());
+
+        let one = T::one();
+        let dt = one / dx;
+        let u = (y - ylo) / dy;
+
+        let result = dt * (-(one - u) * zlolo + (one - u) * zhilo - u * zlohi + u * zhihi);
+        Ok(result)
+    }
+
+    fn eval_deriv_y(
+        &self,
+        xa: &[T],
+        ya: &[T],
+        za: &[T],
+        x: T,
+        y: T,
+        xacc: &mut Accelerator,
+        yacc: &mut Accelerator,
+    ) -> Result<T, DomainError> {
+        check_if_inbounds(xa, x)?;
+        check_if_inbounds(ya, y)?;
+
+        let (xi, yi) = acc_indeces(xa, ya, x, y, xacc, yacc);
+        let (xlo, xhi, ylo, yhi) = xy_grid_indeces(xa, ya, xi, yi);
+        let (zlolo, zlohi, zhilo, zhihi) = z_grid_indeces(za, xa.len(), ya.len(), xi, yi)?;
+        let (dx, dy) = partials(xlo, xhi, ylo, yhi);
+
+        debug_assert!(dx > T::zero());
+        debug_assert!(dy > T::zero());
+
+        let one = T::one();
+        let t = (x - xlo) / dx;
+        let du = one / dy;
+
+        let result = du * (-(one - t) * zlolo - t * zhilo + (one - t) * zlohi + t * zhihi);
+        Ok(result)
+    }
+
+    #[allow(unused_variables)]
+    fn eval_deriv_xx(
+        &self,
+        xa: &[T],
+        ya: &[T],
+        za: &[T],
+        x: T,
+        y: T,
+        xacc: &mut Accelerator,
+        yacc: &mut Accelerator,
+    ) -> Result<T, DomainError> {
+        check_if_inbounds(xa, x)?;
+        check_if_inbounds(ya, y)?;
+
+        Ok(T::zero())
+    }
+
+    #[allow(unused_variables)]
+    fn eval_deriv_yy(
+        &self,
+        xa: &[T],
+        ya: &[T],
+        za: &[T],
+        x: T,
+        y: T,
+        xacc: &mut Accelerator,
+        yacc: &mut Accelerator,
+    ) -> Result<T, DomainError> {
+        check_if_inbounds(xa, x)?;
+        check_if_inbounds(ya, y)?;
+
+        Ok(T::zero())
+    }
+
+    fn eval_deriv_xy(
+        &self,
+        xa: &[T],
+        ya: &[T],
+        za: &[T],
+        x: T,
+        y: T,
+        xacc: &mut Accelerator,
+        yacc: &mut Accelerator,
+    ) -> Result<T, DomainError> {
+        check_if_inbounds(xa, x)?;
+        check_if_inbounds(ya, y)?;
+
+        let (xi, yi) = acc_indeces(xa, ya, x, y, xacc, yacc);
+        let (xlo, xhi, ylo, yhi) = xy_grid_indeces(xa, ya, xi, yi);
+        let (zlolo, zlohi, zhilo, zhihi) = z_grid_indeces(za, xa.len(), ya.len(), xi, yi)?;
+        let (dx, dy) = partials(xlo, xhi, ylo, yhi);
+
+        let one = T::one();
+        let dt = one / dx;
+        let du = one / dy;
+
+        let result = dt * du * (zlolo - zhilo - zlohi + zhihi);
+        Ok(result)
+    }
+}

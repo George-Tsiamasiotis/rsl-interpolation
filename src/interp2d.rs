@@ -1,3 +1,4 @@
+use crate::types::check_if_inbounds;
 use crate::{Accelerator, DomainError, InterpolationError};
 
 /// Defines the required methods for every 2d Interpolation type.
@@ -30,6 +31,7 @@ where
     /// [`DomainError`]: struct.DomainError.html
     #[doc(alias = "gsl_interp2d_eval")]
     #[doc(alias = "gsl_interp2d_eval_e")]
+    #[allow(clippy::too_many_arguments)]
     fn eval(
         &self,
         xa: &[T],
@@ -39,7 +41,13 @@ where
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
-    ) -> Result<T, DomainError>;
+    ) -> Result<T, DomainError> {
+        // Calculation is the same, with the added bounds check
+        check_if_inbounds(xa, x)?;
+        check_if_inbounds(ya, y)?;
+
+        self.eval_extrap(xa, ya, za, x, y, xacc, yacc)
+    }
 
     /// Returns the interpolated value of `z` for a given point (`x`, `y`), using the data arrays
     /// `xa`, `ya`, `za` and the Accelerators `xacc` and `yacc`.
@@ -50,6 +58,7 @@ where
     /// is outside the range of `ya`, extrapolation is performed.
     #[doc(alias = "gsl_interp2d_eval_extrap")]
     #[doc(alias = "gsl_interp2d_eval_extrap_e")]
+    #[allow(clippy::too_many_arguments)]
     fn eval_extrap(
         &self,
         xa: &[T],
@@ -72,6 +81,7 @@ where
     /// [`DomainError`]: struct.DomainError.html
     #[doc(alias = "gsl_interp2d_eval_deriv_x")]
     #[doc(alias = "gsl_interp2d_eval_deriv_x_e")]
+    #[allow(clippy::too_many_arguments)]
     fn eval_deriv_x(
         &self,
         xa: &[T],
@@ -94,6 +104,7 @@ where
     /// [`DomainError`]: struct.DomainError.html
     #[doc(alias = "gsl_interp2d_eval_deriv_y")]
     #[doc(alias = "gsl_interp2d_eval_deriv_y_e")]
+    #[allow(clippy::too_many_arguments)]
     fn eval_deriv_y(
         &self,
         xa: &[T],
@@ -116,6 +127,7 @@ where
     /// [`DomainError`]: struct.DomainError.html
     #[doc(alias = "gsl_interp2d_eval_deriv_xx")]
     #[doc(alias = "gsl_interp2d_eval_deriv_xx_e")]
+    #[allow(clippy::too_many_arguments)]
     fn eval_deriv_xx(
         &self,
         xa: &[T],
@@ -138,6 +150,7 @@ where
     /// [`DomainError`]: struct.DomainError.html
     #[doc(alias = "gsl_interp2d_eval_deriv_yy")]
     #[doc(alias = "gsl_interp2d_eval_deriv_yy_e")]
+    #[allow(clippy::too_many_arguments)]
     fn eval_deriv_yy(
         &self,
         xa: &[T],
@@ -160,6 +173,7 @@ where
     /// [`DomainError`]: struct.DomainError.html
     #[doc(alias = "gsl_interp2d_eval_deriv_xy")]
     #[doc(alias = "gsl_interp2d_eval_deriv_xy_e")]
+    #[allow(clippy::too_many_arguments)]
     fn eval_deriv_xy(
         &self,
         xa: &[T],
@@ -190,8 +204,72 @@ where
     /// Returns the index corresponding to the grid point (`i`, `j`). The index is given by
     /// `j*len(x) + i`
     #[doc(alias = "gsl_interp2d_idx")]
-    #[allow(unused_variables)] // FIXME:
-    fn idx(i: usize, j: usize) -> usize {
-        todo!()
+    fn idx(i: usize, j: usize, ilen: usize, jlen: usize) -> Result<usize, DomainError> {
+        idx(i, j, ilen, jlen)
     }
+}
+
+pub(crate) fn idx(xi: usize, yi: usize, xlen: usize, ylen: usize) -> Result<usize, DomainError> {
+    if (xi >= xlen) | (yi >= ylen) {
+        Err(DomainError)
+    } else {
+        Ok(yi * xlen + xi)
+    }
+}
+
+/// Common calculation to evaluation functions
+pub(crate) fn acc_indeces<T>(
+    xa: &[T],
+    ya: &[T],
+    x: T,
+    y: T,
+    xacc: &mut Accelerator,
+    yacc: &mut Accelerator,
+) -> (usize, usize)
+where
+    T: num::Float + std::fmt::Debug,
+{
+    let xi = xacc.find(xa, x);
+    let yi = yacc.find(ya, y);
+    (xi, yi)
+}
+
+/// Common calculation to evaluation functions
+pub(crate) fn xy_grid_indeces<T>(xa: &[T], ya: &[T], xi: usize, yi: usize) -> (T, T, T, T)
+where
+    T: num::Float + std::fmt::Debug,
+{
+    let xlo = xa[xi];
+    let xhi = xa[xi + 1];
+    let ylo = ya[yi];
+    let yhi = ya[yi + 1];
+    (xlo, xhi, ylo, yhi)
+}
+
+/// Common calculation to evaluation functions
+pub(crate) fn z_grid_indeces<T>(
+    za: &[T],
+    xlen: usize,
+    ylen: usize,
+    xi: usize,
+    yi: usize,
+) -> Result<(T, T, T, T), DomainError>
+where
+    T: num::Float + std::fmt::Debug,
+{
+    let zlolo = za[idx(xi, yi, xlen, ylen)?];
+    let zlohi = za[idx(xi, yi + 1, xlen, ylen)?];
+    let zhilo = za[idx(xi + 1, yi, xlen, ylen)?];
+    let zhihi = za[idx(xi + 1, yi + 1, xlen, ylen)?];
+    Ok((zlolo, zlohi, zhilo, zhihi))
+}
+
+/// Common calculation to evaluation functions
+pub(crate) fn partials<T>(xlo: T, xhi: T, ylo: T, yhi: T) -> (T, T)
+where
+    T: num::Float + std::fmt::Debug,
+{
+    let dx = xhi - xlo;
+    let dy = yhi - ylo;
+    (dx, dy)
 }

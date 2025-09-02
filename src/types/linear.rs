@@ -14,7 +14,7 @@ use crate::types::utils::check_if_inbounds;
 ///
 /// The simplest type of interpolation.
 ///
-/// ## Example
+/// # Example
 ///
 /// ```
 /// # use rsl_interpolation::Interpolation;
