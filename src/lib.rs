@@ -5,11 +5,13 @@
 mod accel;
 mod error;
 mod interp;
+mod interp2d;
 
 mod types;
 
 pub use error::*;
 pub use interp::Interpolation;
+pub use interp2d::Interpolation2d;
 
 pub use accel::Accelerator;
 pub use types::*;

@@ -1,7 +1,7 @@
 use crate::Accelerator;
 use crate::{DomainError, InterpolationError};
 
-/// Defines the required methods for every Interpolation method.
+/// Defines the required methods for every Interpolation type.
 pub trait Interpolation<T>
 where
     T: num::Float + std::fmt::Debug,
@@ -13,7 +13,8 @@ where
     /// The name of the interpolator.
     const NAME: &'static str;
 
-    /// Creates a new interpolator.
+    /// Creates a new Interpolator for the data (xa, ya), where xa and ya are slices of the
+    /// x and y data points.
     #[doc(alias = "gsl_interp_init")]
     fn new(xa: &[T], ya: &[T]) -> Result<Self, InterpolationError>
     where
@@ -24,7 +25,7 @@ where
     ///
     /// # Errors
     ///
-    /// Returns a [`DomainError`] if x is outside the range of xa.
+    /// Returns a [`DomainError`] if `x` is outside the range of `xa`.
     ///
     /// [`DomainError`]: struct.DomainError.html
     #[doc(alias = "gsl_interp_eval")]
@@ -36,7 +37,7 @@ where
     ///
     /// # Errors
     ///
-    /// Returns a [`DomainError`] if x is outside the range of xa.
+    /// Returns a [`DomainError`] if `x` is outside the range of `xa`.
     ///
     /// [`DomainError`]: struct.DomainError.html
     #[doc(alias = "gsl_interp_eval_deriv")]
@@ -49,7 +50,7 @@ where
     ///
     /// # Errors
     ///
-    /// Returns a [`DomainError`] if x is outside the range of xa.
+    /// Returns a [`DomainError`] if `x` is outside the range of `xa`.
     ///
     /// [`DomainError`]: struct.DomainError.html
     #[doc(alias = "gsl_interp_eval_deriv2")]
@@ -68,7 +69,7 @@ where
     ///
     /// # Errors
     ///
-    /// Returns a [`DomainError`] if a or b is outside the range of xa.
+    /// Returns a [`DomainError`] if `a` or `b` is outside the range of xa.
     ///
     /// [`DomainError`]: struct.DomainError.html
     #[doc(alias = "gsl_interp_eval_integ")]
