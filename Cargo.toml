@@ -1,12 +1,12 @@
 [package]
 name = "rsl-interpolation"
 authors = ["George Tsiamasiotis"]
-version = "0.1.6"
+version = "0.1.6-pre.1"
 edition = "2024"
 keywords = ["math", "science", "interpolation"]
 readme = "README.md"
 license = "GPL-3.0-only"
-documentation = "https://docs.rs/crate/rsl-interpolation/"
+documentation = "https://docs.rs/rsl-interpolation/latest/rsl_interpolation/"
 repository = "https://github.com/George-Tsiamasiotis/rsl-interpolation.git"
 description = "A re-write of GSL's Interpolation Routines in Rust."
 
