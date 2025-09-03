@@ -16,8 +16,12 @@ pub enum InterpolationError {
     #[error("Supplied array size is less than the interpolation type's minimum size.")]
     NotEnoughPoints,
 
+    /// Suppled z-grid dataset must be 1D with length of `xsize*ysize`.
+    #[error("Suppled z-grid dataset must be 1D with length of `xsize*ysize`.")]
+    ZGridMismatch,
+
     /// BLAS error solving Tridiagonal linear system.
-    #[error("Blass error solving Tridiagonal matrix of {which_interp} Interpolator: {source}")]
+    #[error("BLAS error solving Tridiagonal matrix of {which_interp} Interpolator: {source}")]
     BLASTridiagError {
         which_interp: String,
         #[source]

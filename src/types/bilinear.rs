@@ -6,6 +6,7 @@ use crate::Interpolation2d;
 use crate::interp2d::{acc_indeces, partials, xy_grid_indeces, z_grid_indeces};
 use crate::types::utils::check_data;
 use crate::types::utils::check_if_inbounds;
+use crate::types::utils::check_zgrid_size;
 
 /// BiLinear Interpolation
 ///
@@ -22,8 +23,19 @@ use crate::types::utils::check_if_inbounds;
 /// # fn main() -> Result<(), InterpolationError>{
 /// let xa = [0.0, 1.0, 2.0];
 /// let ya = [0.0, 2.0, 4.0];
-/// let za = [0.0, 4.0, 8.0];
+/// // z = x + y
+/// let za = [
+///     0.0, 1.0, 2.0,
+///     2.0, 3.0, 4.0,
+///     4.0, 5.0, 6.0,
+/// ];
 /// let interp = Bilinear::new(&xa, &ya, &za)?;
+/// let mut xacc = Accelerator::new();
+/// let mut yacc = Accelerator::new();
+///
+/// let z = interp.eval(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc)?;
+///
+/// assert_eq!(z, 4.5);
 /// # Ok(())
 /// # }
 /// ```
@@ -44,6 +56,8 @@ where
         Self: Sized,
     {
         check_data(xa, ya, Self::MIN_SIZE)?;
+        check_zgrid_size(xa, ya, za)?;
+
         Ok(Self {
             _variable_type: PhantomData,
         })

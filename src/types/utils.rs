@@ -17,6 +17,18 @@ where
     Ok(())
 }
 
+/// Checks that the passed za grid has the correct number of points
+pub(crate) fn check_zgrid_size<T>(xa: &[T], ya: &[T], za: &[T]) -> Result<(), InterpolationError>
+where
+    T: num::Float,
+{
+    if xa.len() * ya.len() != za.len() {
+        Err(InterpolationError::ZGridMismatch)
+    } else {
+        Ok(())
+    }
+}
+
 pub(crate) fn check_if_inbounds<T>(xa: &[T], x: T) -> Result<(), DomainError>
 where
     T: num::Float,
