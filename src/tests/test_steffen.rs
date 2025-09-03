@@ -5,7 +5,7 @@ use crate::tests::test_interp;
 use crate::tests::test_interp_extra;
 
 #[test]
-fn test_steffen1() {
+fn gsl_test_steffen1() {
     let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     let ya = [0.0, 1.0, 2.0, 3.0, 4.0];
 
@@ -36,7 +36,7 @@ fn test_steffen1() {
 }
 
 #[test]
-fn test_steffen2() {
+fn gsl_test_steffen2() {
     #[rustfmt::skip]
     let xa = [
         4.673405471947611, 4.851675778029557, 6.185473620119991, 7.066003430727031, 7.236222118389267,

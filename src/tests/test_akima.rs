@@ -6,7 +6,7 @@ use crate::tests::test_interp;
 use crate::tests::test_interp_extra;
 
 #[test]
-fn test_akima() {
+fn gsl_test_akima() {
     let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     let ya = [0.0, 1.0, 2.0, 3.0, 4.0];
 

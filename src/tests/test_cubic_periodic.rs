@@ -9,7 +9,7 @@ use crate::tests::test_interp;
 /// This data has been chosen to be random (uneven spacing in x and y) and the exact cubic spine
 /// solution computed using Octave.
 #[test]
-fn test_cubic_periodic1() {
+fn gsl_test_cubic_periodic1() {
     let xa = [
         0.000000000000000,
         0.130153674349869,
@@ -104,7 +104,7 @@ fn test_cubic_periodic1() {
 
 /// This data tests the periodic case n=3
 #[test]
-fn test_cubic_periodic2() {
+fn gsl_test_cubic_periodic2() {
     let xa = [0.123, 0.423, 1.123];
 
     let ya = [0.456000000000000, 1.407056516295154, 0.456000000000000];

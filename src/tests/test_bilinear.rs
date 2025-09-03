@@ -6,7 +6,7 @@ use crate::{
 /// Tests bilinear interpolation using a symmetric function, f(x,y)=f(y,x), and diagonal
 /// interpolation points (x,y) where x=y. If these tests don't pass, something is seriously broken.
 #[test]
-fn test_bilinear_symmetric() {
+fn gsl_test_bilinear_symmetric() {
     let xa = [0.0, 1.0, 2.0, 3.0];
     let ya = [0.0, 1.0, 2.0, 3.0];
     #[rustfmt::skip]
@@ -38,7 +38,7 @@ fn test_bilinear_symmetric() {
 }
 
 #[test]
-fn test_bilinear_asymmetric_z() {
+fn gsl_test_bilinear_asymmetric_z() {
     let xa = [0.0, 1.0, 2.0, 3.0];
     let ya = [0.0, 1.0, 2.0, 3.0];
     #[rustfmt::skip]
@@ -81,7 +81,7 @@ fn test_bilinear_asymmetric_z() {
 
 /// Extra test that includes all derivatives, and iterates through all (x, y) pairs.
 #[test]
-fn test_bilinear_extra() {
+fn extra_test_bilinear() {
     let xa = [0.0, 1.0];
     let ya = [0.0, 1.0];
     #[rustfmt::skip]

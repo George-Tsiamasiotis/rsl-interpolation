@@ -1,6 +1,6 @@
 echo """
 set terminal png size 1920,1080
-set output 'out/bilinear.png'
+set output 'plots/bilinear.png'
 
 set multiplot layout 2,3 rowsfirst
 

@@ -1,13 +1,17 @@
 CFLAGS = -Wall -I/usr/lib -lm -lgsl -g
 GRAPHFLAGS = -C
 
-all: out akima_plot akima_periodic_plot steffen_plot bilinear_plot bicubic_plot
+all: out plots akima_plot akima_periodic_plot steffen_plot bilinear_plot
+
+plots:
+	mkdir plots -v
 
 out:
 	mkdir out -v
 
 clean:
 	rm -rf out
+	rm -rf plots
 
 # ==============================================================
 
@@ -16,8 +20,8 @@ akima: out
 	@./out/akima > ./out/akima.dat
 
 akima_plot: akima
-	@graph -T png $(GRAPHFLAGS) < ./out/akima.dat > ./out/akima.png 
-	$(info Plot saved at src/tests/out/akima.png)
+	@graph -T png $(GRAPHFLAGS) < ./out/akima.dat > ./plots/akima.png 
+	$(info Plot saved at src/tests/plots/akima.png)
 
 # ==============================================================
 
@@ -26,8 +30,8 @@ akima_periodic: out
 
 akima_periodic_plot: akima_periodic
 	@./out/akima_periodic > ./out/akima_periodic.dat
-	@graph -T png $(GRAPHFLAGS) < ./out/akima_periodic.dat > ./out/akima_periodic.png 
-	$(info Plot saved at src/tests/out/akima_periodic.png)
+	@graph -T png $(GRAPHFLAGS) < ./out/akima_periodic.dat > ./plots/akima_periodic.png 
+	$(info Plot saved at src/tests/plots/akima_periodic.png)
 
 # ==============================================================
 
@@ -36,8 +40,8 @@ steffen: out
 	@./out/steffen > ./out/steffen.dat
 
 steffen_plot: steffen
-	@graph -T png $(GRAPHFLAGS) < ./out/steffen.dat > ./out/steffen.png 
-	$(info Plot saved at src/tests/out/steffen.png)
+	@graph -T png $(GRAPHFLAGS) < ./out/steffen.dat > ./plots/steffen.png 
+	$(info Plot saved at src/tests/plots/steffen.png)
 
 # ==============================================================
 
@@ -47,4 +51,4 @@ bilinear: out
 
 bilinear_plot: bilinear
 	$(shell ./bilinear_plot.sh)
-	$(info Plot saved at src/tests/out/bilinear.png)
+	$(info Plot saved at src/tests/plots/bilinear.png)

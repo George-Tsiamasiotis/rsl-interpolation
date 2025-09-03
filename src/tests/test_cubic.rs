@@ -4,7 +4,7 @@ use crate::tests::XYTable;
 use crate::tests::test_interp;
 
 #[test]
-fn test_cubic1() {
+fn gsl_test_cubic1() {
     let xa = [0.0, 1.0, 2.0];
     let ya = [0.0, 1.0, 2.0];
 
@@ -35,10 +35,9 @@ fn test_cubic1() {
 }
 
 
-/// 1/(1+x^2) Interpolation
 /// Test taken from Young & Gregory, A Survey of Numerical Mathematics, Vol 1 Chapter 6.8
 #[test]
-fn test_cubic2() {
+fn gsl_test_cubic2() {
     let xa = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0];
 
     let ya = [
@@ -122,7 +121,7 @@ fn test_cubic2() {
 #[test]
 /// This data has been chosen to be random (uneven spacing in x and y) and the exact cubic spine 
 /// solution computed using Octave.
-fn test_cubic3() {
+fn gsl_test_cubic3() {
 
     #[rustfmt::skip]
     let xa = [

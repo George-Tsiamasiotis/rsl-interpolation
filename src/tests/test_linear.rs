@@ -4,7 +4,7 @@ use crate::tests::XYTable;
 use crate::tests::test_interp;
 
 #[test]
-fn test_linear() {
+fn gsl_test_linear() {
     let xa = [0.0, 1.0, 2.0, 3.0];
     let ya = [0.0, 1.0, 2.0, 3.0];
 

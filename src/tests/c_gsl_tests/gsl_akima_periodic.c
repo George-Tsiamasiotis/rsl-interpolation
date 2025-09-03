@@ -1,4 +1,4 @@
-/* Test for Akima interpolation, with f(x) = 1 + x^2
+/* Test for Akima interpolation, with f(x) = cos(2πx)
  * */
 
 #include <gsl/gsl_errno.h>
