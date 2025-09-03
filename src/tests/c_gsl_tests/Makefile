@@ -1,7 +1,7 @@
 CFLAGS = -Wall -I/usr/lib -lm -lgsl -g
 GRAPHFLAGS = -C
 
-all: out plots akima_plot akima_periodic_plot steffen_plot bilinear_plot
+all: out plots akima_plot akima_periodic_plot steffen_plot bilinear_plot bicubic_plot
 
 plots:
 	mkdir plots -v
@@ -52,3 +52,13 @@ bilinear: out
 bilinear_plot: bilinear
 	$(shell ./bilinear_plot.sh)
 	$(info Plot saved at src/tests/plots/bilinear.png)
+
+# ==============================================================
+
+bicubic: out
+	gcc gsl_bicubic.c -o out/bicubic $(CFLAGS)
+	@./out/bicubic > ./out/bicubic.dat
+
+bicubic_plot: bicubic
+	$(shell ./bicubic_plot.sh)
+	$(info Plot saved at src/tests/out/bicubic.png)

@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use crate::Accelerator;
 use crate::DomainError;
 use crate::Interpolation2d;
+use crate::InterpolationError;
 use crate::interp2d::{acc_indeces, partials, xy_grid_indeces, z_grid_indeces};
 use crate::types::utils::check_data;
 use crate::types::utils::check_if_inbounds;
@@ -51,7 +52,7 @@ where
     const NAME: &'static str = "linear";
 
     #[allow(unused_variables)]
-    fn new(xa: &[T], ya: &[T], za: &[T]) -> Result<Self, crate::InterpolationError>
+    fn new(xa: &[T], ya: &[T], za: &[T]) -> Result<Self, InterpolationError>
     where
         Self: Sized,
     {
