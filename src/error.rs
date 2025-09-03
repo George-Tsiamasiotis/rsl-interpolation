@@ -1,3 +1,6 @@
+const DOMAIN_ERROR_MSG: &str =
+    "Supplied value is outside the range of the supplied xdata or ydata.";
+
 #[derive(thiserror::Error, Debug)]
 /// The error type for Interpolator creation and data checking.
 pub enum InterpolationError {
@@ -20,10 +23,14 @@ pub enum InterpolationError {
         #[source]
         source: ndarray_linalg::error::LinalgError,
     },
+
+    /// Supplied value is outside the range of the supplied xdata or ydata.
+    #[error("{DOMAIN_ERROR_MSG}")]
+    DomainError(#[from] DomainError),
 }
 
 #[derive(thiserror::Error, Debug)]
-#[error("Supplied value is outside the range of the supplied xdata or ydata.")]
+#[error("{DOMAIN_ERROR_MSG}")]
 #[non_exhaustive]
 /// Returned  when the supplied value is outside the range of the supplied xdata or ydata.
 pub struct DomainError;

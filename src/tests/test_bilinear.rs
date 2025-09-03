@@ -1,5 +1,5 @@
 use crate::{
-    BiLinear, Interpolation2d,
+    Bilinear, Interpolation2d,
     tests::{XYZTable, test_interp2d, test_interp2d_extra},
 };
 
@@ -33,7 +33,7 @@ fn test_bilinear_symmetric() {
         z: &ztest,
     };
 
-    let interp = BiLinear::new(&xa, &ya, &za).unwrap();
+    let interp = Bilinear::new(&xa, &ya, &za).unwrap();
     test_interp2d(data_table, test_e_table, interp);
 }
 
@@ -75,7 +75,7 @@ fn test_bilinear_asymmetric_z() {
         z: &ztest,
     };
 
-    let interp = BiLinear::new(&xa, &ya, &za).unwrap();
+    let interp = Bilinear::new(&xa, &ya, &za).unwrap();
     test_interp2d(data_table, test_e_table, interp);
 }
 
@@ -181,7 +181,7 @@ fn test_bilinear_extra() {
         z: &dxytest,
     };
 
-    let interp = BiLinear::new(&xa, &ya, &za).unwrap();
+    let interp = Bilinear::new(&xa, &ya, &za).unwrap();
     test_interp2d_extra(
         data_table,
         test_e_table,

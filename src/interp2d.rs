@@ -7,6 +7,38 @@ use crate::{Accelerator, DomainError, InterpolationError};
 /// >
 /// > The `za` array must be defined in **column-major (Fortran)** style. This is done to comply
 /// > with GSL's interface.
+/// >
+/// > # Example
+/// >
+/// > ```
+/// > # use rsl_interpolation::Interpolation2d;
+/// > # use rsl_interpolation::InterpolationError;
+/// > # use rsl_interpolation::Bilinear;
+/// > # use rsl_interpolation::Accelerator;
+/// > #
+/// > # fn main() -> Result<(), InterpolationError>{
+/// > let xa = [0.0, 1.0, 2.0];
+/// > let ya = [0.0, 2.0, 4.0];
+/// > // z = x + y
+/// > let za = [
+/// >     0.0, 1.0, 2.0,
+/// >     2.0, 3.0, 4.0,
+/// >     4.0, 5.0, 6.0,
+/// > ];
+/// > let interp = Bilinear::new(&xa, &ya, &za)?;
+/// > let mut xacc = Accelerator::new();
+/// > let mut yacc = Accelerator::new();
+/// >
+/// > let z = interp.eval(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc)?;
+/// >
+/// > assert_eq!(z, 4.5);
+/// > # Ok(())
+/// > # }
+/// > ```
+///
+/// For 2d interpolation, 2 seperate [`Accelerators`] are required for each of the grid variables.
+///
+/// [`Accelerators`]: struct.Accelerator.html
 #[allow(clippy::too_many_arguments)]
 pub trait Interpolation2d<T>
 where
@@ -21,18 +53,71 @@ where
 
     /// Creates a new 2d Interpolator for the data (`xa`, `ya`, `za`), where `xa` and `ya` are slices of the
     /// x and y grid points and `za` is an array of functions values of `len(xa)*len(ya)`.
+    ///
+    /// > # **Important**
+    /// >
+    /// > The `za` array must be defined in **column-major (Fortran)** style. This is done to comply
+    /// > with GSL's interface.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use rsl_interpolation::Interpolation2d;
+    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::Bilinear;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError>{
+    /// let xa = [0.0, 1.0, 2.0];
+    /// let ya = [0.0, 2.0, 4.0];
+    /// let za = [
+    ///     0.0, 1.0, 2.0,
+    ///     3.0, 4.0, 5.0,
+    ///     6.0, 7.0, 8.0,
+    /// ];
+    /// let interp = Bilinear::new(&xa, &ya, &za)?;
+    /// # Ok(())
+    /// # }
+    /// ```
     #[doc(alias = "gsl_interp2d_init")]
     fn new(xa: &[T], ya: &[T], za: &[T]) -> Result<Self, InterpolationError>
     where
         Self: Sized;
 
     /// Returns the interpolated value of `z` for a given point (`x`, `y`), using the data arrays
-    /// `xa`, `ya`, `za` and the Accelerators `xacc` and `yacc`.
+    /// `xa`, `ya`, `za` and the [`Accelerators`] `xacc` and `yacc`.
     ///
     /// # Note
     ///
-    /// This functions only performes the bounds check, and then calls `eval_extrap()`, where the
+    /// This function only performes the bounds check, and then calls `eval_extrap()`, where the
     /// actual evaluation is implemented.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use rsl_interpolation::Interpolation2d;
+    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::Bilinear;
+    /// # use rsl_interpolation::Accelerator;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError>{
+    /// let xa = [0.0, 1.0, 2.0];
+    /// let ya = [0.0, 2.0, 4.0];
+    /// // z = x + y
+    /// let za = [
+    ///     0.0, 1.0, 2.0,
+    ///     2.0, 3.0, 4.0,
+    ///     4.0, 5.0, 6.0,
+    /// ];
+    /// let interp = Bilinear::new(&xa, &ya, &za)?;
+    /// let mut xacc = Accelerator::new();
+    /// let mut yacc = Accelerator::new();
+    ///
+    /// let z = interp.eval(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc)?;
+    ///
+    /// assert_eq!(z, 4.5);
+    /// # Ok(())
+    /// # }
+    /// ```
     ///
     /// # Errors
     ///
@@ -40,6 +125,7 @@ where
     /// of `ya`.
     ///
     /// [`DomainError`]: struct.DomainError.html
+    /// [`Accelerators`]: struct.Accelerator.html
     #[doc(alias = "gsl_interp2d_eval")]
     #[doc(alias = "gsl_interp2d_eval_e")]
     fn eval(
@@ -60,12 +146,42 @@ where
     }
 
     /// Returns the interpolated value of `z` for a given point (`x`, `y`), using the data arrays
-    /// `xa`, `ya`, `za` and the Accelerators `xacc` and `yacc`.
+    /// `xa`, `ya`, `za` and the [`Accelerators`]` `xacc` and `yacc`.
     ///
     /// # Note
     ///
     /// This function performs *no bound checking*, so when `x` is outside the range of `xa` or y
     /// is outside the range of `ya`, extrapolation is performed.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use rsl_interpolation::Interpolation2d;
+    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::Bilinear;
+    /// # use rsl_interpolation::Accelerator;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError>{
+    /// let xa = [0.0, 1.0, 2.0];
+    /// let ya = [0.0, 2.0, 4.0];
+    /// // z = x + y
+    /// let za = [
+    ///     0.0, 1.0, 2.0,
+    ///     2.0, 3.0, 4.0,
+    ///     4.0, 5.0, 6.0,
+    /// ];
+    /// let interp = Bilinear::new(&xa, &ya, &za)?;
+    /// let mut xacc = Accelerator::new();
+    /// let mut yacc = Accelerator::new();
+    ///
+    /// let z = interp.eval_extrap(&xa, &ya, &za, 3.0, 6.0, &mut xacc, &mut yacc)?;
+    ///
+    /// assert_eq!(z, 9.0);
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// [`Accelerators`]: struct.Accelerator.html
     #[doc(alias = "gsl_interp2d_eval_extrap")]
     #[doc(alias = "gsl_interp2d_eval_extrap_e")]
     fn eval_extrap(
@@ -80,7 +196,35 @@ where
     ) -> Result<T, DomainError>;
 
     /// Returns the interpolated value `d = ∂z/∂x` for a given point (`x`, `y`), using the data arrays
-    /// `xa`, `ya`, `za` and the Accelerators `xacc` and `yacc`.
+    /// `xa`, `ya`, `za` and the [`Accelerators`] `xacc` and `yacc`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use rsl_interpolation::Interpolation2d;
+    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::Bilinear;
+    /// # use rsl_interpolation::Accelerator;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError>{
+    /// let xa = [0.0, 1.0, 2.0];
+    /// let ya = [0.0, 2.0, 4.0];
+    /// // z = x² + y²
+    /// let za = [
+    ///      0.0,  1.0,  4.0,
+    ///      4.0,  5.0,  8.0,
+    ///     16.0, 17.0, 20.0,
+    /// ];
+    /// let interp = Bilinear::new(&xa, &ya, &za)?;
+    /// let mut xacc = Accelerator::new();
+    /// let mut yacc = Accelerator::new();
+    ///
+    /// let dzdx = interp.eval_deriv_x(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc)?;
+    ///
+    /// assert_eq!(dzdx, 3.0);
+    /// # Ok(())
+    /// # }
+    /// ```
     ///
     /// # Errors
     ///
@@ -88,6 +232,7 @@ where
     /// of `ya`.
     ///
     /// [`DomainError`]: struct.DomainError.html
+    /// [`Accelerators`]: struct.Accelerator.html
     #[doc(alias = "gsl_interp2d_eval_deriv_x")]
     #[doc(alias = "gsl_interp2d_eval_deriv_x_e")]
     fn eval_deriv_x(
@@ -102,7 +247,35 @@ where
     ) -> Result<T, DomainError>;
 
     /// Returns the interpolated value `d = ∂z/∂y` for a given point (`x`, `y`), using the data arrays
-    /// `xa`, `ya`, `za` and the Accelerators `xacc` and `yacc`.
+    /// `xa`, `ya`, `za` and the [`Accelerators`] `xacc` and `yacc`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use rsl_interpolation::Interpolation2d;
+    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::Bilinear;
+    /// # use rsl_interpolation::Accelerator;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError>{
+    /// let xa = [0.0, 1.0, 2.0];
+    /// let ya = [0.0, 2.0, 4.0];
+    /// // z = x² + y²
+    /// let za = [
+    ///      0.0,  1.0,  4.0,
+    ///      4.0,  5.0,  8.0,
+    ///     16.0, 17.0, 20.0,
+    /// ];
+    /// let interp = Bilinear::new(&xa, &ya, &za)?;
+    /// let mut xacc = Accelerator::new();
+    /// let mut yacc = Accelerator::new();
+    ///
+    /// let dzdy = interp.eval_deriv_y(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc)?;
+    ///
+    /// assert_eq!(dzdy, 6.0);
+    /// # Ok(())
+    /// # }
+    /// ```
     ///
     /// # Errors
     ///
@@ -110,6 +283,7 @@ where
     /// of `ya`.
     ///
     /// [`DomainError`]: struct.DomainError.html
+    /// [`Accelerators`]: struct.Accelerator.html
     #[doc(alias = "gsl_interp2d_eval_deriv_y")]
     #[doc(alias = "gsl_interp2d_eval_deriv_y_e")]
     fn eval_deriv_y(
@@ -124,7 +298,35 @@ where
     ) -> Result<T, DomainError>;
 
     /// Returns the interpolated value `d = 𝜕²z/𝜕x²` for a given point (`x`, `y`), using the data arrays
-    /// `xa`, `ya`, `za` and the Accelerators `xacc` and `yacc`.
+    /// `xa`, `ya`, `za` and the [`Accelerators`] `xacc` and `yacc`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use rsl_interpolation::Interpolation2d;
+    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::Bilinear;
+    /// # use rsl_interpolation::Accelerator;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError>{
+    /// let xa = [0.0, 1.0, 2.0];
+    /// let ya = [0.0, 2.0, 4.0];
+    /// // z = x² + y²
+    /// let za = [
+    ///      0.0,  1.0,  4.0,
+    ///      4.0,  5.0,  8.0,
+    ///     16.0, 17.0, 20.0,
+    /// ];
+    /// let interp = Bilinear::new(&xa, &ya, &za)?;
+    /// let mut xacc = Accelerator::new();
+    /// let mut yacc = Accelerator::new();
+    ///
+    /// let dzdx2 = interp.eval_deriv_xx(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc)?;
+    ///
+    /// assert_eq!(dzdx2, 0.0); // Linear Interpolation!
+    /// # Ok(())
+    /// # }
+    /// ```
     ///
     /// # Errors
     ///
@@ -132,6 +334,7 @@ where
     /// of `ya`.
     ///
     /// [`DomainError`]: struct.DomainError.html
+    /// [`Accelerators`]: struct.Accelerator.html
     #[doc(alias = "gsl_interp2d_eval_deriv_xx")]
     #[doc(alias = "gsl_interp2d_eval_deriv_xx_e")]
     fn eval_deriv_xx(
@@ -146,7 +349,35 @@ where
     ) -> Result<T, DomainError>;
 
     /// Returns the interpolated value `d = 𝜕²z/𝜕y²` for a given point (`x`, `y`), using the data arrays
-    /// `xa`, `ya`, `za` and the Accelerators `xacc` and `yacc`.
+    /// `xa`, `ya`, `za` and the [`Accelerators`] `xacc` and `yacc`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use rsl_interpolation::Interpolation2d;
+    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::Bilinear;
+    /// # use rsl_interpolation::Accelerator;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError>{
+    /// let xa = [0.0, 1.0, 2.0];
+    /// let ya = [0.0, 2.0, 4.0];
+    /// // z = x² + y²
+    /// let za = [
+    ///      0.0,  1.0,  4.0,
+    ///      4.0,  5.0,  8.0,
+    ///     16.0, 17.0, 20.0,
+    /// ];
+    /// let interp = Bilinear::new(&xa, &ya, &za)?;
+    /// let mut xacc = Accelerator::new();
+    /// let mut yacc = Accelerator::new();
+    ///
+    /// let dzdy2 = interp.eval_deriv_yy(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc)?;
+    ///
+    /// assert_eq!(dzdy2, 0.0); // Linear Interpolation!
+    /// # Ok(())
+    /// # }
+    /// ```
     ///
     /// # Errors
     ///
@@ -154,6 +385,7 @@ where
     /// of `ya`.
     ///
     /// [`DomainError`]: struct.DomainError.html
+    /// [`Accelerators`]: struct.Accelerator.html
     #[doc(alias = "gsl_interp2d_eval_deriv_yy")]
     #[doc(alias = "gsl_interp2d_eval_deriv_yy_e")]
     fn eval_deriv_yy(
@@ -168,7 +400,35 @@ where
     ) -> Result<T, DomainError>;
 
     /// Returns the interpolated value `d = 𝜕²z/𝜕x𝜕y` for a given point (`x`, `y`), using the data arrays
-    /// `xa`, `ya`, `za` and the Accelerators `xacc` and `yacc`.
+    /// `xa`, `ya`, `za` and the [`Accelerators`] `xacc` and `yacc`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use rsl_interpolation::Interpolation2d;
+    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::Bilinear;
+    /// # use rsl_interpolation::Accelerator;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError>{
+    /// let xa = [0.0, 1.0, 2.0];
+    /// let ya = [0.0, 2.0, 4.0];
+    /// // z = x² + y²
+    /// let za = [
+    ///      0.0,  1.0,  4.0,
+    ///      4.0,  5.0,  8.0,
+    ///     16.0, 17.0, 20.0,
+    /// ];
+    /// let interp = Bilinear::new(&xa, &ya, &za)?;
+    /// let mut xacc = Accelerator::new();
+    /// let mut yacc = Accelerator::new();
+    ///
+    /// let dzdxy = interp.eval_deriv_xy(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc)?;
+    ///
+    /// assert_eq!(dzdxy, 0.0); // Linear Interpolation!
+    /// # Ok(())
+    /// # }
+    /// ```
     ///
     /// # Errors
     ///
@@ -176,6 +436,7 @@ where
     /// of `ya`.
     ///
     /// [`DomainError`]: struct.DomainError.html
+    /// [`Accelerators`]: struct.Accelerator.html
     #[doc(alias = "gsl_interp2d_eval_deriv_xy")]
     #[doc(alias = "gsl_interp2d_eval_deriv_xy_e")]
     fn eval_deriv_xy(

@@ -16,22 +16,22 @@ use crate::types::utils::check_if_inbounds;
 /// ```
 /// # use rsl_interpolation::Interpolation2d;
 /// # use rsl_interpolation::InterpolationError;
-/// # use rsl_interpolation::BiLinear;
+/// # use rsl_interpolation::Bilinear;
 /// # use rsl_interpolation::Accelerator;
 /// #
 /// # fn main() -> Result<(), InterpolationError>{
 /// let xa = [0.0, 1.0, 2.0];
 /// let ya = [0.0, 2.0, 4.0];
 /// let za = [0.0, 4.0, 8.0];
-/// let interp = BiLinear::new(&xa, &ya, &za)?;
+/// let interp = Bilinear::new(&xa, &ya, &za)?;
 /// # Ok(())
 /// # }
 /// ```
-pub struct BiLinear<T> {
+pub struct Bilinear<T> {
     _variable_type: PhantomData<T>,
 }
 
-impl<T> Interpolation2d<T> for BiLinear<T>
+impl<T> Interpolation2d<T> for Bilinear<T>
 where
     T: num::Float + std::fmt::Debug,
 {

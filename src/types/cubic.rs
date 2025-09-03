@@ -19,13 +19,12 @@ use crate::types::utils::{check_data, check_if_inbounds, diff};
 /// interval, with matching first and second derivatives at the supplied data-points. The second
 /// derivative is chosen to be zero at the first and last point.
 ///
-/// ## Example
+/// # Example
 ///
 /// ```
 /// # use rsl_interpolation::Interpolation;
 /// # use rsl_interpolation::InterpolationError;
 /// # use rsl_interpolation::Cubic;
-/// # use rsl_interpolation::Accelerator;
 /// #
 /// # fn main() -> Result<(), InterpolationError>{
 /// let xa = [0.0, 1.0, 2.0];
@@ -305,7 +304,7 @@ where
                     Ok(coeffs) => coeffs,
                     Err(err) => {
                         return Err(InterpolationError::BLASTridiagError {
-                            which_interp: "Cubic".into(),
+                            which_interp: "Cubic Periodic".into(),
                             source: err,
                         });
                     }
