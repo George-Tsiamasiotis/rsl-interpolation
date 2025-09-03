@@ -131,8 +131,8 @@ mod test {
     #[test]
     fn test_debug_trait() {
         let acc = Accelerator::new();
-        let _ = format!("{:?}", acc);
-        let _ = format!("{:#?}", acc);
+        let _ = format!("{acc:?}");
+        let _ = format!("{acc:#?}");
     }
 
     #[test]

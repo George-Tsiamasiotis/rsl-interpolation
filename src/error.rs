@@ -8,7 +8,7 @@ pub enum InterpolationError {
     #[error("x values must be strictly increasing.")]
     UnsortedDataset,
 
-    /// x and y datasets have differnet length.
+    /// x and y datasets have different length.
     #[error("Supplied datasets must be 1D and of equal length.")]
     DatasetMismatch,
 

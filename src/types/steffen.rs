@@ -5,7 +5,7 @@ use std::fmt::Debug;
 use crate::Accelerator;
 use crate::DomainError;
 use crate::Interpolation;
-use crate::types::utils::{check_data, check_if_inbounds};
+use crate::types::utils::{check_if_inbounds, check1d_data};
 
 /// Steffen Spline.
 ///
@@ -53,7 +53,7 @@ where
     where
         Self: Sized,
     {
-        check_data(xa, ya, Self::MIN_SIZE)?;
+        check1d_data(xa, ya, Self::MIN_SIZE)?;
         let size = xa.len();
 
         // First assign the interval and slopes for the left boundary. We use the "simplest

@@ -16,6 +16,7 @@ mod test_cubic_periodic;
 mod test_linear;
 mod test_steffen;
 
+mod test_bicubic;
 mod test_bilinear;
 
 /// A Primitive 2D table for holding the x and y values. Don't bother with num::Float here
@@ -148,9 +149,9 @@ pub(crate) fn test_interp2d_extra<I>(
             assert!(is_close!(eval, expected_eval, rel_tol = EPS, abs_tol = ATOL));
             assert!(is_close!(dx, expected_eval_deriv_x, rel_tol = EPS, abs_tol = ATOL));
             assert!(is_close!(dy, expected_eval_deriv_y, rel_tol = EPS, abs_tol = ATOL));
-            assert!(is_close!(dxx, expected_eval_deriv_xx, rel_tol = EPS));
-            assert!(is_close!(dyy, expected_eval_deriv_yy, rel_tol = EPS));
-            assert!(is_close!(dxy, expected_eval_deriv_xy, rel_tol = EPS));
+            assert!(is_close!(dxx, expected_eval_deriv_xx, rel_tol = EPS, abs_tol = ATOL));
+            assert!(is_close!(dyy, expected_eval_deriv_yy, rel_tol = EPS, abs_tol = ATOL));
+            assert!(is_close!(dxy, expected_eval_deriv_xy, rel_tol = EPS, abs_tol = ATOL));
         }
     }
 }

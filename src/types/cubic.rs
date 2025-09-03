@@ -11,7 +11,7 @@ use crate::DomainError;
 use crate::Interpolation;
 use crate::InterpolationError;
 use crate::types::utils::integ_eval;
-use crate::types::utils::{check_data, check_if_inbounds, diff};
+use crate::types::utils::{check_if_inbounds, check1d_data, diff};
 
 /// Cubic Spline.
 ///
@@ -60,7 +60,7 @@ where
     where
         Self: Sized,
     {
-        check_data(xa, ya, Self::MIN_SIZE)?;
+        check1d_data(xa, ya, Self::MIN_SIZE)?;
 
         // Engeln-Mullges G. - Uhlig F.: Algorithm 10.1, pg 254
         let sys_size = xa.len() - 2;
@@ -218,7 +218,7 @@ where
     where
         Self: Sized,
     {
-        check_data(xa, ya, Self::MIN_SIZE)?;
+        check1d_data(xa, ya, Self::MIN_SIZE)?;
 
         // Engeln-Mullges G. - Uhlig F.: Algorithm 10.2, pg 255
         let sys_size = xa.len() - 1;

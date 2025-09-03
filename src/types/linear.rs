@@ -7,8 +7,8 @@ use crate::Accelerator;
 use crate::Interpolation;
 use crate::{DomainError, InterpolationError};
 
-use crate::types::utils::check_data;
 use crate::types::utils::check_if_inbounds;
+use crate::types::utils::check1d_data;
 
 /// Linear interpolation.
 ///
@@ -41,7 +41,7 @@ where
     const NAME: &'static str = "linear";
 
     fn new(xa: &[T], ya: &[T]) -> Result<Self, InterpolationError> {
-        check_data(xa, ya, Self::MIN_SIZE)?;
+        check1d_data(xa, ya, Self::MIN_SIZE)?;
         Ok(Self {
             _variable_type: PhantomData,
         })

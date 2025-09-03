@@ -25,8 +25,8 @@ All of GSL's tests have been transferred in this crate.
 Additionally, some extra tests have been added, with data computed directly from GSL, to cover untested 
 cases. These are located in `src/tests/*.c`. Their output can be saved and graphed with the GNU plotutils `graph` program.
 
-GSL must be installed.
-
+`GSL` must be installed.
+For the plots to work, `gnuplot` must be installed.
 
 Example
 ```bash

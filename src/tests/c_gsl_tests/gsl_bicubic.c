@@ -1,4 +1,8 @@
-#include <math.h>
+/*
+ * Test for bicubic interpolator, including all the derivatives and iteration
+ * over all (x, y) pairs.
+ * */
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -8,55 +12,42 @@
 
 int main() {
   const gsl_interp2d_type *T = gsl_interp2d_bicubic;
-  const size_t N = 100; /* number of points to interpolate */
-  const double xa[] = {
-      0.,  0.025, 0.05, 0.075, 0.1, 0.125, 0.15, 0.175, 0.2, 0.225, 0.25, 0.275,
-      0.3, 0.325, 0.35, 0.375, 0.4, 0.425, 0.45, 0.475, 0.5, 0.525, 0.55, 0.575,
-      0.6, 0.625, 0.65, 0.675, 0.7, 0.725, 0.75, 0.775, 0.8, 0.825, 0.85, 0.875,
-      0.9, 0.925, 0.95, 0.975, 1.};
-  const double ya[] = {
-      0.,  0.025, 0.05, 0.075, 0.1, 0.125, 0.15, 0.175, 0.2, 0.225, 0.25, 0.275,
-      0.3, 0.325, 0.35, 0.375, 0.4, 0.425, 0.45, 0.475, 0.5, 0.525, 0.55, 0.575,
-      0.6, 0.625, 0.65, 0.675, 0.7, 0.725, 0.75, 0.775, 0.8, 0.825, 0.85, 0.875,
-      0.9, 0.925, 0.95, 0.975, 1.};
+  const size_t N = 9; /* number of points to interpolate */
+  double xa[] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0};
+  double ya[] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0};
+  /* least common multiple of x and y */
+  double za[] = {1, 2,  3,  4,  5,  6,  7,  8,  2, 2, 6,  4,  10, 6,  14, 8,
+                 3, 6,  3,  12, 15, 6,  21, 24, 4, 4, 12, 4,  20, 12, 28, 8,
+                 5, 10, 15, 20, 5,  30, 35, 40, 6, 6, 6,  12, 30, 6,  42, 24,
+                 7, 14, 21, 28, 35, 42, 7,  56, 8, 8, 24, 8,  40, 24, 56, 8};
+
   const size_t nx = sizeof(xa) / sizeof(double); /* x grid points */
   const size_t ny = sizeof(ya) / sizeof(double); /* y grid points */
-  double *za = malloc(nx * ny * sizeof(double));
   gsl_spline2d *spline = gsl_spline2d_alloc(T, nx, ny);
   gsl_interp_accel *xacc = gsl_interp_accel_alloc();
   gsl_interp_accel *yacc = gsl_interp_accel_alloc();
   size_t i = 0;
   size_t j = 0;
-  double x, y;
-
-  /* set z grid values */
-
-  for (i = 0; i < nx; i++) {
-    for (j = 0; j < ny; j++) {
-      x = xa[i];
-      y = ya[j];
-      double z = cos(x) * sin(x * y);
-      gsl_spline2d_set(spline, za, i, j, z);
-    }
-  }
 
   /* initialize interpolation */
   gsl_spline2d_init(spline, xa, ya, za, nx, ny);
 
   /* interpolate N values in x and y and print out grid for plotting */
   for (i = 0; i < N; ++i) {
-    double xi = i / (N - 1.0);
+    double xi = xa[0] + i * (xa[nx - 1] - xa[0]) / (N - 1);
 
     for (j = 0; j < N; ++j) {
-      double yj = j / (N - 1.0);
+      double yj = ya[0] + j * (ya[ny - 1] - ya[0]) / (N - 1);
       double z = gsl_spline2d_eval(spline, xi, yj, xacc, yacc);
-      double zx = gsl_spline2d_eval_deriv_x(spline, xi, yj, xacc, yacc);
-      double zy = gsl_spline2d_eval_deriv_x(spline, xi, yj, xacc, yacc);
-      double zxx = gsl_spline2d_eval_deriv_xx(spline, xi, yj, xacc, yacc);
-      double zyy = gsl_spline2d_eval_deriv_yy(spline, xi, yj, xacc, yacc);
-      double zxy = gsl_spline2d_eval_deriv_xy(spline, xi, yj, xacc, yacc);
+      double dx = gsl_spline2d_eval_deriv_x(spline, xi, yj, xacc, yacc);
+      double dy = gsl_spline2d_eval_deriv_y(spline, xi, yj, xacc, yacc);
+      double dxx = gsl_spline2d_eval_deriv_xx(spline, xi, yj, xacc, yacc);
+      double dyy = gsl_spline2d_eval_deriv_yy(spline, xi, yj, xacc, yacc);
+      double dxy = gsl_spline2d_eval_deriv_xy(spline, xi, yj, xacc, yacc);
 
-      printf("%f %f %f %f %f %f %f %f\n", xi, yj, z, zx, zy, zxx, zyy, zxy);
+      printf("%.15f          %.15f          %.15f          %.15f          "
+             "%.15f          %.15f          %.15f         %.15f\n",
+             xi, yj, z, dx, dy, dxx, dyy, dxy);
     }
     printf("\n");
   }
@@ -64,7 +55,6 @@ int main() {
   gsl_spline2d_free(spline);
   gsl_interp_accel_free(xacc);
   gsl_interp_accel_free(yacc);
-  free(za);
 
   return 0;
 }

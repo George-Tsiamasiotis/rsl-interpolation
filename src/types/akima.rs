@@ -7,7 +7,7 @@ use crate::Accelerator;
 use crate::DomainError;
 use crate::Interpolation;
 use crate::types::utils::integ_eval;
-use crate::types::utils::{check_data, check_if_inbounds};
+use crate::types::utils::{check_if_inbounds, check1d_data};
 
 /// Akima Spline.
 ///
@@ -51,7 +51,7 @@ where
     where
         Self: Sized,
     {
-        check_data(xa, ya, Self::MIN_SIZE)?;
+        check1d_data(xa, ya, Self::MIN_SIZE)?;
 
         let size = xa.len();
         let two = T::from(2.0).unwrap();
@@ -158,7 +158,7 @@ where
     where
         Self: Sized,
     {
-        check_data(xa, ya, Self::MIN_SIZE)?;
+        check1d_data(xa, ya, Self::MIN_SIZE)?;
 
         let size = xa.len();
 

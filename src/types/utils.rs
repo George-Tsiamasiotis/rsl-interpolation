@@ -1,7 +1,7 @@
 use crate::{DomainError, InterpolationError};
 
 /// Checks that supplied datasets are valid.
-pub(crate) fn check_data<T>(xa: &[T], ya: &[T], min_size: usize) -> Result<(), InterpolationError>
+pub(crate) fn check1d_data<T>(xa: &[T], ya: &[T], min_size: usize) -> Result<(), InterpolationError>
 where
     T: num::Float,
 {
@@ -17,11 +17,22 @@ where
     Ok(())
 }
 
-/// Checks that the passed za grid has the correct number of points
-pub(crate) fn check_zgrid_size<T>(xa: &[T], ya: &[T], za: &[T]) -> Result<(), InterpolationError>
+/// Checks that the passed xa, ya and za datasets are valid.
+pub(crate) fn check2d_data<T>(
+    xa: &[T],
+    ya: &[T],
+    za: &[T],
+    min_size: usize,
+) -> Result<(), InterpolationError>
 where
     T: num::Float,
 {
+    if (!xa.iter().is_sorted()) | (!ya.iter().is_sorted()) {
+        return Err(InterpolationError::UnsortedDataset);
+    }
+    if (xa.len() < min_size) | (ya.len() < min_size) {
+        return Err(InterpolationError::NotEnoughPoints);
+    }
     if xa.len() * ya.len() != za.len() {
         Err(InterpolationError::ZGridMismatch)
     } else {
@@ -83,21 +94,21 @@ mod test {
         let ya = [0.0, 1.0, 2.0];
 
         let xa = [0.0, 1.0, 2.0];
-        assert!(check_data(&xa, &ya, 2).is_ok());
+        assert!(check1d_data(&xa, &ya, 2).is_ok());
         assert!(matches!(
-            check_data(&xa, &ya, 4).unwrap_err(),
+            check1d_data(&xa, &ya, 4).unwrap_err(),
             InterpolationError::NotEnoughPoints
         ));
 
         let xa = [2.0, 1.0, 2.0];
         assert!(matches!(
-            check_data(&xa, &ya, 2).unwrap_err(),
+            check1d_data(&xa, &ya, 2).unwrap_err(),
             InterpolationError::UnsortedDataset
         ));
 
         let xa = [0.0, 1.0, 2.0, 3.0];
         assert!(matches!(
-            check_data(&xa, &ya, 2).unwrap_err(),
+            check1d_data(&xa, &ya, 2).unwrap_err(),
             InterpolationError::DatasetMismatch
         ));
     }

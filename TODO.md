@@ -25,9 +25,9 @@
 - [ ] 2D Interpolation
 	- [x] Instantiation [`gsl_interp2d_alloc()`, `gsl_interp2d_init()`, `gsl_interp2d_free()`]
 	- [x] 2D Interpolation Grids [`gsl_interp2d_set`, `gsl_interp2d_get()`, `gsl_interp2d_idx`]
-	- [ ] 1D Interpolation types [`gsl_interp2d_type`]
+	- [x] 2D Interpolation types [`gsl_interp2d_type`]
 		- [x] Bilinear [`gsl_interp2d_bilinear`]
-		- [ ] Bicubic [`gsl_interp2d_bicubic`]
+		- [x] Bicubic [`gsl_interp2d_bicubic`]
 	- [x] Utility functions
 		- [x] Name [`gsl_interp2d_name()`]
 		- [x] Minimum number of points [`gsl_interp2d_min_size()` and `gsl_interp2d_type_min_size()`]

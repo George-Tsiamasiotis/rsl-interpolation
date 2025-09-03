@@ -5,9 +5,8 @@ use crate::DomainError;
 use crate::Interpolation2d;
 use crate::InterpolationError;
 use crate::interp2d::{acc_indeces, partials, xy_grid_indeces, z_grid_indeces};
-use crate::types::utils::check_data;
 use crate::types::utils::check_if_inbounds;
-use crate::types::utils::check_zgrid_size;
+use crate::types::utils::check2d_data;
 
 /// BiLinear Interpolation
 ///
@@ -40,6 +39,7 @@ use crate::types::utils::check_zgrid_size;
 /// # Ok(())
 /// # }
 /// ```
+#[doc(alias = "gsl_interp2d_bilinear")]
 pub struct Bilinear<T> {
     _variable_type: PhantomData<T>,
 }
@@ -56,8 +56,7 @@ where
     where
         Self: Sized,
     {
-        check_data(xa, ya, Self::MIN_SIZE)?;
-        check_zgrid_size(xa, ya, za)?;
+        check2d_data(xa, ya, za, Self::MIN_SIZE)?;
 
         Ok(Self {
             _variable_type: PhantomData,

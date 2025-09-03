@@ -5,22 +5,9 @@ use crate::Interpolation;
 use crate::Interpolation2d;
 use crate::InterpolationError;
 use crate::interp2d::{acc_indeces, partials, xy_grid_indeces, z_grid_indeces};
-use crate::types::utils::check_data;
 use crate::types::utils::check_if_inbounds;
-use crate::types::utils::check_zgrid_size;
+use crate::types::utils::check2d_data;
 use crate::z_idx;
-
-#[allow(dead_code)]
-pub struct Bicubic<T>
-where
-    T: num::Float + std::fmt::Debug,
-{
-    zx: Vec<T>,
-    zy: Vec<T>,
-    zxy: Vec<T>,
-    xsize: usize,
-    ysize: usize,
-}
 
 /// Bicubic Interpolation
 ///
@@ -52,7 +39,19 @@ where
 /// # Ok(())
 /// # }
 /// ```
-///
+#[allow(dead_code)]
+#[doc(alias = "gsl_interp2d_bicubic")]
+pub struct Bicubic<T>
+where
+    T: num::Float + std::fmt::Debug,
+{
+    pub(crate) zx: Vec<T>,
+    pub(crate) zy: Vec<T>,
+    pub(crate) zxy: Vec<T>,
+    pub(crate) xsize: usize,
+    pub(crate) ysize: usize,
+}
+
 impl<T> Interpolation2d<T> for Bicubic<T>
 where
     T: num::Float + std::fmt::Debug + ndarray_linalg::Lapack,
@@ -64,8 +63,7 @@ where
     where
         Self: Sized,
     {
-        check_data(xa, ya, Self::MIN_SIZE)?;
-        check_zgrid_size(xa, ya, za)?;
+        check2d_data(xa, ya, za, Self::MIN_SIZE)?;
 
         let xsize = xa.len();
         let ysize = ya.len();
@@ -81,6 +79,7 @@ where
         let mut x: Vec<T> = vec![T::nan(); xsize];
         let mut y: Vec<T> = vec![T::nan(); xsize];
 
+        #[allow(clippy::needless_range_loop)] // Much cleaner this way
         for j in 0..ysize {
             for i in 0..xsize {
                 x[i] = xa[i];
@@ -92,12 +91,12 @@ where
                 zx[index] = interp.eval_deriv(&x, &y, xa[i], &mut acc)?;
             }
         }
-
         acc.reset(); // Is this necessary?
 
         let mut x: Vec<T> = vec![T::nan(); ysize];
         let mut y: Vec<T> = vec![T::nan(); ysize];
 
+        #[allow(clippy::needless_range_loop)] // Much cleaner this way
         for i in 0..xsize {
             for j in 0..ysize {
                 x[j] = ya[j];
@@ -106,19 +105,19 @@ where
             interp = Cubic::new(&x, &y)?;
             for j in 0..ysize {
                 let index = z_idx(i, j, xsize, ysize)?;
-                zy[index] = interp.eval_deriv(&x, &y, ya[i], &mut acc)?;
+                zy[index] = interp.eval_deriv(&x, &y, ya[j], &mut acc)?;
             }
         }
-
         acc.reset();
 
         let mut x: Vec<T> = vec![T::nan(); xsize];
         let mut y: Vec<T> = vec![T::nan(); xsize];
 
+        #[allow(clippy::needless_range_loop)] // Much cleaner this way
         for j in 0..ysize {
             for i in 0..xsize {
                 x[i] = xa[i];
-                y[i] = za[z_idx(i, j, xsize, ysize)?];
+                y[i] = zy[z_idx(i, j, xsize, ysize)?];
             }
             interp = Cubic::new(&x, &y)?;
             for i in 0..xsize {
@@ -138,7 +137,6 @@ where
         Ok(bicubic)
     }
 
-    #[allow(unused_variables)]
     fn eval_extrap(
         &self,
         xa: &[T],
@@ -149,8 +147,6 @@ where
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
     ) -> Result<T, DomainError> {
-        check_if_inbounds(xa, x)?;
-        check_if_inbounds(ya, y)?;
         let (xi, yi) = acc_indeces(xa, ya, x, y, xacc, yacc);
         let (xlo, xhi, ylo, yhi) = xy_grid_indeces(xa, ya, xi, yi);
         let (zminmin, zminmax, zmaxmin, zmaxmax) = z_grid_indeces(za, xa.len(), ya.len(), xi, yi)?;
@@ -185,90 +181,57 @@ where
         let mut z = T::zero(); // Result
 
         let v = zminmin;
-        z = z + v * t0 * u0;
+        z += v * t0 * u0;
         let v = zyminmin;
-        z = z + v * t0 * u1;
+        z += v * t0 * u1;
         let v = -three * zminmin + three * zminmax - two * zyminmin - zyminmax;
-        z = z + v * t0 * u2;
+        z += v * t0 * u2;
         let v = two * zminmin - two * zminmax + zyminmin + zyminmax;
-        z = z + v * t0 * u3;
+        z += v * t0 * u3;
         let v = zxminmin;
-        z = z + v * t1 * u0;
+        z += v * t1 * u0;
         let v = zxyminmin;
-        z = z + v * t1 * u1;
+        z += v * t1 * u1;
         let v = -three * zxminmin + three * zxminmax - two * zxyminmin - zxyminmax;
-        z = z + v * t1 * u2;
+        z += v * t1 * u2;
         let v = two * zxminmin - two * zxminmax + zxyminmin + zxyminmax;
-        z = z + v * t1 * u3;
+        z += v * t1 * u3;
         let v = -three * zminmin + three * zmaxmin - two * zxminmin - zxmaxmin;
-        z = z + v * t2 * u0;
+        z += v * t2 * u0;
         let v = -three * zyminmin + three * zymaxmin - two * zxyminmin - zxymaxmin;
-        z = z + v * t2 * u1;
+        z += v * t2 * u1;
+        #[rustfmt::skip]
         let v = nine * zminmin - nine * zmaxmin + nine * zmaxmax - nine * zminmax
-            + six * zxminmin
-            + three * zxmaxmin
-            - three * zxmaxmax
-            - six * zxminmax
-            + six * zyminmin
-            - six * zymaxmin
-            - three * zymaxmax
-            + three * zyminmax
-            + four * zxyminmin
-            + two * zxymaxmin
-            + zxymaxmax
-            + two * zxyminmax;
-        z = z + v * t2 * u2;
+            + six * zxminmin + three * zxmaxmin - three * zxmaxmax - six * zxminmax
+            + six * zyminmin - six * zymaxmin - three * zymaxmax + three * zyminmax
+            + four * zxyminmin + two * zxymaxmin + zxymaxmax + two * zxyminmax;
+        z += v * t2 * u2;
+        #[rustfmt::skip]
         let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - four * zxminmin
-            - two * zxmaxmin
-            + two * zxmaxmax
-            + four * zxminmax
-            - three * zyminmin
-            + three * zymaxmin
-            + three * zymaxmax
-            - three * zyminmax
-            - two * zxyminmin
-            - zxymaxmin
-            - zxymaxmax
-            - two * zxyminmax;
-        z = z + v * t2 * u3;
+            - four * zxminmin - two * zxmaxmin + two * zxmaxmax + four * zxminmax
+            - three * zyminmin + three * zymaxmin + three * zymaxmax - three * zyminmax
+            - two * zxyminmin - zxymaxmin - zxymaxmax - two * zxyminmax;
+        z += v * t2 * u3;
         let v = two * zminmin - two * zmaxmin + zxminmin + zxmaxmin;
-        z = z + v * t3 * u0;
+        z += v * t3 * u0;
         let v = two * zyminmin - two * zymaxmin + zxyminmin + zxymaxmin;
-        z = z + v * t3 * u1;
+        z += v * t3 * u1;
+        #[rustfmt::skip]
         let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - three * zxminmin
-            - three * zxmaxmin
-            + three * zxmaxmax
-            + three * zxminmax
-            - four * zyminmin
-            + four * zymaxmin
-            + two * zymaxmax
-            - two * zyminmax
-            - two * zxyminmin
-            - two * zxymaxmin
-            - zxymaxmax
-            - zxyminmax;
-        z = z + v * t3 * u2;
+            - three * zxminmin - three * zxmaxmin + three * zxmaxmax + three * zxminmax
+            - four * zyminmin + four * zymaxmin + two * zymaxmax - two * zyminmax
+            - two * zxyminmin - two * zxymaxmin - zxymaxmax - zxyminmax;
+        z += v * t3 * u2;
+        #[rustfmt::skip]
         let v = four * zminmin - four * zmaxmin + four * zmaxmax - four * zminmax
-            + two * zxminmin
-            + two * zxmaxmin
-            - two * zxmaxmax
-            - two * zxminmax
-            + two * zyminmin
-            - two * zymaxmin
-            - two * zymaxmax
-            + two * zyminmax
-            + zxyminmin
-            + zxymaxmin
-            + zxymaxmax
-            + zxyminmax;
-        z = z + v * t3 * u3;
+            + two * zxminmin + two * zxmaxmin - two * zxmaxmax - two * zxminmax
+            + two * zyminmin - two * zymaxmin - two * zymaxmax + two * zyminmax
+            + zxyminmin + zxymaxmin + zxymaxmax + zxyminmax;
+        z += v * t3 * u3;
 
         Ok(z)
     }
 
-    #[allow(unused_variables)]
     fn eval_deriv_x(
         &self,
         xa: &[T],
@@ -314,83 +277,50 @@ where
         let mut d = T::zero(); // Result
 
         let v = zxminmin;
-        d = d + v * t0 * u0;
+        d += v * t0 * u0;
         let v = zxyminmin;
-        d = d + v * t0 * u1;
+        d += v * t0 * u1;
         let v = -three * zxminmin + three * zxminmax - two * zxyminmin - zxyminmax;
-        d = d + v * t0 * u2;
+        d += v * t0 * u2;
         let v = two * zxminmin - two * zxminmax + zxyminmin + zxyminmax;
-        d = d + v * t0 * u3;
+        d += v * t0 * u3;
         let v = -three * zminmin + three * zmaxmin - two * zxminmin - zxmaxmin;
-        d = d + two * v * t1 * u0;
+        d += two * v * t1 * u0;
         let v = -three * zyminmin + three * zymaxmin - two * zxyminmin - zxymaxmin;
-        d = d + two * v * t1 * u1;
+        d += two * v * t1 * u1;
+        #[rustfmt::skip]
         let v = nine * zminmin - nine * zmaxmin + nine * zmaxmax - nine * zminmax
-            + six * zxminmin
-            + three * zxmaxmin
-            - three * zxmaxmax
-            - six * zxminmax
-            + six * zyminmin
-            - six * zymaxmin
-            - three * zymaxmax
-            + three * zyminmax
-            + four * zxyminmin
-            + two * zxymaxmin
-            + zxymaxmax
-            + two * zxyminmax;
-        d = d + two * v * t1 * u2;
+            + six * zxminmin + three * zxmaxmin - three * zxmaxmax - six * zxminmax
+            + six * zyminmin - six * zymaxmin - three * zymaxmax + three * zyminmax
+            + four * zxyminmin + two * zxymaxmin + zxymaxmax + two * zxyminmax;
+        d += two * v * t1 * u2;
+        #[rustfmt::skip]
         let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - four * zxminmin
-            - two * zxmaxmin
-            + two * zxmaxmax
-            + four * zxminmax
-            - three * zyminmin
-            + three * zymaxmin
-            + three * zymaxmax
-            - three * zyminmax
-            - two * zxyminmin
-            - zxymaxmin
-            - zxymaxmax
-            - two * zxyminmax;
-        d = d + two * v * t1 * u3;
+            - four * zxminmin - two * zxmaxmin + two * zxmaxmax + four * zxminmax
+            - three * zyminmin + three * zymaxmin + three * zymaxmax - three * zyminmax
+            - two * zxyminmin - zxymaxmin - zxymaxmax - two * zxyminmax;
+        d += two * v * t1 * u3;
         let v = two * zminmin - two * zmaxmin + zxminmin + zxmaxmin;
-        d = d + three * v * t2 * u0;
+        d += three * v * t2 * u0;
         let v = two * zyminmin - two * zymaxmin + zxyminmin + zxymaxmin;
-        d = d + three * v * t2 * u1;
+        d += three * v * t2 * u1;
+        #[rustfmt::skip]
         let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - three * zxminmin
-            - three * zxmaxmin
-            + three * zxmaxmax
-            + three * zxminmax
-            - four * zyminmin
-            + four * zymaxmin
-            + two * zymaxmax
-            - two * zyminmax
-            - two * zxyminmin
-            - two * zxymaxmin
-            - zxymaxmax
-            - zxyminmax;
-        d = d + three * v * t2 * u2;
+            - three * zxminmin - three * zxmaxmin + three * zxmaxmax + three * zxminmax
+            - four * zyminmin + four * zymaxmin + two * zymaxmax - two * zyminmax
+            - two * zxyminmin - two * zxymaxmin - zxymaxmax - zxyminmax;
+        d += three * v * t2 * u2;
+        #[rustfmt::skip]
         let v = four * zminmin - four * zmaxmin + four * zmaxmax - four * zminmax
-            + two * zxminmin
-            + two * zxmaxmin
-            - two * zxmaxmax
-            - two * zxminmax
-            + two * zyminmin
-            - two * zymaxmin
-            - two * zymaxmax
-            + two * zyminmax
-            + zxyminmin
-            + zxymaxmin
-            + zxymaxmax
-            + zxyminmax;
-        d = d + three * v * t2 * u3;
-        d = d * dt;
+            + two * zxminmin + two * zxmaxmin - two * zxmaxmax - two * zxminmax
+            + two * zyminmin - two * zymaxmin - two * zymaxmax + two * zyminmax
+            + zxyminmin + zxymaxmin + zxymaxmax + zxyminmax;
+        d += three * v * t2 * u3;
+        d *= dt;
 
         Ok(d)
     }
 
-    #[allow(unused_variables)]
     fn eval_deriv_y(
         &self,
         xa: &[T],
@@ -436,83 +366,50 @@ where
         let mut d = T::zero(); // Result
 
         let v = zyminmin;
-        d = d + v * t0 * u0;
+        d += v * t0 * u0;
         let v = -three * zminmin + three * zminmax - two * zyminmin - zyminmax;
-        d = d + two * v * t0 * u1;
+        d += two * v * t0 * u1;
         let v = two * zminmin - two * zminmax + zyminmin + zyminmax;
-        d = d + three * v * t0 * u2;
+        d += three * v * t0 * u2;
         let v = zxyminmin;
-        d = d + v * t1 * u0;
+        d += v * t1 * u0;
         let v = -three * zxminmin + three * zxminmax - two * zxyminmin - zxyminmax;
-        d = d + two * v * t1 * u1;
+        d += two * v * t1 * u1;
         let v = two * zxminmin - two * zxminmax + zxyminmin + zxyminmax;
-        d = d + three * v * t1 * u2;
+        d += three * v * t1 * u2;
         let v = -three * zyminmin + three * zymaxmin - two * zxyminmin - zxymaxmin;
-        d = d + v * t2 * u0;
+        d += v * t2 * u0;
+        #[rustfmt::skip]
         let v = nine * zminmin - nine * zmaxmin + nine * zmaxmax - nine * zminmax
-            + six * zxminmin
-            + three * zxmaxmin
-            - three * zxmaxmax
-            - six * zxminmax
-            + six * zyminmin
-            - six * zymaxmin
-            - three * zymaxmax
-            + three * zyminmax
-            + four * zxyminmin
-            + two * zxymaxmin
-            + zxymaxmax
-            + two * zxyminmax;
-        d = d + two * v * t2 * u1;
+            + six * zxminmin + three * zxmaxmin - three * zxmaxmax - six * zxminmax
+            + six * zyminmin - six * zymaxmin - three * zymaxmax + three * zyminmax
+            + four * zxyminmin + two * zxymaxmin + zxymaxmax + two * zxyminmax;
+        d += two * v * t2 * u1;
+        #[rustfmt::skip]
         let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - four * zxminmin
-            - two * zxmaxmin
-            + two * zxmaxmax
-            + four * zxminmax
-            - three * zyminmin
-            + three * zymaxmin
-            + three * zymaxmax
-            - three * zyminmax
-            - two * zxyminmin
-            - zxymaxmin
-            - zxymaxmax
-            - two * zxyminmax;
-        d = d + three * v * t2 * u2;
+            - four * zxminmin - two * zxmaxmin + two * zxmaxmax + four * zxminmax
+            - three * zyminmin + three * zymaxmin + three * zymaxmax - three * zyminmax
+            - two * zxyminmin - zxymaxmin - zxymaxmax - two * zxyminmax;
+        d += three * v * t2 * u2;
         let v = two * zyminmin - two * zymaxmin + zxyminmin + zxymaxmin;
-        d = d + v * t3 * u0;
+        d += v * t3 * u0;
+        #[rustfmt::skip]
         let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - three * zxminmin
-            - three * zxmaxmin
-            + three * zxmaxmax
-            + three * zxminmax
-            - four * zyminmin
-            + four * zymaxmin
-            + two * zymaxmax
-            - two * zyminmax
-            - two * zxyminmin
-            - two * zxymaxmin
-            - zxymaxmax
-            - zxyminmax;
-        d = d + two * v * t3 * u1;
+            - three * zxminmin - three * zxmaxmin + three * zxmaxmax + three * zxminmax
+            - four * zyminmin + four * zymaxmin + two * zymaxmax - two * zyminmax
+            - two * zxyminmin - two * zxymaxmin - zxymaxmax - zxyminmax;
+        d += two * v * t3 * u1;
+        #[rustfmt::skip]
         let v = four * zminmin - four * zmaxmin + four * zmaxmax - four * zminmax
-            + two * zxminmin
-            + two * zxmaxmin
-            - two * zxmaxmax
-            - two * zxminmax
-            + two * zyminmin
-            - two * zymaxmin
-            - two * zymaxmax
-            + two * zyminmax
-            + zxyminmin
-            + zxymaxmin
-            + zxymaxmax
-            + zxyminmax;
-        d = d + three * v * t3 * u2;
-        d = d * du;
+            + two * zxminmin + two * zxmaxmin - two * zxmaxmax - two * zxminmax
+            + two * zyminmin - two * zymaxmin - two * zymaxmax + two * zyminmax
+            + zxyminmin + zxymaxmin + zxymaxmax + zxyminmax;
+        d += three * v * t3 * u2;
+        d *= du;
 
         Ok(d)
     }
 
-    #[allow(unused_variables)]
     fn eval_deriv_xx(
         &self,
         xa: &[T],
@@ -558,75 +455,42 @@ where
         let mut dd = T::zero(); // Result
 
         let v = -three * zminmin + three * zmaxmin - two * zxminmin - zxmaxmin;
-        dd = dd + two * v * t0 * u0;
+        dd += two * v * t0 * u0;
         let v = -three * zyminmin + three * zymaxmin - two * zxyminmin - zxymaxmin;
-        dd = dd + two * v * t0 * u1;
+        dd += two * v * t0 * u1;
+        #[rustfmt::skip]
         let v = nine * zminmin - nine * zmaxmin + nine * zmaxmax - nine * zminmax
-            + six * zxminmin
-            + three * zxmaxmin
-            - three * zxmaxmax
-            - six * zxminmax
-            + six * zyminmin
-            - six * zymaxmin
-            - three * zymaxmax
-            + three * zyminmax
-            + four * zxyminmin
-            + two * zxymaxmin
-            + zxymaxmax
-            + two * zxyminmax;
-        dd = dd + two * v * t0 * u2;
+            + six * zxminmin + three * zxmaxmin - three * zxmaxmax - six * zxminmax
+            + six * zyminmin - six * zymaxmin - three * zymaxmax + three * zyminmax
+            + four * zxyminmin + two * zxymaxmin + zxymaxmax + two * zxyminmax;
+        dd += two * v * t0 * u2;
+        #[rustfmt::skip]
         let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - four * zxminmin
-            - two * zxmaxmin
-            + two * zxmaxmax
-            + four * zxminmax
-            - three * zyminmin
-            + three * zymaxmin
-            + three * zymaxmax
-            - three * zyminmax
-            - two * zxyminmin
-            - zxymaxmin
-            - zxymaxmax
-            - two * zxyminmax;
-        dd = dd + two * v * t0 * u3;
+            - four * zxminmin - two * zxmaxmin + two * zxmaxmax + four * zxminmax
+            - three * zyminmin + three * zymaxmin + three * zymaxmax - three * zyminmax
+            - two * zxyminmin - zxymaxmin - zxymaxmax - two * zxyminmax;
+        dd += two * v * t0 * u3;
         let v = two * zminmin - two * zmaxmin + zxminmin + zxmaxmin;
-        dd = dd + six * v * t1 * u0;
+        dd += six * v * t1 * u0;
         let v = two * zyminmin - two * zymaxmin + zxyminmin + zxymaxmin;
-        dd = dd + six * v * t1 * u1;
+        dd += six * v * t1 * u1;
+        #[rustfmt::skip]
         let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - three * zxminmin
-            - three * zxmaxmin
-            + three * zxmaxmax
-            + three * zxminmax
-            - four * zyminmin
-            + four * zymaxmin
-            + two * zymaxmax
-            - two * zyminmax
-            - two * zxyminmin
-            - two * zxymaxmin
-            - zxymaxmax
-            - zxyminmax;
-        dd = dd + six * v * t1 * u2;
+            - three * zxminmin - three * zxmaxmin + three * zxmaxmax + three * zxminmax
+            - four * zyminmin + four * zymaxmin + two * zymaxmax - two * zyminmax
+            - two * zxyminmin - two * zxymaxmin - zxymaxmax - zxyminmax;
+        dd += six * v * t1 * u2;
+        #[rustfmt::skip]
         let v = four * zminmin - four * zmaxmin + four * zmaxmax - four * zminmax
-            + two * zxminmin
-            + two * zxmaxmin
-            - two * zxmaxmax
-            - two * zxminmax
-            + two * zyminmin
-            - two * zymaxmin
-            - two * zymaxmax
-            + two * zyminmax
-            + zxyminmin
-            + zxymaxmin
-            + zxymaxmax
-            + zxyminmax;
-        dd = dd + six * v * t1 * u3;
+            + two * zxminmin + two * zxmaxmin - two * zxmaxmax - two * zxminmax
+            + two * zyminmin - two * zymaxmin - two * zymaxmax + two * zyminmax
+            + zxyminmin + zxymaxmin + zxymaxmax + zxyminmax;
+        dd += six * v * t1 * u3;
         dd = dd * dt * dt;
 
         Ok(dd)
     }
 
-    #[allow(unused_variables)]
     fn eval_deriv_yy(
         &self,
         xa: &[T],
@@ -672,75 +536,42 @@ where
         let mut dd = T::zero(); // Result
 
         let v = -three * zminmin + three * zminmax - two * zyminmin - zyminmax;
-        dd = dd + two * v * t0 * u0;
+        dd += two * v * t0 * u0;
         let v = two * zminmin - two * zminmax + zyminmin + zyminmax;
-        dd = dd + six * v * t0 * u1;
+        dd += six * v * t0 * u1;
         let v = -three * zxminmin + three * zxminmax - two * zxyminmin - zxyminmax;
-        dd = dd + two * v * t1 * u0;
+        dd += two * v * t1 * u0;
         let v = two * zxminmin - two * zxminmax + zxyminmin + zxyminmax;
-        dd = dd + six * v * t1 * u1;
+        dd += six * v * t1 * u1;
+        #[rustfmt::skip]
         let v = nine * zminmin - nine * zmaxmin + nine * zmaxmax - nine * zminmax
-            + six * zxminmin
-            + three * zxmaxmin
-            - three * zxmaxmax
-            - six * zxminmax
-            + six * zyminmin
-            - six * zymaxmin
-            - three * zymaxmax
-            + three * zyminmax
-            + four * zxyminmin
-            + two * zxymaxmin
-            + zxymaxmax
-            + two * zxyminmax;
-        dd = dd + two * v * t2 * u0;
+            + six * zxminmin + three * zxmaxmin - three * zxmaxmax - six * zxminmax
+            + six * zyminmin - six * zymaxmin - three * zymaxmax + three * zyminmax
+            + four * zxyminmin + two * zxymaxmin + zxymaxmax + two * zxyminmax;
+        dd += two * v * t2 * u0;
+        #[rustfmt::skip]
         let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - four * zxminmin
-            - two * zxmaxmin
-            + two * zxmaxmax
-            + four * zxminmax
-            - three * zyminmin
-            + three * zymaxmin
-            + three * zymaxmax
-            - three * zyminmax
-            - two * zxyminmin
-            - zxymaxmin
-            - zxymaxmax
-            - two * zxyminmax;
-        dd = dd + six * v * t2 * u1;
+            - four * zxminmin - two * zxmaxmin + two * zxmaxmax + four * zxminmax
+            - three * zyminmin + three * zymaxmin + three * zymaxmax - three * zyminmax
+            - two * zxyminmin - zxymaxmin - zxymaxmax - two * zxyminmax;
+        dd += six * v * t2 * u1;
+        #[rustfmt::skip]
         let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - three * zxminmin
-            - three * zxmaxmin
-            + three * zxmaxmax
-            + three * zxminmax
-            - four * zyminmin
-            + four * zymaxmin
-            + two * zymaxmax
-            - two * zyminmax
-            - two * zxyminmin
-            - two * zxymaxmin
-            - zxymaxmax
-            - zxyminmax;
-        dd = dd + two * v * t3 * u0;
+            - three * zxminmin - three * zxmaxmin + three * zxmaxmax + three * zxminmax
+            - four * zyminmin + four * zymaxmin + two * zymaxmax - two * zyminmax
+            - two * zxyminmin - two * zxymaxmin - zxymaxmax - zxyminmax;
+        dd += two * v * t3 * u0;
+        #[rustfmt::skip]
         let v = four * zminmin - four * zmaxmin + four * zmaxmax - four * zminmax
-            + two * zxminmin
-            + two * zxmaxmin
-            - two * zxmaxmax
-            - two * zxminmax
-            + two * zyminmin
-            - two * zymaxmin
-            - two * zymaxmax
-            + two * zyminmax
-            + zxyminmin
-            + zxymaxmin
-            + zxymaxmax
-            + zxyminmax;
-        dd = dd + six * v * t3 * u1;
+            + two * zxminmin + two * zxmaxmin - two * zxmaxmax - two * zxminmax
+            + two * zyminmin - two * zymaxmin - two * zymaxmax + two * zyminmax
+            + zxyminmin + zxymaxmin + zxymaxmax + zxyminmax;
+        dd += six * v * t3 * u1;
         dd = dd * du * du;
 
         Ok(dd)
     }
 
-    #[allow(unused_variables)]
     fn eval_deriv_xy(
         &self,
         xa: &[T],
@@ -785,77 +616,46 @@ where
         let mut dd = T::zero(); // Result
 
         let v = zxyminmin;
-        dd = dd + v * t0 * u0;
+        dd += v * t0 * u0;
         let v = -three * zxminmin + three * zxminmax - two * zxyminmin - zxyminmax;
-        dd = dd + two * v * t0 * u1;
+        dd += two * v * t0 * u1;
         let v = two * zxminmin - two * zxminmax + zxyminmin + zxyminmax;
-        dd = dd + three * v * t0 * u2;
+        dd += three * v * t0 * u2;
         let v = -three * zyminmin + three * zymaxmin - two * zxyminmin - zxymaxmin;
-        dd = dd + two * v * t1 * u0;
+        dd += two * v * t1 * u0;
+        #[rustfmt::skip]
         let v = nine * zminmin - nine * zmaxmin + nine * zmaxmax - nine * zminmax
-            + six * zxminmin
-            + three * zxmaxmin
-            - three * zxmaxmax
-            - six * zxminmax
-            + six * zyminmin
-            - six * zymaxmin
-            - three * zymaxmax
-            + three * zyminmax
-            + four * zxyminmin
-            + two * zxymaxmin
-            + zxymaxmax
-            + two * zxyminmax;
-        dd = dd + four * v * t1 * u1;
+            + six * zxminmin + three * zxmaxmin - three * zxmaxmax - six * zxminmax
+            + six * zyminmin - six * zymaxmin - three * zymaxmax + three * zyminmax
+            + four * zxyminmin + two * zxymaxmin + zxymaxmax + two * zxyminmax;
+        dd += four * v * t1 * u1;
+        #[rustfmt::skip]
         let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - four * zxminmin
-            - two * zxmaxmin
-            + two * zxmaxmax
-            + four * zxminmax
-            - three * zyminmin
-            + three * zymaxmin
-            + three * zymaxmax
-            - three * zyminmax
-            - two * zxyminmin
-            - zxymaxmin
-            - zxymaxmax
-            - two * zxyminmax;
-        dd = dd + six * v * t1 * u2;
+            - four * zxminmin - two * zxmaxmin + two * zxmaxmax + four * zxminmax
+            - three * zyminmin + three * zymaxmin + three * zymaxmax - three * zyminmax
+            - two * zxyminmin - zxymaxmin - zxymaxmax - two * zxyminmax;
+        dd += six * v * t1 * u2;
         let v = two * zyminmin - two * zymaxmin + zxyminmin + zxymaxmin;
-        dd = dd + three * v * t2 * u0;
+        dd += three * v * t2 * u0;
+        #[rustfmt::skip]
         let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - three * zxminmin
-            - three * zxmaxmin
-            + three * zxmaxmax
-            + three * zxminmax
-            - four * zyminmin
-            + four * zymaxmin
-            + two * zymaxmax
-            - two * zyminmax
-            - two * zxyminmin
-            - two * zxymaxmin
-            - zxymaxmax
-            - zxyminmax;
-        dd = dd + six * v * t2 * u1;
+            - three * zxminmin - three * zxmaxmin + three * zxmaxmax + three * zxminmax
+            - four * zyminmin + four * zymaxmin + two * zymaxmax - two * zyminmax
+            - two * zxyminmin - two * zxymaxmin - zxymaxmax - zxyminmax;
+        dd += six * v * t2 * u1;
+        #[rustfmt::skip]
         let v = four * zminmin - four * zmaxmin + four * zmaxmax - four * zminmax
-            + two * zxminmin
-            + two * zxmaxmin
-            - two * zxmaxmax
-            - two * zxminmax
-            + two * zyminmin
-            - two * zymaxmin
-            - two * zymaxmax
-            + two * zyminmax
-            + zxyminmin
-            + zxymaxmin
-            + zxymaxmax
-            + zxyminmax;
-        dd = dd + nine * v * t2 * u2;
+            + two * zxminmin + two * zxmaxmin - two * zxmaxmax - two * zxminmax
+            + two * zyminmin - two * zymaxmin - two * zymaxmax + two * zyminmax
+            + zxyminmin + zxymaxmin + zxymaxmax + zxyminmax;
+        dd += nine * v * t2 * u2;
         dd = dd * dt * du;
 
         Ok(dd)
     }
 }
 
+/// Common calculations
 impl<T> Bicubic<T>
 where
     T: num::Float + std::fmt::Debug,
@@ -917,6 +717,7 @@ where
     }
 }
 
+/// Common calculation
 fn tu_cubic_values<T>(x: T, y: T, xlo: T, ylo: T, dx: T, dy: T) -> (T, T, T, T)
 where
     T: num::Float + std::fmt::Debug + ndarray_linalg::Lapack,
