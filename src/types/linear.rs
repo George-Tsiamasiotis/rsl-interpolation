@@ -41,7 +41,7 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    fn build(self, xa: &[T], ya: &[T]) -> Result<LinearInterp<T>, InterpolationError> {
+    fn build(&self, xa: &[T], ya: &[T]) -> Result<LinearInterp<T>, InterpolationError> {
         check1d_data(xa, ya, MIN_SIZE)?;
         Ok(LinearInterp {
             _variable_type: PhantomData,

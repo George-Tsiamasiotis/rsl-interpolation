@@ -34,7 +34,7 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    fn build(self, xa: &[T], ya: &[T]) -> Result<Self::Interpolator, InterpolationError>;
+    fn build(&self, xa: &[T], ya: &[T]) -> Result<Self::Interpolator, InterpolationError>;
 }
 
 /// Defines the required evaluation methods.

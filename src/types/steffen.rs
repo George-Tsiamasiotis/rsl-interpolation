@@ -42,7 +42,7 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    fn build(self, xa: &[T], ya: &[T]) -> Result<SteffenInterp<T>, InterpolationError> {
+    fn build(&self, xa: &[T], ya: &[T]) -> Result<SteffenInterp<T>, InterpolationError> {
         check1d_data(xa, ya, MIN_SIZE)?;
         let size = xa.len();
 

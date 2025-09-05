@@ -43,7 +43,7 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    fn build(self, xa: &[T], ya: &[T]) -> Result<AkimaInterp<T>, InterpolationError> {
+    fn build(&self, xa: &[T], ya: &[T]) -> Result<AkimaInterp<T>, InterpolationError> {
         check1d_data(xa, ya, MIN_SIZE)?;
 
         let size = xa.len();
@@ -165,7 +165,7 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    fn build(self, xa: &[T], ya: &[T]) -> Result<AkimaPeriodicInterp<T>, InterpolationError> {
+    fn build(&self, xa: &[T], ya: &[T]) -> Result<AkimaPeriodicInterp<T>, InterpolationError> {
         check1d_data(xa, ya, MIN_SIZE)?;
 
         let size = xa.len();

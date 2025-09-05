@@ -25,11 +25,15 @@ mod interp;
 mod interp2d;
 mod types;
 
+mod spline;
+
 pub use accel::Accelerator;
 
 pub use error::*;
 pub use interp::{InterpType, Interpolation};
 pub use interp2d::{Interp2dType, Interpolation2d, z_get, z_idx, z_set};
+
+pub use spline::Spline;
 
 pub use types::*;
 

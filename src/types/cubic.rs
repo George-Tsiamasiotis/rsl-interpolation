@@ -51,7 +51,7 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    fn build(self, xa: &[T], ya: &[T]) -> Result<CubicInterp<T>, InterpolationError> {
+    fn build(&self, xa: &[T], ya: &[T]) -> Result<CubicInterp<T>, InterpolationError> {
         check1d_data(xa, ya, MIN_SIZE)?;
 
         // Engeln-Mullges G. - Uhlig F.: Algorithm 10.1, pg 254
@@ -225,7 +225,7 @@ where
     /// # }
     /// ```
     ///
-    fn build(self, xa: &[T], ya: &[T]) -> Result<CubicPeriodicInterp<T>, InterpolationError> {
+    fn build(&self, xa: &[T], ya: &[T]) -> Result<CubicPeriodicInterp<T>, InterpolationError> {
         check1d_data(xa, ya, MIN_SIZE)?;
 
         // Engeln-Mullges G. - Uhlig F.: Algorithm 10.2, pg 255
