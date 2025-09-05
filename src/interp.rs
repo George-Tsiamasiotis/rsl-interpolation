@@ -34,7 +34,19 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    fn build(self, xa: &[T], ya: &[T]) -> Result<Self::Interpolator, InterpolationError>;
+    fn build(&self, xa: &[T], ya: &[T]) -> Result<Self::Interpolator, InterpolationError>;
+
+    /// Returns the name of the Interpolator.
+    #[doc(alias = "gsl_interp_name")]
+    fn name(&self) -> String {
+        Self::NAME.to_string()
+    }
+
+    /// Returns the minimum number of points required by the Interpolator.
+    #[doc(alias = "gsl_interp_min_size")]
+    fn min_size(&self) -> usize {
+        Self::MIN_SIZE
+    }
 }
 
 /// Defines the required evaluation methods.
@@ -164,9 +176,9 @@ where
     /// let interp = Cubic.build(&xa, &ya)?;
     /// let mut acc = Accelerator::new();
     ///
-    /// let dydx2 = interp.eval_integ(&xa, &ya, 0.0, 2.0, &mut acc)?;
+    /// let int = interp.eval_integ(&xa, &ya, 0.0, 2.0, &mut acc)?;
     ///
-    /// assert_eq!(dydx2, 4.0);
+    /// assert_eq!(int, 4.0);
     /// # Ok(())
     /// # }
     /// ```

@@ -1,0 +1,254 @@
+use ndarray_linalg::Lapack;
+
+use crate::Accelerator;
+use crate::DomainError;
+use crate::InterpType;
+use crate::Interpolation;
+use crate::InterpolationError;
+
+#[allow(dead_code)]
+pub struct Spline<I, T> {
+    /// The lower-level [`Interpolator`].
+    ///
+    /// [`Interpolator`]: Interpolation#implementors
+    pub interp: I,
+    /// The owned x data.
+    pub xa: Vec<T>,
+    /// The owned y data.
+    pub ya: Vec<T>,
+    name: String,
+    min_size: usize,
+}
+
+impl<I, T> Spline<I, T>
+where
+    I: Interpolation<T>,
+    T: crate::Num + Lapack,
+{
+    /// Constructs a Spline of an Interpolation type `typ` from the data arrays `xa` and `ya`.
+    ///
+    /// # Example
+    /// ```
+    /// # use rsl_interpolation::Spline;
+    /// # use rsl_interpolation::Cubic;
+    /// # use rsl_interpolation::InterpType;
+    /// # use rsl_interpolation::InterpolationError;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError>{
+    /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
+    /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
+    /// let typ = Cubic;
+    ///
+    /// let spline = Spline::build(typ, &xa, &ya)?;
+    /// #
+    /// # Ok(())
+    /// # }
+    #[doc(alias = "gsl_spline_init")]
+    pub fn build(
+        typ: impl InterpType<T, Interpolator = I>,
+        xa: &[T],
+        ya: &[T],
+    ) -> Result<Self, InterpolationError> {
+        let xa = xa.to_owned();
+        let ya = ya.to_owned();
+
+        let interp = typ.build(&xa, &ya)?;
+        let name = typ.name();
+        let min_size = typ.min_size();
+
+        let spline = Self {
+            interp,
+            xa,
+            ya,
+            name,
+            min_size,
+        };
+
+        Ok(spline)
+    }
+
+    /// Returns the interpolated value `y` for a given point `x`, using the [`Accelerator`] `acc`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use rsl_interpolation::Spline;
+    /// # use rsl_interpolation::Cubic;
+    /// # use rsl_interpolation::InterpType;
+    /// # use rsl_interpolation::Accelerator;
+    /// # use rsl_interpolation::InterpolationError;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError>{
+    /// let mut acc = Accelerator::new();
+    ///
+    /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
+    /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
+    /// let typ = Cubic;
+    /// let spline = Spline::build(typ, &xa, &ya)?;
+    /// #
+    /// let y = spline.eval(1.5, &mut acc)?;
+    ///
+    /// assert_eq!(y, 3.0);
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`DomainError`] if `x` is outside the range of `xa`.
+    #[doc(alias = "gsl_spline_eval")]
+    pub fn eval(&self, x: T, acc: &mut Accelerator) -> Result<T, DomainError> {
+        self.interp.eval(&self.xa, &self.ya, x, acc)
+    }
+
+    /// Returns the derivative `dy/dx` of an interpolated function for a given point `x`, using the
+    /// [`Accelerator`] `acc`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use rsl_interpolation::Spline;
+    /// # use rsl_interpolation::Cubic;
+    /// # use rsl_interpolation::InterpType;
+    /// # use rsl_interpolation::Accelerator;
+    /// # use rsl_interpolation::InterpolationError;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError>{
+    /// let mut acc = Accelerator::new();
+    ///
+    /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
+    /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
+    /// let typ = Cubic;
+    /// let spline = Spline::build(typ, &xa, &ya)?;
+    ///
+    /// let dydx = spline.eval_deriv(1.5, &mut acc)?;
+    ///
+    /// assert_eq!(dydx, 2.0);
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`DomainError`] if `x` is outside the range of `xa`.
+    #[doc(alias = "gsl_spline_eval_deriv")]
+    pub fn eval_deriv(&self, x: T, acc: &mut Accelerator) -> Result<T, DomainError> {
+        self.interp.eval_deriv(&self.xa, &self.ya, x, acc)
+    }
+
+    /// Returns the second derivative `d²y/dx²` of an interpolated function for a given point `x`, using the
+    /// [`Accelerator`] `acc`.
+    ///
+    /// # Example
+    /// ```
+    /// # use rsl_interpolation::Spline;
+    /// # use rsl_interpolation::Cubic;
+    /// # use rsl_interpolation::InterpType;
+    /// # use rsl_interpolation::Accelerator;
+    /// # use rsl_interpolation::InterpolationError;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError>{
+    /// let mut acc = Accelerator::new();
+    ///
+    /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
+    /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
+    /// let typ = Cubic;
+    /// let spline = Spline::build(typ, &xa, &ya)?;
+    ///
+    /// let dydx = spline.eval_deriv2(1.5, &mut acc)?;
+    ///
+    /// assert_eq!(dydx, 0.0);
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`DomainError`] if `x` is outside the range of `xa`.
+    #[doc(alias = "gsl_spline_eval_deriv2")]
+    pub fn eval_deriv2(&self, x: T, acc: &mut Accelerator) -> Result<T, DomainError> {
+        self.interp.eval_deriv2(&self.xa, &self.ya, x, acc)
+    }
+
+    #[allow(rustdoc::broken_intra_doc_links)]
+    /// Returns the numerical integral of an interpolated function over the range [`a` ,`b`], using the
+    /// [`Accelerator`] `acc`.
+    ///
+    /// # Example
+    /// ```
+    /// # use rsl_interpolation::Spline;
+    /// # use rsl_interpolation::Cubic;
+    /// # use rsl_interpolation::InterpType;
+    /// # use rsl_interpolation::Accelerator;
+    /// # use rsl_interpolation::InterpolationError;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError>{
+    /// let mut acc = Accelerator::new();
+    ///
+    /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
+    /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
+    /// let typ = Cubic;
+    /// let spline = Spline::build(typ, &xa, &ya)?;
+    ///
+    /// let int = spline.eval_integ(0.0, 2.0, &mut acc)?;
+    ///
+    /// assert_eq!(int, 4.0);
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`DomainError`] if `a` or `b` is outside the range of xa.
+    #[doc(alias = "gsl_spline_eval_integ")]
+    pub fn eval_integ(&self, a: T, b: T, acc: &mut Accelerator) -> Result<T, DomainError> {
+        self.interp.eval_integ(&self.xa, &self.ya, a, b, acc)
+    }
+
+    /// Returns the name of the Interpolator.
+    #[doc(alias = "gsl_interp_name")]
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
+
+    /// Returns the minimum number of points required by the Interpolator.
+    #[doc(alias = "gsl_interp_min_size")]
+    pub fn min_size(&self) -> usize {
+        self.min_size
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::Cubic;
+
+    #[test]
+    fn test_spline_info() {
+        let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
+        let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
+        let spline = Spline::build(Cubic, &xa, &ya).unwrap();
+
+        assert_eq!(spline.name(), <Cubic as InterpType<f64>>::NAME);
+        assert_eq!(spline.min_size(), <Cubic as InterpType<f64>>::MIN_SIZE);
+    }
+
+    #[test]
+    fn test_spline_eval() {
+        let xa = [0.0, 1.0, 2.0];
+        let ya = [0.0, 1.0, 2.0];
+        let spline = Spline::build(Cubic, &xa, &ya).unwrap();
+        let mut acc = Accelerator::new();
+
+        let x = 0.5;
+        let y = spline.eval(x, &mut acc).unwrap();
+        let dy = spline.eval_deriv(x, &mut acc).unwrap();
+        let dy2 = spline.eval_deriv2(x, &mut acc).unwrap();
+        let int = spline.eval_integ(0.0, x, &mut acc).unwrap();
+
+        assert_eq!(y, 0.5);
+        assert_eq!(dy, 1.0);
+        assert_eq!(dy2, 0.0);
+        assert_eq!(int, 0.125);
+    }
+}

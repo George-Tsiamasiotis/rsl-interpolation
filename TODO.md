@@ -18,7 +18,7 @@
 	- [x] Utility functions
 		- [x] Name [`gsl_interp_name()`]
 		- [x] Minimum number of points [`gsl_interp_min_size()` and `gsl_interp_type_min_size()`]
-	- [ ] Higher level Interface (Splines)
+	- [x] Higher level Interface (Splines)
 
 ---
 
