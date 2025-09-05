@@ -3,7 +3,7 @@ use crate::{DomainError, InterpolationError};
 /// Checks that supplied datasets are valid.
 pub(crate) fn check1d_data<T>(xa: &[T], ya: &[T], min_size: usize) -> Result<(), InterpolationError>
 where
-    T: num::Float,
+    T: crate::Num,
 {
     if !xa.iter().is_sorted() {
         return Err(InterpolationError::UnsortedDataset);
@@ -25,7 +25,7 @@ pub(crate) fn check2d_data<T>(
     min_size: usize,
 ) -> Result<(), InterpolationError>
 where
-    T: num::Float,
+    T: crate::Num,
 {
     if (!xa.iter().is_sorted()) | (!ya.iter().is_sorted()) {
         return Err(InterpolationError::UnsortedDataset);
@@ -42,7 +42,7 @@ where
 
 pub(crate) fn check_if_inbounds<T>(xa: &[T], x: T) -> Result<(), DomainError>
 where
-    T: num::Float,
+    T: crate::Num,
 {
     if (x < *xa.first().unwrap()) | (x > *xa.last().unwrap()) {
         return Err(DomainError);
@@ -53,7 +53,7 @@ where
 /// Calculates the n-th discrete difference: out[i] = s[i+1]-s[i].
 pub(crate) fn diff<T>(s: &[T]) -> Vec<T>
 where
-    T: num::Float,
+    T: crate::Num,
 {
     s.windows(2)
         .map(|xy| {
@@ -67,7 +67,7 @@ where
 /// akima methods.
 pub(crate) fn integ_eval<T>(ai: T, bi: T, ci: T, di: T, xi: T, a: T, b: T) -> T
 where
-    T: num::Float + std::fmt::Debug,
+    T: crate::Num,
 {
     let quarter = T::from(0.25).unwrap();
     let half = T::from(0.5).unwrap();

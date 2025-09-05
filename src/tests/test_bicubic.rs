@@ -1,5 +1,5 @@
 use crate::Bicubic;
-use crate::interp2d::Interpolation2d;
+use crate::interp2d::Interp2dType;
 use crate::tests::XYZTable;
 use crate::tests::test_interp2d;
 use crate::tests::test_interp2d_extra;
@@ -33,7 +33,7 @@ fn gsl_test_bicubic1() {
         z: &ztest,
     };
 
-    let interp = Bicubic::new(&xa, &ya, &za).unwrap();
+    let interp = Bicubic.build(&xa, &ya, &za).unwrap();
     test_interp2d(data_table, test_e_table, interp);
 }
 
@@ -81,7 +81,7 @@ fn gsl_test_bicubic2() {
         z: &ztest,
     };
 
-    let interp = Bicubic::new(&xa, &ya, &za).unwrap();
+    let interp = Bicubic.build(&xa, &ya, &za).unwrap();
     test_interp2d(data_table, test_e_table, interp);
 }
 
@@ -102,10 +102,6 @@ fn gsl_test_bicubic3() {
         7.0, 14.0, 21.0, 28.0, 35.0, 42.0,  7.0, 56.0, 21.0, 22.0,
         8.0,  8.0, 24.0,  8.0, 40.0, 24.0, 56.0,  8.0, 23.0, 24.0,
     ];
-
-    dbg!(xa.len());
-    dbg!(ya.len());
-    dbg!(za.len());
 
     let xtest = [1.4, 2.3, 9.7, 3.3, 9.5, 6.6, 5.1];
     let ytest = [1.0, 1.8, 1.9, 2.5, 2.7, 4.1, 3.3];
@@ -133,7 +129,7 @@ fn gsl_test_bicubic3() {
         z: &ztest,
     };
 
-    let interp = Bicubic::new(&xa, &ya, &za).unwrap();
+    let interp = Bicubic.build(&xa, &ya, &za).unwrap();
     test_interp2d(data_table, test_e_table, interp);
 }
 
@@ -328,7 +324,7 @@ fn extra_test_bicubic() {
         z: &dxytest,
     };
 
-    let interp = Bicubic::new(&xa, &ya, &za).unwrap();
+    let interp = Bicubic.build(&xa, &ya, &za).unwrap();
     test_interp2d_extra(
         data_table,
         test_e_table,

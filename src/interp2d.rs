@@ -1,88 +1,70 @@
 use crate::types::check_if_inbounds;
 use crate::{Accelerator, DomainError, InterpolationError};
 
-/// Defines the required methods for every 2d Interpolation type.
+/// Representation of a 2D Interpolation Type.
 ///
 /// > # **Important**
 /// >
 /// > The `za` array must be defined in **column-major (Fortran)** style. This is done to comply
 /// > with GSL's interface.
 /// >
-/// > # Example
-/// >
-/// > ```
-/// > # use rsl_interpolation::Interpolation2d;
-/// > # use rsl_interpolation::InterpolationError;
-/// > # use rsl_interpolation::Bilinear;
-/// > # use rsl_interpolation::Accelerator;
-/// > #
-/// > # fn main() -> Result<(), InterpolationError>{
-/// > let xa = [0.0, 1.0, 2.0];
-/// > let ya = [0.0, 2.0, 4.0];
-/// > // z = x + y
-/// > let za = [
-/// >     0.0, 1.0, 2.0,
-/// >     2.0, 3.0, 4.0,
-/// >     4.0, 5.0, 6.0,
-/// > ];
-/// > let interp = Bilinear::new(&xa, &ya, &za)?;
-/// > let mut xacc = Accelerator::new();
-/// > let mut yacc = Accelerator::new();
-/// >
-/// > let z = interp.eval(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc)?;
-/// >
-/// > assert_eq!(z, 4.5);
-/// > # Ok(())
-/// > # }
-/// > ```
 ///
 /// For 2d interpolation, 2 seperate [`Accelerators`] are required for each of the grid variables.
 ///
-/// [`Accelerators`]: struct.Accelerator.html
-#[allow(clippy::too_many_arguments)]
-pub trait Interpolation2d<T>
+/// [`Accelerators`]: Accelerator
+pub trait Interp2dType<T>
 where
-    T: num::Float + std::fmt::Debug,
+    T: crate::Num,
 {
-    /// The minimum number of points required by the interpolator. For example, bicubic
-    /// interpolation requires a minimum of 4 points.
+    /// The minimum number of points required by the Interpolator.
     const MIN_SIZE: usize;
 
-    /// The name of the interpolator.
-    const NAME: &'static str;
+    /// The name of the Interpolator.
+    const NAME: &str;
 
-    /// Creates a new 2d Interpolator for the data (`xa`, `ya`, `za`), where `xa` and `ya` are slices of the
-    /// x and y grid points and `za` is an array of functions values of `len(xa)*len(ya)`.
-    ///
-    /// > # **Important**
-    /// >
-    /// > The `za` array must be defined in **column-major (Fortran)** style. This is done to comply
-    /// > with GSL's interface.
+    /// The returned 2D Interpolator, containing the calculated coefficients and providing the
+    /// evaluation methods.
+    type Interpolator2d: Interpolation2d<T>;
+
+    /// Creates a 2D Interpolator from the data arrays `xa`, `ya` and `za`.
     ///
     /// # Example
     ///
     /// ```
+    /// # use rsl_interpolation::Interp2dType;
     /// # use rsl_interpolation::Interpolation2d;
     /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Bilinear;
+    /// # use rsl_interpolation::Bicubic;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
-    /// let xa = [0.0, 1.0, 2.0];
-    /// let ya = [0.0, 2.0, 4.0];
+    /// let xa = [0.0, 1.0, 2.0, 3.0];
+    /// let ya = [0.0, 2.0, 4.0, 6.0];
+    /// // z = x + y
     /// let za = [
-    ///     0.0, 1.0, 2.0,
-    ///     3.0, 4.0, 5.0,
-    ///     6.0, 7.0, 8.0,
+    ///     0.0, 1.0, 2.0, 3.0,
+    ///     2.0, 3.0, 4.0, 5.0,
+    ///     4.0, 5.0, 6.0, 7.0,
+    ///     6.0, 7.0, 8.0, 9.0,
     /// ];
-    /// let interp = Bilinear::new(&xa, &ya, &za)?;
+    ///
+    /// let interp = Bicubic.build(&xa, &ya, &za)?;
     /// # Ok(())
     /// # }
     /// ```
-    #[doc(alias = "gsl_interp2d_init")]
-    fn new(xa: &[T], ya: &[T], za: &[T]) -> Result<Self, InterpolationError>
-    where
-        Self: Sized;
+    fn build(
+        self,
+        xa: &[T],
+        ya: &[T],
+        za: &[T],
+    ) -> Result<Self::Interpolator2d, InterpolationError>;
+}
 
+/// Defines the required evaulation methods.
+#[allow(clippy::too_many_arguments)]
+pub trait Interpolation2d<T>
+where
+    T: crate::Num,
+{
     /// Returns the interpolated value of `z` for a given point (`x`, `y`), using the data arrays
     /// `xa`, `ya`, `za` and the [`Accelerators`] `xacc` and `yacc`.
     ///
@@ -94,6 +76,7 @@ where
     /// # Example
     ///
     /// ```
+    /// # use rsl_interpolation::Interp2dType;
     /// # use rsl_interpolation::Interpolation2d;
     /// # use rsl_interpolation::InterpolationError;
     /// # use rsl_interpolation::Bilinear;
@@ -108,7 +91,7 @@ where
     ///     2.0, 3.0, 4.0,
     ///     4.0, 5.0, 6.0,
     /// ];
-    /// let interp = Bilinear::new(&xa, &ya, &za)?;
+    /// let interp = Bilinear.build(&xa, &ya, &za)?;
     /// let mut xacc = Accelerator::new();
     /// let mut yacc = Accelerator::new();
     ///
@@ -124,8 +107,7 @@ where
     /// Returns a [`DomainError`] if `x` is outside the range of `xa` or `y` is outside the range
     /// of `ya`.
     ///
-    /// [`DomainError`]: struct.DomainError.html
-    /// [`Accelerators`]: struct.Accelerator.html
+    /// [`Accelerators`]: Accelerator
     #[doc(alias = "gsl_interp2d_eval")]
     #[doc(alias = "gsl_interp2d_eval_e")]
     fn eval(
@@ -156,6 +138,7 @@ where
     /// # Example
     ///
     /// ```
+    /// # use rsl_interpolation::Interp2dType;
     /// # use rsl_interpolation::Interpolation2d;
     /// # use rsl_interpolation::InterpolationError;
     /// # use rsl_interpolation::Bilinear;
@@ -170,7 +153,7 @@ where
     ///     2.0, 3.0, 4.0,
     ///     4.0, 5.0, 6.0,
     /// ];
-    /// let interp = Bilinear::new(&xa, &ya, &za)?;
+    /// let interp = Bilinear.build(&xa, &ya, &za)?;
     /// let mut xacc = Accelerator::new();
     /// let mut yacc = Accelerator::new();
     ///
@@ -181,7 +164,7 @@ where
     /// # }
     /// ```
     ///
-    /// [`Accelerators`]: struct.Accelerator.html
+    /// [`Accelerators`]: Accelerator
     #[doc(alias = "gsl_interp2d_eval_extrap")]
     #[doc(alias = "gsl_interp2d_eval_extrap_e")]
     fn eval_extrap(
@@ -201,6 +184,7 @@ where
     /// # Example
     ///
     /// ```
+    /// # use rsl_interpolation::Interp2dType;
     /// # use rsl_interpolation::Interpolation2d;
     /// # use rsl_interpolation::InterpolationError;
     /// # use rsl_interpolation::Bilinear;
@@ -215,7 +199,7 @@ where
     ///      4.0,  5.0,  8.0,
     ///     16.0, 17.0, 20.0,
     /// ];
-    /// let interp = Bilinear::new(&xa, &ya, &za)?;
+    /// let interp = Bilinear.build(&xa, &ya, &za)?;
     /// let mut xacc = Accelerator::new();
     /// let mut yacc = Accelerator::new();
     ///
@@ -231,8 +215,7 @@ where
     /// Returns a [`DomainError`] if `x` is outside the range of `xa` or `y` is outside the range
     /// of `ya`.
     ///
-    /// [`DomainError`]: struct.DomainError.html
-    /// [`Accelerators`]: struct.Accelerator.html
+    /// [`Accelerators`]: Accelerator
     #[doc(alias = "gsl_interp2d_eval_deriv_x")]
     #[doc(alias = "gsl_interp2d_eval_deriv_x_e")]
     fn eval_deriv_x(
@@ -252,6 +235,7 @@ where
     /// # Example
     ///
     /// ```
+    /// # use rsl_interpolation::Interp2dType;
     /// # use rsl_interpolation::Interpolation2d;
     /// # use rsl_interpolation::InterpolationError;
     /// # use rsl_interpolation::Bilinear;
@@ -266,7 +250,7 @@ where
     ///      4.0,  5.0,  8.0,
     ///     16.0, 17.0, 20.0,
     /// ];
-    /// let interp = Bilinear::new(&xa, &ya, &za)?;
+    /// let interp = Bilinear.build(&xa, &ya, &za)?;
     /// let mut xacc = Accelerator::new();
     /// let mut yacc = Accelerator::new();
     ///
@@ -282,8 +266,7 @@ where
     /// Returns a [`DomainError`] if `x` is outside the range of `xa` or `y` is outside the range
     /// of `ya`.
     ///
-    /// [`DomainError`]: struct.DomainError.html
-    /// [`Accelerators`]: struct.Accelerator.html
+    /// [`Accelerators`]: Accelerator
     #[doc(alias = "gsl_interp2d_eval_deriv_y")]
     #[doc(alias = "gsl_interp2d_eval_deriv_y_e")]
     fn eval_deriv_y(
@@ -303,6 +286,7 @@ where
     /// # Example
     ///
     /// ```
+    /// # use rsl_interpolation::Interp2dType;
     /// # use rsl_interpolation::Interpolation2d;
     /// # use rsl_interpolation::InterpolationError;
     /// # use rsl_interpolation::Bilinear;
@@ -317,7 +301,7 @@ where
     ///      4.0,  5.0,  8.0,
     ///     16.0, 17.0, 20.0,
     /// ];
-    /// let interp = Bilinear::new(&xa, &ya, &za)?;
+    /// let interp = Bilinear.build(&xa, &ya, &za)?;
     /// let mut xacc = Accelerator::new();
     /// let mut yacc = Accelerator::new();
     ///
@@ -333,8 +317,7 @@ where
     /// Returns a [`DomainError`] if `x` is outside the range of `xa` or `y` is outside the range
     /// of `ya`.
     ///
-    /// [`DomainError`]: struct.DomainError.html
-    /// [`Accelerators`]: struct.Accelerator.html
+    /// [`Accelerators`]: Accelerator
     #[doc(alias = "gsl_interp2d_eval_deriv_xx")]
     #[doc(alias = "gsl_interp2d_eval_deriv_xx_e")]
     fn eval_deriv_xx(
@@ -354,6 +337,7 @@ where
     /// # Example
     ///
     /// ```
+    /// # use rsl_interpolation::Interp2dType;
     /// # use rsl_interpolation::Interpolation2d;
     /// # use rsl_interpolation::InterpolationError;
     /// # use rsl_interpolation::Bilinear;
@@ -368,7 +352,7 @@ where
     ///      4.0,  5.0,  8.0,
     ///     16.0, 17.0, 20.0,
     /// ];
-    /// let interp = Bilinear::new(&xa, &ya, &za)?;
+    /// let interp = Bilinear.build(&xa, &ya, &za)?;
     /// let mut xacc = Accelerator::new();
     /// let mut yacc = Accelerator::new();
     ///
@@ -384,8 +368,7 @@ where
     /// Returns a [`DomainError`] if `x` is outside the range of `xa` or `y` is outside the range
     /// of `ya`.
     ///
-    /// [`DomainError`]: struct.DomainError.html
-    /// [`Accelerators`]: struct.Accelerator.html
+    /// [`Accelerators`]: Accelerator
     #[doc(alias = "gsl_interp2d_eval_deriv_yy")]
     #[doc(alias = "gsl_interp2d_eval_deriv_yy_e")]
     fn eval_deriv_yy(
@@ -405,6 +388,7 @@ where
     /// # Example
     ///
     /// ```
+    /// # use rsl_interpolation::Interp2dType;
     /// # use rsl_interpolation::Interpolation2d;
     /// # use rsl_interpolation::InterpolationError;
     /// # use rsl_interpolation::Bilinear;
@@ -419,7 +403,7 @@ where
     ///      4.0,  5.0,  8.0,
     ///     16.0, 17.0, 20.0,
     /// ];
-    /// let interp = Bilinear::new(&xa, &ya, &za)?;
+    /// let interp = Bilinear.build(&xa, &ya, &za)?;
     /// let mut xacc = Accelerator::new();
     /// let mut yacc = Accelerator::new();
     ///
@@ -435,8 +419,7 @@ where
     /// Returns a [`DomainError`] if `x` is outside the range of `xa` or `y` is outside the range
     /// of `ya`.
     ///
-    /// [`DomainError`]: struct.DomainError.html
-    /// [`Accelerators`]: struct.Accelerator.html
+    /// [`Accelerators`]: Accelerator
     #[doc(alias = "gsl_interp2d_eval_deriv_xy")]
     #[doc(alias = "gsl_interp2d_eval_deriv_xy_e")]
     fn eval_deriv_xy(
@@ -467,7 +450,6 @@ where
 /// # fn main() -> Result<(), DomainError>{
 /// let xa = [0.0, 1.0];
 /// let ya = [0.0, 2.0];
-/// #    #[rustfmt::skip]
 /// let za = [
 ///     0.0, 1.0, // <- This one
 ///     2.0, 3.0,
@@ -500,7 +482,6 @@ pub fn z_idx(xi: usize, yi: usize, xlen: usize, ylen: usize) -> Result<usize, Do
 /// # fn main() -> Result<(), DomainError>{
 /// let xa = [0.0, 1.0];
 /// let ya = [0.0, 2.0];
-/// #    #[rustfmt::skip]
 /// let mut za = [
 ///     0.0, 1.0, // <- We set this one
 ///     2.0, 3.0,
@@ -519,7 +500,7 @@ pub fn z_set<T>(
     ylen: usize,
 ) -> Result<(), DomainError>
 where
-    T: num::Float + std::fmt::Debug,
+    T: crate::Num,
 {
     if (i >= xlen) | (j >= ylen) {
         return Err(DomainError);
@@ -545,7 +526,6 @@ where
 /// # fn main() -> Result<(), DomainError>{
 /// let xa = [0.0, 1.0];
 /// let ya = [0.0, 2.0];
-/// #    #[rustfmt::skip]
 /// let za = [
 ///     0.0, 10.0, // <- We want this one
 ///     2.0, 3.0,
@@ -557,7 +537,7 @@ where
 #[doc(alias = "gsl_inter2d_get")]
 pub fn z_get<T>(za: &[T], i: usize, j: usize, xlen: usize, ylen: usize) -> Result<T, DomainError>
 where
-    T: num::Float + std::fmt::Debug,
+    T: crate::Num,
 {
     if (i >= xlen) | (j >= ylen) {
         return Err(DomainError);
@@ -578,7 +558,7 @@ pub(crate) fn acc_indeces<T>(
     yacc: &mut Accelerator,
 ) -> (usize, usize)
 where
-    T: num::Float + std::fmt::Debug,
+    T: crate::Num,
 {
     let xi = xacc.find(xa, x);
     let yi = yacc.find(ya, y);
@@ -588,7 +568,7 @@ where
 /// Common calculation to evaluation functions
 pub(crate) fn xy_grid_indeces<T>(xa: &[T], ya: &[T], xi: usize, yi: usize) -> (T, T, T, T)
 where
-    T: num::Float + std::fmt::Debug,
+    T: crate::Num,
 {
     let xlo = xa[xi];
     let xhi = xa[xi + 1];
@@ -606,7 +586,7 @@ pub(crate) fn z_grid_indeces<T>(
     yi: usize,
 ) -> Result<(T, T, T, T), DomainError>
 where
-    T: num::Float + std::fmt::Debug,
+    T: crate::Num,
 {
     let zlolo = za[z_idx(xi, yi, xlen, ylen)?];
     let zlohi = za[z_idx(xi, yi + 1, xlen, ylen)?];
@@ -618,7 +598,7 @@ where
 /// Common calculation to evaluation functions
 pub(crate) fn partials<T>(xlo: T, xhi: T, ylo: T, yhi: T) -> (T, T)
 where
-    T: num::Float + std::fmt::Debug,
+    T: crate::Num,
 {
     let dx = xhi - xlo;
     let dy = yhi - ylo;

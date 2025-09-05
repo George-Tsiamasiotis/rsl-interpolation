@@ -1,6 +1,6 @@
 use crate::Akima;
 use crate::AkimaPeriodic;
-use crate::Interpolation;
+use crate::InterpType;
 use crate::tests::XYTable;
 use crate::tests::test_interp;
 use crate::tests::test_interp_extra;
@@ -32,7 +32,7 @@ fn gsl_test_akima() {
         y: &iytest,
     };
 
-    let interp = Akima::new(&xa, &ya).unwrap();
+    let interp = Akima.build(&xa, &ya).unwrap();
     test_interp(data_table, test_e_table, test_d_table, test_i_table, interp);
 }
 
@@ -103,7 +103,7 @@ fn extra_test_akima() {
         y: &iytest,
     };
 
-    let interp = Akima::new(&xa, &ya).unwrap();
+    let interp = Akima.build(&xa, &ya).unwrap();
     test_interp_extra(
         data_table,
         test_e_table,
@@ -187,7 +187,7 @@ fn extra_test_akima_periodic() {
         y: &iytest,
     };
 
-    let interp = AkimaPeriodic::new(&xa, &ya).unwrap();
+    let interp = AkimaPeriodic.build(&xa, &ya).unwrap();
     test_interp_extra(
         data_table,
         test_e_table,

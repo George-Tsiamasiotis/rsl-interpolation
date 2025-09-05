@@ -1,5 +1,5 @@
 use crate::CubicPeriodic;
-use crate::Interpolation;
+use crate::InterpType;
 use crate::tests::XYTable;
 use crate::tests::test_interp;
 
@@ -98,7 +98,7 @@ fn gsl_test_cubic_periodic1() {
         y: &iytest,
     };
 
-    let interp = CubicPeriodic::new(&xa, &ya).unwrap();
+    let interp = CubicPeriodic.build(&xa, &ya).unwrap();
     test_interp(data_table, test_e_table, test_d_table, test_i_table, interp);
 }
 
@@ -197,6 +197,6 @@ fn gsl_test_cubic_periodic2() {
         y: &iytest,
     };
 
-    let interp = CubicPeriodic::new(&xa, &ya).unwrap();
+    let interp = CubicPeriodic.build(&xa, &ya).unwrap();
     test_interp(data_table, test_e_table, test_d_table, test_i_table, interp);
 }

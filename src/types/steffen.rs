@@ -1,59 +1,49 @@
-//! Implementor for Steffen Interpolator.
-
-use std::fmt::Debug;
-
 use crate::Accelerator;
 use crate::DomainError;
+use crate::InterpType;
 use crate::Interpolation;
+use crate::InterpolationError;
 use crate::types::utils::{check_if_inbounds, check1d_data};
 
-/// Steffen Spline.
+const MIN_SIZE: usize = 3;
+
+/// Steffen Interpolation type.
 ///
 /// Steffen’s method guarantees the monotonicity of the interpolating function between the given
 /// data points. Therefore, minima and maxima can only occur exactly at the data points, and there
 /// can never be spurious oscillations between data points. The interpolated function is piecewise
 /// cubic in each interval. The resulting curve and its first derivative are guaranteed to be
 /// continuous, but the second derivative may be discontinuous.
-///
-/// ## Example
-///
-/// ```
-/// # use rsl_interpolation::Interpolation;
-/// # use rsl_interpolation::InterpolationError;
-/// # use rsl_interpolation::Steffen;
-/// # use rsl_interpolation::Accelerator;
-/// #
-/// # fn main() -> Result<(), InterpolationError>{
-/// let xa = [0.0, 1.0, 2.0];
-/// let ya = [0.0, 2.0, 4.0];
-/// let interp = Steffen::new(&xa, &ya)?;
-/// # Ok(())
-/// # }
-/// ```
-#[allow(dead_code)]
-pub struct Steffen<T>
-where
-    T: num::Float + std::fmt::Debug,
-{
-    a: Vec<T>,
-    b: Vec<T>,
-    c: Vec<T>,
-    d: Vec<T>,
-    y_prime: Vec<T>,
-}
+pub struct Steffen;
 
-impl<T> Interpolation<T> for Steffen<T>
+impl<T> InterpType<T> for Steffen
 where
-    T: num::Float + Debug,
+    T: crate::Num,
 {
-    const MIN_SIZE: usize = 3;
-    const NAME: &'static str = "steffen";
+    type Interpolator = SteffenInterp<T>;
 
-    fn new(xa: &[T], ya: &[T]) -> Result<Self, crate::InterpolationError>
-    where
-        Self: Sized,
-    {
-        check1d_data(xa, ya, Self::MIN_SIZE)?;
+    const MIN_SIZE: usize = MIN_SIZE;
+    const NAME: &str = "Steffen";
+
+    /// Constructs a Cubic Interpolator.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// # use rsl_interpolation::InterpType;
+    /// # use rsl_interpolation::Interpolation;
+    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::Steffen;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError>{
+    /// let xa = [0.0, 1.0, 2.0];
+    /// let ya = [0.0, 2.0, 4.0];
+    /// let interp = Steffen.build(&xa, &ya)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn build(self, xa: &[T], ya: &[T]) -> Result<SteffenInterp<T>, InterpolationError> {
+        check1d_data(xa, ya, MIN_SIZE)?;
         let size = xa.len();
 
         // First assign the interval and slopes for the left boundary. We use the "simplest
@@ -112,7 +102,7 @@ where
             d.push(ya[i]);
         }
 
-        let steffen = Self {
+        let state = SteffenInterp {
             a,
             b,
             c,
@@ -120,9 +110,33 @@ where
             y_prime,
         };
 
-        Ok(steffen)
+        Ok(state)
     }
+}
 
+// ===============================================================================================
+
+/// Steffen Interpolator.
+///
+/// Provides all the evaluation methods.
+///
+/// Should be constructed through the [`Steffen`] type.
+#[allow(dead_code)]
+pub struct SteffenInterp<T>
+where
+    T: crate::Num,
+{
+    a: Vec<T>,
+    b: Vec<T>,
+    c: Vec<T>,
+    d: Vec<T>,
+    y_prime: Vec<T>,
+}
+
+impl<T> Interpolation<T> for SteffenInterp<T>
+where
+    T: crate::Num,
+{
     #[allow(unused_variables)]
     fn eval(&self, xa: &[T], ya: &[T], x: T, acc: &mut Accelerator) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
@@ -219,10 +233,10 @@ where
             let x12 = x1.powi(2);
             let x22 = x2.powi(2);
 
-            result = result + quarter * self.a[i] * (x22.powi(2) - x12.powi(2));
-            result = result + third * self.b[i] * (x22 * x2 - x12 * x1);
-            result = result + half * self.c[i] * (x22 - x12);
-            result = result + self.d[i] * (x2 - x1);
+            result += quarter * self.a[i] * (x22.powi(2) - x12.powi(2));
+            result += third * self.b[i] * (x22 * x2 - x12 * x1);
+            result += half * self.c[i] * (x22 - x12);
+            result += self.d[i] * (x2 - x1);
         }
 
         Ok(result)
@@ -231,7 +245,7 @@ where
 
 fn steffen_copysign<T>(x: T, y: T) -> T
 where
-    T: num::Float,
+    T: crate::Num,
 {
     if (x.is_sign_negative() & y.is_sign_positive()) | (x.is_sign_positive() & y.is_sign_negative())
     {

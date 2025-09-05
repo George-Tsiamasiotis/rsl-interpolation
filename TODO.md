@@ -1,6 +1,6 @@
 ## GSL features to be implemented
 
-- [ ] 1D Interpolation
+- [x] 1D Interpolation
 	- [x] Instantiation [`gsl_interp_alloc()`, `gsl_interp_init()`, `gsl_interp_free()`]
 	- [x] 1D Interpolation types [`gsl_interp_type`]
 		- [x] Linear [`gsl_interp_linear`]
@@ -22,7 +22,7 @@
 
 ---
 
-- [ ] 2D Interpolation
+- [x] 2D Interpolation
 	- [x] Instantiation [`gsl_interp2d_alloc()`, `gsl_interp2d_init()`, `gsl_interp2d_free()`]
 	- [x] 2D Interpolation Grids [`gsl_interp2d_set`, `gsl_interp2d_get()`, `gsl_interp2d_idx`]
 	- [x] 2D Interpolation types [`gsl_interp2d_type`]

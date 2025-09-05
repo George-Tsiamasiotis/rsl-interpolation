@@ -1,52 +1,69 @@
-//! Implementor for Linear Interpolator.
-
-use std::fmt::Debug;
 use std::marker::PhantomData;
 
 use crate::Accelerator;
+use crate::InterpType;
 use crate::Interpolation;
 use crate::{DomainError, InterpolationError};
 
-use crate::types::utils::check_if_inbounds;
-use crate::types::utils::check1d_data;
+use crate::{check_if_inbounds, check1d_data};
 
-/// Linear interpolation.
+const MIN_SIZE: usize = 2;
+
+/// Linear Interpolation type.
 ///
 /// The simplest type of interpolation.
-///
-/// # Example
-///
-/// ```
-/// # use rsl_interpolation::Interpolation;
-/// # use rsl_interpolation::InterpolationError;
-/// # use rsl_interpolation::Linear;
-/// # use rsl_interpolation::Accelerator;
-/// #
-/// # fn main() -> Result<(), InterpolationError>{
-/// let xa = [0.0, 1.0, 2.0];
-/// let ya = [0.0, 2.0, 4.0];
-/// let interp = Linear::new(&xa, &ya)?;
-/// # Ok(())
-/// # }
-/// ```
-pub struct Linear<T> {
-    _variable_type: PhantomData<T>,
-}
+#[doc(alias = "gsl_interp_linear")]
+pub struct Linear;
 
-impl<T> Interpolation<T> for Linear<T>
+impl<T> InterpType<T> for Linear
 where
-    T: num::Float + Debug + std::ops::AddAssign,
+    T: crate::Num,
 {
-    const MIN_SIZE: usize = 2;
-    const NAME: &'static str = "linear";
+    type Interpolator = LinearInterp<T>;
 
-    fn new(xa: &[T], ya: &[T]) -> Result<Self, InterpolationError> {
-        check1d_data(xa, ya, Self::MIN_SIZE)?;
-        Ok(Self {
+    const MIN_SIZE: usize = MIN_SIZE;
+    const NAME: &str = "Linear";
+
+    /// Constructs a Linear Interpolator.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use rsl_interpolation::InterpType;
+    /// # use rsl_interpolation::Interpolation;
+    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::Linear;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError>{
+    /// let xa = [0.0, 1.0, 2.0];
+    /// let ya = [0.0, 2.0, 4.0];
+    /// let interp = Linear.build(&xa, &ya)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn build(self, xa: &[T], ya: &[T]) -> Result<LinearInterp<T>, InterpolationError> {
+        check1d_data(xa, ya, MIN_SIZE)?;
+        Ok(LinearInterp {
             _variable_type: PhantomData,
         })
     }
+}
 
+// ===============================================================================================
+
+/// Linear Interpolator.
+///
+/// Provides all the evaluation methods.
+///
+/// Should be constructed through the [`Linear`] type.
+pub struct LinearInterp<T> {
+    _variable_type: PhantomData<T>,
+}
+
+impl<T> Interpolation<T> for LinearInterp<T>
+where
+    T: crate::Num,
+{
     fn eval(&self, xa: &[T], ya: &[T], x: T, acc: &mut Accelerator) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         let index = acc.find(xa, x);
@@ -84,6 +101,7 @@ where
         Ok(dy / dx)
     }
 
+    /// Always returns `0`.
     #[allow(unused_variables)]
     fn eval_deriv2(
         &self,

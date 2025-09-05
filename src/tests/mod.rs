@@ -1,4 +1,4 @@
-use is_close::is_close;
+use is_close::Comparator;
 use std::f64;
 
 // GSL uses this to compare floats
@@ -19,24 +19,44 @@ mod test_steffen;
 mod test_bicubic;
 mod test_bilinear;
 
+/// Custom Comparator with pre-set tolerances, to be used across all tests, instead of invoking the
+/// macro every time.
+fn build_comparator<'a, T>() -> Comparator<'a, T>
+where
+    T: crate::Num + 'a,
+{
+    let mut builder = is_close::default::<T>();
+    builder
+        .rel_tol(T::from(EPS).unwrap())
+        .abs_tol(T::from(ATOL).unwrap())
+        .method(is_close::AVERAGE);
+
+    builder.compile()
+}
+
 /// A Primitive 2D table for holding the x and y values. Don't bother with num::Float here
-pub(crate) struct XYTable<'a> {
-    x: &'a [f64],
-    y: &'a [f64],
+pub(crate) struct XYTable<'a, T>
+where
+    T: crate::Num,
+{
+    x: &'a [T],
+    y: &'a [T],
 }
 
 /// Test function for eval(), eval_deriv() and eval_integ() for 1d interpolation. Corresponds to
 /// the transferred GSL tests.
 #[rustfmt::skip]
-pub(crate) fn test_interp<I>(
-    data_table: XYTable,
-    test_e_table: XYTable,
-    test_d_table: XYTable,
-    test_i_table: XYTable,
+pub(crate) fn test_interp<I, T>(
+    data_table: XYTable<T>,
+    test_e_table: XYTable<T>,
+    test_d_table: XYTable<T>,
+    test_i_table: XYTable<T>,
     interp: I,
 ) where
-    I: Interpolation<f64>,
+    T: crate::Num,
+    I: Interpolation<T>,
 {
+    let comp = build_comparator::<T>();
     let mut acc = Accelerator::new();
 
     for (i, x) in test_e_table.x.iter().enumerate() {
@@ -45,24 +65,26 @@ pub(crate) fn test_interp<I>(
         let s3 = interp.eval_integ(data_table.x, data_table.y, test_e_table.x[0], *x, &mut acc).unwrap();
 
         // No deriv2 tests apparently
-        assert!(is_close!(s1, test_e_table.y[i], rel_tol = EPS));
-        assert!(is_close!(s2, test_d_table.y[i], rel_tol = EPS));
-        assert!(is_close!(s3, test_i_table.y[i], rel_tol = EPS));
+        assert!(comp.is_close(s1, test_e_table.y[i]));
+        assert!(comp.is_close(s2, test_d_table.y[i]));
+        assert!(comp.is_close(s3, test_i_table.y[i]));
     }
 }
 
 /// Test function for extra tests with GSL data. Includes eval_deriv2() testing.
 #[rustfmt::skip]
-pub(crate) fn test_interp_extra<I>(
-    data_table: XYTable,
-    test_e_table: XYTable,
-    test_d_table: XYTable,
-    test_d2_table: XYTable,
-    test_i_table: XYTable,
+pub(crate) fn test_interp_extra<I, T>(
+    data_table: XYTable<T>,
+    test_e_table: XYTable<T>,
+    test_d_table: XYTable<T>,
+    test_d2_table: XYTable<T>,
+    test_i_table: XYTable<T>,
     interp: I,
 ) where
-    I: Interpolation<f64>,
+    T: crate::Num,
+    I: Interpolation<T>,
 {
+    let comp = build_comparator::<T>();
     let mut acc = Accelerator::new();
 
     for (i, x) in test_e_table.x.iter().enumerate() {
@@ -74,28 +96,30 @@ pub(crate) fn test_interp_extra<I>(
         // We need to specify an absolute tolerance, since is_close!() with abs_tol = 0 always
         // fails on 0.0, as described in https://docs.python.org/3/library/math.html#math.isclose.
         // is_close uses the python implementation.
-        assert!(is_close!(s1, test_e_table.y[i], rel_tol = EPS, abs_tol = ATOL));
-        assert!(is_close!(s2, test_d_table.y[i], rel_tol = EPS, abs_tol = ATOL));
-        assert!(is_close!(s3, test_d2_table.y[i], rel_tol = EPS, abs_tol = ATOL));
-        assert!(is_close!(s4, test_i_table.y[i], rel_tol = EPS, abs_tol = ATOL));
+        assert!(comp.is_close(s1, test_e_table.y[i]));
+        assert!(comp.is_close(s2, test_d_table.y[i]));
+        assert!(comp.is_close(s3, test_d2_table.y[i]));
+        assert!(comp.is_close(s4, test_i_table.y[i]));
     }
 }
 
 // ================================================================================================
 
 /// A Primitive 2D table for holding the x and y values. Don't bother with num::Float here
-pub(crate) struct XYZTable<'a> {
-    x: &'a [f64],
-    y: &'a [f64],
-    z: &'a [f64],
+pub(crate) struct XYZTable<'a, T> {
+    x: &'a [T],
+    y: &'a [T],
+    z: &'a [T],
 }
 
 /// Test function for eval(), for 2d interpolation. Corresponds to the transferred GSL tests.
 #[rustfmt::skip]
-pub(crate) fn test_interp2d<I>(data_table: XYZTable, test_e_table: XYZTable, interp: I)
+pub(crate) fn test_interp2d<I, T>(data_table: XYZTable<T>, test_e_table: XYZTable<T>, interp: I)
 where
-    I: Interpolation2d<f64>,
+    T: crate::Num,
+    I: Interpolation2d<T>,
 {
+    let comp = build_comparator::<T>();
     let mut xacc = Accelerator::new();
     let mut yacc = Accelerator::new();
 
@@ -105,25 +129,27 @@ where
 
         // No deriv tests apparently
         let expected = test_e_table.z[i];
-        assert!(is_close!(s1, expected, rel_tol = EPS));
+        assert!(comp.is_close(s1, expected));
     }
 }
 
 /// Test function including all derivatives and iteration over all (x, y) pairs,  for use with extra 
 /// 2d testing.
 #[rustfmt::skip]
-pub(crate) fn test_interp2d_extra<I>(
-    data_table: XYZTable,
-    test_e_table: XYZTable,
-    test_dx_table: XYZTable,
-    test_dy_table: XYZTable,
-    test_dxx_table: XYZTable,
-    test_dyy_table: XYZTable,
-    test_dxy_table: XYZTable,
+pub(crate) fn test_interp2d_extra<I, T>(
+    data_table: XYZTable<T>,
+    test_e_table: XYZTable<T>,
+    test_dx_table: XYZTable<T>,
+    test_dy_table: XYZTable<T>,
+    test_dxx_table: XYZTable<T>,
+    test_dyy_table: XYZTable<T>,
+    test_dxy_table: XYZTable<T>,
     interp: I,
 ) where
-    I: Interpolation2d<f64>,
+    T: crate::Num,
+    I: Interpolation2d<T>,
 {
+    let comp = build_comparator::<T>();
     let mut xacc = Accelerator::new();
     let mut yacc = Accelerator::new();
 
@@ -139,19 +165,20 @@ pub(crate) fn test_interp2d_extra<I>(
             let dxy  = interp.eval_deriv_xy( data_table.x, data_table.y, data_table.z, *x, *y, &mut xacc, &mut yacc).unwrap();
 
             let expected_eval = test_e_table.z[index];
-            let expected_eval_deriv_x = test_dx_table.z[index];
-            let expected_eval_deriv_y = test_dy_table.z[index];
-            let expected_eval_deriv_xx = test_dxx_table.z[index];
-            let expected_eval_deriv_yy = test_dyy_table.z[index];
-            let expected_eval_deriv_xy = test_dxy_table.z[index];
+            let expected_dx= test_dx_table.z[index];
+            let expected_dy= test_dy_table.z[index];
+            let expected_dxx = test_dxx_table.z[index];
+            let expected_dyy = test_dyy_table.z[index];
+            let expected_dxy = test_dxy_table.z[index];
             index +=1;
 
-            assert!(is_close!(eval, expected_eval, rel_tol = EPS, abs_tol = ATOL));
-            assert!(is_close!(dx, expected_eval_deriv_x, rel_tol = EPS, abs_tol = ATOL));
-            assert!(is_close!(dy, expected_eval_deriv_y, rel_tol = EPS, abs_tol = ATOL));
-            assert!(is_close!(dxx, expected_eval_deriv_xx, rel_tol = EPS, abs_tol = ATOL));
-            assert!(is_close!(dyy, expected_eval_deriv_yy, rel_tol = EPS, abs_tol = ATOL));
-            assert!(is_close!(dxy, expected_eval_deriv_xy, rel_tol = EPS, abs_tol = ATOL));
+            assert!(comp.is_close(eval, expected_eval));
+            assert!(comp.is_close(dx,expected_dx));
+            assert!(comp.is_close(dy,expected_dy));
+            assert!(comp.is_close(dxx,expected_dxx));
+            assert!(comp.is_close(dyy,expected_dyy));
+            assert!(comp.is_close(dxy,expected_dxy));
+
         }
     }
 }

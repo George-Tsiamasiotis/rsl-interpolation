@@ -1,57 +1,50 @@
-//! Implementor for Akima Interpolator.
-
 use std::collections::VecDeque;
-use std::fmt::Debug;
 
 use crate::Accelerator;
 use crate::DomainError;
+use crate::InterpType;
 use crate::Interpolation;
+use crate::InterpolationError;
 use crate::types::utils::integ_eval;
 use crate::types::utils::{check_if_inbounds, check1d_data};
 
-/// Akima Spline.
+const MIN_SIZE: usize = 5;
+
+/// Akima Interpolation type.
 ///
 /// Non-rounded Akima spline with natural boundary conditions. This method uses the non-rounded
 /// corner algorithm of Wodicka.
-///
-/// ## Example
-///
-/// ```
-/// # use rsl_interpolation::Interpolation;
-/// # use rsl_interpolation::InterpolationError;
-/// # use rsl_interpolation::Akima;
-/// # use rsl_interpolation::Accelerator;
-/// #
-/// # fn main() -> Result<(), InterpolationError>{
-/// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
-/// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
-/// let interp = Akima::new(&xa, &ya)?;
-/// # Ok(())
-/// # }
-/// ```
-#[allow(dead_code)]
-pub struct Akima<T>
-where
-    T: num::Float + std::fmt::Debug,
-{
-    b: Vec<T>,
-    c: Vec<T>,
-    d: Vec<T>,
-    m: Vec<T>,
-}
+#[doc(alias = "gsl_interp_akima")]
+pub struct Akima;
 
-impl<T> Interpolation<T> for Akima<T>
+impl<T> InterpType<T> for Akima
 where
-    T: num::Float + Debug,
+    T: crate::Num,
 {
-    const MIN_SIZE: usize = 5;
-    const NAME: &'static str = "akima";
+    type Interpolator = AkimaInterp<T>;
 
-    fn new(xa: &[T], ya: &[T]) -> Result<Self, crate::InterpolationError>
-    where
-        Self: Sized,
-    {
-        check1d_data(xa, ya, Self::MIN_SIZE)?;
+    const MIN_SIZE: usize = MIN_SIZE;
+    const NAME: &str = "Akima";
+
+    /// Constructs an Akima Interpolator.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// # use rsl_interpolation::InterpType;
+    /// # use rsl_interpolation::Interpolation;
+    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::Akima;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError>{
+    /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
+    /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
+    /// let interp = Akima.build(&xa, &ya)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn build(self, xa: &[T], ya: &[T]) -> Result<AkimaInterp<T>, InterpolationError> {
+        check1d_data(xa, ya, MIN_SIZE)?;
 
         let size = xa.len();
         let two = T::from(2.0).unwrap();
@@ -72,10 +65,34 @@ where
 
         let (b, c, d) = akima_calc(xa, &m);
 
-        let akima = Akima { b, c, d, m };
-        Ok(akima)
+        let state = AkimaInterp { b, c, d, m };
+        Ok(state)
     }
+}
 
+// ===============================================================================================
+
+/// Akima Interpolator.
+///
+/// Provides all the evaluation methods.
+///
+/// Should be constructed through the [`Akima`] type.
+#[allow(dead_code)]
+#[doc(alias = "gsl_akima_interp")]
+pub struct AkimaInterp<T>
+where
+    T: crate::Num,
+{
+    b: Vec<T>,
+    c: Vec<T>,
+    d: Vec<T>,
+    m: Vec<T>,
+}
+
+impl<T> Interpolation<T> for AkimaInterp<T>
+where
+    T: crate::Num,
+{
     fn eval(&self, xa: &[T], ya: &[T], x: T, acc: &mut Accelerator) -> Result<T, DomainError> {
         akima_eval(xa, ya, (&self.b, &self.c, &self.d), x, acc)
     }
@@ -116,49 +133,40 @@ where
 
 //=================================================================================================
 
-/// Akima Periodic Spline.
+/// Akima Periodic Interpolation type.
 ///
 /// Non-rounded Akima spline with natural boundary conditions. This method uses the non-rounded
 /// corner algorithm of Wodicka.
-///
-/// ## Example
-///
-/// ```
-/// # use rsl_interpolation::Interpolation;
-/// # use rsl_interpolation::InterpolationError;
-/// # use rsl_interpolation::AkimaPeriodic;
-/// # use rsl_interpolation::Accelerator;
-/// #
-/// # fn main() -> Result<(), InterpolationError>{
-/// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
-/// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
-/// let interp = AkimaPeriodic::new(&xa, &ya)?;
-/// # Ok(())
-/// # }
-/// ```
-#[allow(dead_code)]
-pub struct AkimaPeriodic<T>
-where
-    T: num::Float + Debug,
-{
-    c: Vec<T>,
-    b: Vec<T>,
-    d: Vec<T>,
-    m: Vec<T>,
-}
+pub struct AkimaPeriodic;
 
-impl<T> Interpolation<T> for AkimaPeriodic<T>
+impl<T> InterpType<T> for AkimaPeriodic
 where
-    T: num::Float + Debug,
+    T: crate::Num,
 {
-    const MIN_SIZE: usize = 5;
-    const NAME: &'static str = "akima-periodic";
+    type Interpolator = AkimaPeriodicInterp<T>;
 
-    fn new(xa: &[T], ya: &[T]) -> Result<Self, crate::InterpolationError>
-    where
-        Self: Sized,
-    {
-        check1d_data(xa, ya, Self::MIN_SIZE)?;
+    const MIN_SIZE: usize = MIN_SIZE;
+    const NAME: &str = "Akima Periodic";
+
+    /// Constructs an Akima Periodic Interpolator.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// # use rsl_interpolation::InterpType;
+    /// # use rsl_interpolation::Interpolation;
+    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::AkimaPeriodic;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError>{
+    /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
+    /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
+    /// let interp = AkimaPeriodic.build(&xa, &ya)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn build(self, xa: &[T], ya: &[T]) -> Result<AkimaPeriodicInterp<T>, InterpolationError> {
+        check1d_data(xa, ya, MIN_SIZE)?;
 
         let size = xa.len();
 
@@ -177,10 +185,34 @@ where
 
         let (b, c, d) = akima_calc(xa, &m);
 
-        let akima_periodic = AkimaPeriodic { b, c, d, m };
-        Ok(akima_periodic)
+        let state = AkimaPeriodicInterp { b, c, d, m };
+        Ok(state)
     }
+}
 
+// ===============================================================================================
+
+/// Akima Interpolator.
+///
+/// Provides all the evaluation methods.
+///
+/// Should be constructed through the [`Akima`] type.
+#[allow(dead_code)]
+#[doc(alias = "gsl_interp_akima_periodic")]
+pub struct AkimaPeriodicInterp<T>
+where
+    T: crate::Num,
+{
+    c: Vec<T>,
+    b: Vec<T>,
+    d: Vec<T>,
+    m: Vec<T>,
+}
+
+impl<T> Interpolation<T> for AkimaPeriodicInterp<T>
+where
+    T: crate::Num,
+{
     fn eval(&self, xa: &[T], ya: &[T], x: T, acc: &mut Accelerator) -> Result<T, DomainError> {
         akima_eval(xa, ya, (&self.b, &self.c, &self.d), x, acc)
     }
@@ -229,7 +261,7 @@ fn akima_eval<T>(
     acc: &mut Accelerator,
 ) -> Result<T, DomainError>
 where
-    T: num::Float + Debug,
+    T: crate::Num,
 {
     check_if_inbounds(xa, x)?;
     let index = acc.find(xa, x);
@@ -250,7 +282,7 @@ fn akima_eval_deriv<T>(
     acc: &mut Accelerator,
 ) -> Result<T, DomainError>
 where
-    T: num::Float + Debug,
+    T: crate::Num,
 {
     check_if_inbounds(xa, x)?;
     let two = T::from(2).unwrap();
@@ -274,7 +306,7 @@ fn akima_eval_deriv2<T>(
     acc: &mut Accelerator,
 ) -> Result<T, DomainError>
 where
-    T: num::Float + Debug,
+    T: crate::Num,
 {
     check_if_inbounds(xa, x)?;
     let two = T::from(2).unwrap();
@@ -299,7 +331,7 @@ fn akima_eval_integ<T>(
     acc: &mut Accelerator,
 ) -> Result<T, DomainError>
 where
-    T: num::Float + Debug,
+    T: crate::Num,
 {
     check_if_inbounds(xa, a)?;
     check_if_inbounds(xa, b)?;
@@ -329,10 +361,9 @@ where
         if (i == index_a) | (i == index_b) {
             let x1 = if i == index_a { a } else { xlo };
             let x2 = if i == index_b { b } else { xhi };
-            result = result + integ_eval(ylo, bs[i], cs[i], ds[i], xlo, x1, x2);
+            result += integ_eval(ylo, bs[i], cs[i], ds[i], xlo, x1, x2);
         } else {
-            result = result
-                + dx * (ylo + dx * (half * bs[i] + dx * (third * cs[i] + quarter * ds[i] * dx)))
+            result += dx * (ylo + dx * (half * bs[i] + dx * (third * cs[i] + quarter * ds[i] * dx)))
         }
     }
     Ok(result)
@@ -341,7 +372,7 @@ where
 /// Common Calculation
 fn akima_calc<T>(xa: &[T], m: &[T]) -> (Vec<T>, Vec<T>, Vec<T>)
 where
-    T: num::Float + Debug,
+    T: crate::Num,
 {
     let size = xa.len();
     let two = T::from(2.0).unwrap();

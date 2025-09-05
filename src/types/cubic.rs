@@ -1,66 +1,58 @@
-//! Implementor for Cubic Interpolator.
-
-use std::fmt::Debug;
-
 use ndarray::Array1;
-use ndarray_linalg::{Lapack, MatrixLayout, Scalar, SolveTridiagonal, Tridiagonal};
+use ndarray_linalg::{Lapack, MatrixLayout, SolveTridiagonal, Tridiagonal};
 use num::One;
 
 use crate::Accelerator;
 use crate::DomainError;
+use crate::InterpType;
 use crate::Interpolation;
 use crate::InterpolationError;
 use crate::types::utils::integ_eval;
 use crate::types::utils::{check_if_inbounds, check1d_data, diff};
 
-/// Cubic Spline.
+const MIN_SIZE: usize = 3;
+
+/// Cubic Interpolation type.
 ///
-/// Cubic spline with natural boundary conditions. The resulting curve is piecewise cubic on each
+/// Cubic Interpolation with natural boundary conditions. The resulting curve is piecewise cubic on each
 /// interval, with matching first and second derivatives at the supplied data-points. The second
 /// derivative is chosen to be zero at the first and last point.
-///
-/// # Example
-///
-/// ```
-/// # use rsl_interpolation::Interpolation;
-/// # use rsl_interpolation::InterpolationError;
-/// # use rsl_interpolation::Cubic;
-/// #
-/// # fn main() -> Result<(), InterpolationError>{
-/// let xa = [0.0, 1.0, 2.0];
-/// let ya = [0.0, 2.0, 4.0];
-/// let interp = Cubic::new(&xa, &ya)?;
-/// # Ok(())
-/// # }
-/// ```
 ///
 /// ## Reference
 ///
 /// Numerical Algorithms with C - Gisela Engeln-Mullges, Frank Uhlig - 1996 -
 /// Algorithm 10.1, pg 254
-#[allow(dead_code)]
-pub struct Cubic<T>
-where
-    T: num::Float + std::fmt::Debug,
-{
-    c: Vec<T>,
-    g: Vec<T>,
-    diag: Vec<T>,
-    offdiag: Vec<T>,
-}
+#[doc(alias = "gsl_interp_cspline")]
+pub struct Cubic;
 
-impl<T> Interpolation<T> for Cubic<T>
+impl<T> InterpType<T> for Cubic
 where
-    T: num::Float + Debug + Scalar + Lapack,
+    T: crate::Num + Lapack,
 {
-    const MIN_SIZE: usize = 3;
-    const NAME: &'static str = "cubic";
+    type Interpolator = CubicInterp<T>;
 
-    fn new(xa: &[T], ya: &[T]) -> Result<Self, crate::InterpolationError>
-    where
-        Self: Sized,
-    {
-        check1d_data(xa, ya, Self::MIN_SIZE)?;
+    const MIN_SIZE: usize = MIN_SIZE;
+    const NAME: &str = "Cubic";
+
+    /// Constructs a Cubic Interpolator.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use rsl_interpolation::InterpType;
+    /// # use rsl_interpolation::Interpolation;
+    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::Cubic;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError>{
+    /// let xa = [0.0, 1.0, 2.0];
+    /// let ya = [0.0, 2.0, 4.0];
+    /// let interp = Cubic.build(&xa, &ya)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn build(self, xa: &[T], ya: &[T]) -> Result<CubicInterp<T>, InterpolationError> {
+        check1d_data(xa, ya, MIN_SIZE)?;
 
         // Engeln-Mullges G. - Uhlig F.: Algorithm 10.1, pg 254
         let sys_size = xa.len() - 2;
@@ -121,15 +113,38 @@ where
 
         // g, diag, and offdiag are only needed for the calculation of c and are not used anywere
         // else from this point, but lets keep them.
-        let cubic = Cubic {
+        let state = CubicInterp {
             c,
             g,
             diag,
             offdiag,
         };
-        Ok(cubic)
+        Ok(state)
     }
+}
 
+// ===============================================================================================
+
+/// Cubic Interpolator.
+///
+/// Provides all the evaluation methods.
+///
+/// Should be constructed through the [`Cubic`] type.
+#[allow(dead_code)]
+pub struct CubicInterp<T>
+where
+    T: crate::Num,
+{
+    c: Vec<T>,
+    g: Vec<T>,
+    diag: Vec<T>,
+    offdiag: Vec<T>,
+}
+
+impl<T> Interpolation<T> for CubicInterp<T>
+where
+    T: crate::Num + Lapack,
+{
     fn eval(&self, xa: &[T], ya: &[T], x: T, acc: &mut Accelerator) -> Result<T, DomainError> {
         cubic_eval(xa, ya, &self.c, x, acc)
     }
@@ -168,7 +183,7 @@ where
 
 //=================================================================================================
 
-/// Cubic Periodic Spline.
+/// Cubic Periodic Interpolation type.
 ///
 /// Cubic Spline with periodic boundary conditions. The resulting curve is piecewise cubic on each
 /// interval, with matching first and second derivatives at the supplied data-points. The
@@ -176,49 +191,42 @@ where
 /// must have the same y-value as the first point, otherwise the resulting periodic interpolation
 /// will have a discontinuity at the boundary.
 ///
-/// ## Example
-///
-/// ```
-/// # use rsl_interpolation::Interpolation;
-/// # use rsl_interpolation::InterpolationError;
-/// # use rsl_interpolation::CubicPeriodic;
-/// # use rsl_interpolation::Accelerator;
-/// #
-/// # fn main() -> Result<(), InterpolationError>{
-/// let xa = [0.0, 1.0, 2.0];
-/// let ya = [0.0, 2.0, 4.0];
-/// let interp = CubicPeriodic::new(&xa, &ya)?;
-/// # Ok(())
-/// # }
-/// ```
-///
 /// ## Reference
 ///
 /// Numerical Algorithms with C - Gisela Engeln-Mullges, Frank Uhlig - 1996 -
 /// Algorithm 10.2, pg 255
-#[allow(dead_code)]
-pub struct CubicPeriodic<T>
-where
-    T: num::Float + std::fmt::Debug,
-{
-    c: Vec<T>,
-    g: Vec<T>,
-    diag: Vec<T>,
-    offdiag: Vec<T>,
-}
+#[doc(alias = "gsl_interp_cspline_periodic")]
+pub struct CubicPeriodic;
 
-impl<T> Interpolation<T> for CubicPeriodic<T>
+impl<T> InterpType<T> for CubicPeriodic
 where
-    T: num::Float + Debug + Scalar + Lapack,
+    T: crate::Num + Lapack,
 {
-    const MIN_SIZE: usize = 3;
-    const NAME: &'static str = "cubic-periodic";
+    type Interpolator = CubicPeriodicInterp<T>;
 
-    fn new(xa: &[T], ya: &[T]) -> Result<Self, crate::InterpolationError>
-    where
-        Self: Sized,
-    {
-        check1d_data(xa, ya, Self::MIN_SIZE)?;
+    const MIN_SIZE: usize = MIN_SIZE;
+    const NAME: &str = "Cubic Periodic";
+
+    /// Constructs a Cubic Periodic Interpolator.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use rsl_interpolation::InterpType;
+    /// # use rsl_interpolation::Interpolation;
+    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::CubicPeriodic;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError>{
+    /// let xa = [0.0, 1.0, 2.0];
+    /// let ya = [0.0, 2.0, 4.0];
+    /// let interp = CubicPeriodic.build(&xa, &ya)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    fn build(self, xa: &[T], ya: &[T]) -> Result<CubicPeriodicInterp<T>, InterpolationError> {
+        check1d_data(xa, ya, MIN_SIZE)?;
 
         // Engeln-Mullges G. - Uhlig F.: Algorithm 10.2, pg 255
         let sys_size = xa.len() - 1;
@@ -320,15 +328,39 @@ where
 
         // g, diag, and offdiag are only needed for the calculation of c and are not used anywere
         // else from this point, but lets keep them.
-        let cubic_periodic = CubicPeriodic {
+        let state = CubicPeriodicInterp {
             c,
             g,
             diag,
             offdiag,
         };
-        Ok(cubic_periodic)
+        Ok(state)
     }
+}
 
+// ===============================================================================================
+
+/// Cubic Periodic interpolator.
+///
+/// Provides all the evaluation methods.
+///
+/// Should be constructed through the [`CubicPeriodic`] type.
+#[allow(dead_code)]
+#[doc(alias = "gsl_interp_cspline_periodic")]
+pub struct CubicPeriodicInterp<T>
+where
+    T: crate::Num + Lapack,
+{
+    c: Vec<T>,
+    g: Vec<T>,
+    diag: Vec<T>,
+    offdiag: Vec<T>,
+}
+
+impl<T> Interpolation<T> for CubicPeriodicInterp<T>
+where
+    T: crate::Num + Lapack,
+{
     fn eval(&self, xa: &[T], ya: &[T], x: T, acc: &mut Accelerator) -> Result<T, DomainError> {
         cubic_eval(xa, ya, &self.c, x, acc)
     }
@@ -369,7 +401,7 @@ where
 
 fn cubic_eval<T>(xa: &[T], ya: &[T], c: &[T], x: T, acc: &mut Accelerator) -> Result<T, DomainError>
 where
-    T: num::Float + Debug + Scalar + Lapack,
+    T: crate::Num + Lapack,
 {
     check_if_inbounds(xa, x)?;
     let index = acc.find(xa, x);
@@ -397,7 +429,7 @@ fn cubic_eval_deriv<T>(
     acc: &mut Accelerator,
 ) -> Result<T, DomainError>
 where
-    T: num::Float + Debug + Scalar + Lapack,
+    T: crate::Num + Lapack,
 {
     check_if_inbounds(xa, x)?;
     let index = acc.find(xa, x);
@@ -428,7 +460,7 @@ fn cubic_eval_deriv2<T>(
     acc: &mut Accelerator,
 ) -> Result<T, DomainError>
 where
-    T: num::Float + Debug + Scalar + Lapack,
+    T: crate::Num + Lapack,
 {
     check_if_inbounds(xa, x)?;
     let index = acc.find(xa, x);
@@ -460,7 +492,7 @@ fn cubic_eval_integ<T>(
     acc: &mut Accelerator,
 ) -> Result<T, DomainError>
 where
-    T: num::Float + Debug + Scalar + Lapack,
+    T: crate::Num + Lapack,
 {
     check_if_inbounds(xa, a)?;
     check_if_inbounds(xa, b)?;
@@ -502,7 +534,7 @@ where
 /// Function for common coefficient determination.
 fn coeff_calc<T>(carray: &[T], dx: T, dy: T, index: usize) -> (T, T, T)
 where
-    T: num::Float + Debug,
+    T: crate::Num + Lapack,
 {
     let two = T::from(2).unwrap();
     let three = T::from(3).unwrap();

@@ -2,67 +2,78 @@ use std::marker::PhantomData;
 
 use crate::Accelerator;
 use crate::DomainError;
+use crate::Interp2dType;
 use crate::Interpolation2d;
 use crate::InterpolationError;
 use crate::interp2d::{acc_indeces, partials, xy_grid_indeces, z_grid_indeces};
 use crate::types::utils::check_if_inbounds;
 use crate::types::utils::check2d_data;
 
-/// BiLinear Interpolation
+const MIN_SIZE: usize = 2;
+
+/// Bilinear Interpolation type.
 ///
 /// The simplest type of 2d Interpolation.
-///
-/// # Example
-///
-/// ```
-/// # use rsl_interpolation::Interpolation2d;
-/// # use rsl_interpolation::InterpolationError;
-/// # use rsl_interpolation::Bilinear;
-/// # use rsl_interpolation::Accelerator;
-/// #
-/// # fn main() -> Result<(), InterpolationError>{
-/// let xa = [0.0, 1.0, 2.0];
-/// let ya = [0.0, 2.0, 4.0];
-/// // z = x + y
-/// let za = [
-///     0.0, 1.0, 2.0,
-///     2.0, 3.0, 4.0,
-///     4.0, 5.0, 6.0,
-/// ];
-/// let interp = Bilinear::new(&xa, &ya, &za)?;
-/// let mut xacc = Accelerator::new();
-/// let mut yacc = Accelerator::new();
-///
-/// let z = interp.eval(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc)?;
-///
-/// assert_eq!(z, 4.5);
-/// # Ok(())
-/// # }
-/// ```
 #[doc(alias = "gsl_interp2d_bilinear")]
-pub struct Bilinear<T> {
-    _variable_type: PhantomData<T>,
-}
+pub struct Bilinear;
 
-impl<T> Interpolation2d<T> for Bilinear<T>
+impl<T> Interp2dType<T> for Bilinear
 where
-    T: num::Float + std::fmt::Debug,
+    T: crate::Num,
 {
-    const MIN_SIZE: usize = 2;
-    const NAME: &'static str = "linear";
+    type Interpolator2d = BilinearInterp<T>;
 
-    #[allow(unused_variables)]
-    fn new(xa: &[T], ya: &[T], za: &[T]) -> Result<Self, InterpolationError>
-    where
-        Self: Sized,
-    {
-        check2d_data(xa, ya, za, Self::MIN_SIZE)?;
+    const MIN_SIZE: usize = MIN_SIZE;
+    const NAME: &str = "Bilinear";
 
-        Ok(Self {
+    /// Constructs a Bilinear Interpolator.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use rsl_interpolation::Interp2dType;
+    /// # use rsl_interpolation::Interpolation2d;
+    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::Bilinear;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError>{
+    /// let xa = [0.0, 1.0, 2.0];
+    /// let ya = [0.0, 2.0, 4.0];
+    /// // z = x + y, in column-major order
+    /// let za = [
+    ///     0.0, 1.0, 2.0,
+    ///     2.0, 3.0, 4.0,
+    ///     4.0, 5.0, 6.0,
+    /// ];
+    ///
+    /// let interp = Bilinear.build(&xa, &ya, &za)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn build(self, xa: &[T], ya: &[T], za: &[T]) -> Result<BilinearInterp<T>, InterpolationError> {
+        check2d_data(xa, ya, za, MIN_SIZE)?;
+
+        Ok(BilinearInterp {
             _variable_type: PhantomData,
         })
     }
+}
 
+// ===============================================================================================
+
+/// Bilinear Interpolator.
+///
+/// Provides all the evaluation methods.
+///
+/// Should be constructed through the [`Bilinear`] type.
+pub struct BilinearInterp<T> {
+    _variable_type: PhantomData<T>,
+}
+
+impl<T> Interpolation2d<T> for BilinearInterp<T>
+where
+    T: crate::Num,
+{
     fn eval_extrap(
         &self,
         xa: &[T],

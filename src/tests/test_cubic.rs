@@ -1,5 +1,5 @@
 use crate::Cubic;
-use crate::Interpolation;
+use crate::InterpType;
 use crate::tests::XYTable;
 use crate::tests::test_interp;
 
@@ -30,7 +30,7 @@ fn gsl_test_cubic1() {
         y: &iytest,
     };
 
-    let interp = Cubic::new(&xa, &ya).unwrap();
+    let interp = Cubic.build(&xa, &ya).unwrap();
     test_interp(data_table, test_e_table, test_d_table, test_i_table, interp);
 }
 
@@ -114,7 +114,7 @@ fn gsl_test_cubic2() {
         y: &iytest,
     };
 
-    let interp = Cubic::new(&xa, &ya).unwrap();
+    let interp = Cubic.build(&xa, &ya).unwrap();
     test_interp(data_table, test_e_table, test_d_table, test_i_table, interp);
 }
 
@@ -186,7 +186,7 @@ fn gsl_test_cubic3() {
         y: &iytest,
     };
 
-    let interp = Cubic::new(&xa, &ya).unwrap();
+    let interp = Cubic.build(&xa, &ya).unwrap();
     test_interp(data_table, test_e_table, test_d_table, test_i_table, interp);
 }
 

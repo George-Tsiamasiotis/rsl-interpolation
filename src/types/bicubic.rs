@@ -1,6 +1,10 @@
+use ndarray_linalg::Lapack;
+
 use crate::Accelerator;
 use crate::Cubic;
 use crate::DomainError;
+use crate::Interp2dType;
+use crate::InterpType;
 use crate::Interpolation;
 use crate::Interpolation2d;
 use crate::InterpolationError;
@@ -9,61 +13,48 @@ use crate::types::utils::check_if_inbounds;
 use crate::types::utils::check2d_data;
 use crate::z_idx;
 
+const MIN_SIZE: usize = 4;
+
 /// Bicubic Interpolation
-///
-/// # Example
-///
-/// ```
-/// # use rsl_interpolation::Interpolation2d;
-/// # use rsl_interpolation::InterpolationError;
-/// # use rsl_interpolation::Bicubic;
-/// # use rsl_interpolation::Accelerator;
-/// #
-/// # fn main() -> Result<(), InterpolationError>{
-/// let xa = [0.0, 1.0, 2.0, 3.0];
-/// let ya = [0.0, 2.0, 4.0, 6.0];
-/// // z = x + y
-/// let za = [
-///     0.0, 1.0, 2.0, 3.0,
-///     2.0, 3.0, 4.0, 5.0,
-///     4.0, 5.0, 6.0, 7.0,
-///     6.0, 7.0, 8.0, 9.0,
-/// ];
-/// let interp = Bicubic::new(&xa, &ya, &za)?;
-/// let mut xacc = Accelerator::new();
-/// let mut yacc = Accelerator::new();
-///
-/// let z = interp.eval(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc)?;
-///
-/// assert_eq!(z, 4.5);
-/// # Ok(())
-/// # }
-/// ```
-#[allow(dead_code)]
 #[doc(alias = "gsl_interp2d_bicubic")]
-pub struct Bicubic<T>
-where
-    T: num::Float + std::fmt::Debug,
-{
-    pub(crate) zx: Vec<T>,
-    pub(crate) zy: Vec<T>,
-    pub(crate) zxy: Vec<T>,
-    pub(crate) xsize: usize,
-    pub(crate) ysize: usize,
-}
+pub struct Bicubic;
 
-impl<T> Interpolation2d<T> for Bicubic<T>
+impl<T> Interp2dType<T> for Bicubic
 where
-    T: num::Float + std::fmt::Debug + ndarray_linalg::Lapack,
+    T: crate::Num + Lapack,
 {
-    const MIN_SIZE: usize = 4;
-    const NAME: &'static str = "bicubic";
+    type Interpolator2d = BicubicInterp<T>;
 
-    fn new(xa: &[T], ya: &[T], za: &[T]) -> Result<Self, InterpolationError>
-    where
-        Self: Sized,
-    {
-        check2d_data(xa, ya, za, Self::MIN_SIZE)?;
+    const MIN_SIZE: usize = MIN_SIZE;
+    const NAME: &str = "Bicubic";
+
+    /// Constructs a Bicubic Interpolator.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use rsl_interpolation::Interp2dType;
+    /// # use rsl_interpolation::Interpolation2d;
+    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::Bicubic;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError>{
+    /// let xa = [0.0, 1.0, 2.0, 3.0];
+    /// let ya = [0.0, 2.0, 4.0, 6.0];
+    /// // z = x + y, in column-major order
+    /// let za = [
+    ///     0.0, 1.0, 2.0, 3.0,
+    ///     2.0, 3.0, 4.0, 5.0,
+    ///     4.0, 5.0, 6.0, 7.0,
+    ///     6.0, 7.0, 8.0, 9.0,
+    /// ];
+    ///
+    /// let interp = Bicubic.build(&xa, &ya, &za)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn build(self, xa: &[T], ya: &[T], za: &[T]) -> Result<BicubicInterp<T>, InterpolationError> {
+        check2d_data(xa, ya, za, MIN_SIZE)?;
 
         let xsize = xa.len();
         let ysize = ya.len();
@@ -74,7 +65,6 @@ where
         let mut zy: Vec<T> = vec![T::nan(); xsize * ysize];
         let mut zxy: Vec<T> = vec![T::nan(); xsize * ysize];
 
-        let mut interp: Cubic<T>;
         let mut acc = Accelerator::new();
         let mut x: Vec<T> = vec![T::nan(); xsize];
         let mut y: Vec<T> = vec![T::nan(); xsize];
@@ -85,7 +75,7 @@ where
                 x[i] = xa[i];
                 y[i] = za[z_idx(i, j, xsize, ysize)?];
             }
-            interp = Cubic::new(&x, &y)?;
+            let interp = Cubic.build(&x, &y)?;
             for i in 0..xsize {
                 let index = z_idx(i, j, xsize, ysize)?;
                 zx[index] = interp.eval_deriv(&x, &y, xa[i], &mut acc)?;
@@ -102,7 +92,7 @@ where
                 x[j] = ya[j];
                 y[j] = za[z_idx(i, j, xsize, ysize)?];
             }
-            interp = Cubic::new(&x, &y)?;
+            let interp = Cubic.build(&x, &y)?;
             for j in 0..ysize {
                 let index = z_idx(i, j, xsize, ysize)?;
                 zy[index] = interp.eval_deriv(&x, &y, ya[j], &mut acc)?;
@@ -119,14 +109,14 @@ where
                 x[i] = xa[i];
                 y[i] = zy[z_idx(i, j, xsize, ysize)?];
             }
-            interp = Cubic::new(&x, &y)?;
+            let interp = Cubic.build(&x, &y)?;
             for i in 0..xsize {
                 let index = z_idx(i, j, xsize, ysize)?;
                 zxy[index] = interp.eval_deriv(&x, &y, xa[i], &mut acc)?;
             }
         }
 
-        let bicubic = Self {
+        let state = BicubicInterp {
             zx,
             zy,
             zxy,
@@ -134,9 +124,32 @@ where
             ysize,
         };
 
-        Ok(bicubic)
+        Ok(state)
     }
+}
 
+// ===============================================================================================
+
+/// Bicubic Interpolator.
+///
+/// Provides all the evaluation methods.
+///
+/// Should be constructed through the [`Bicubic`] type.
+pub struct BicubicInterp<T>
+where
+    T: crate::Num + Lapack,
+{
+    pub(crate) zx: Vec<T>,
+    pub(crate) zy: Vec<T>,
+    pub(crate) zxy: Vec<T>,
+    pub(crate) xsize: usize,
+    pub(crate) ysize: usize,
+}
+
+impl<T> Interpolation2d<T> for BicubicInterp<T>
+where
+    T: crate::Num + Lapack,
+{
     fn eval_extrap(
         &self,
         xa: &[T],
@@ -154,17 +167,10 @@ where
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
-        let xlen = xa.len();
-        let ylen = ya.len();
-
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) =
-            self.zxminmaxxing_cubic(xi, yi, dt, xlen, ylen)?;
-
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) =
-            self.zyminmaxxing_cubic(xi, yi, du, xlen, ylen)?;
-
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) =
-            self.zxyminmaxxing_cubic(xi, yi, dt, du, xlen, ylen)?;
+        dbg!(y);
+        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = self.zxminmaxxing(xi, yi, dt)?;
+        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = self.zyminmaxxing(xi, yi, du)?;
+        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = self.zxyminmaxxing(xi, yi, dt, du)?;
 
         let t2 = t * t;
         let (t0, t1, t2, t3) = (T::one(), t, t2, t * t2);
@@ -251,17 +257,9 @@ where
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
-        let xlen = xa.len();
-        let ylen = ya.len();
-
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) =
-            self.zxminmaxxing_cubic(xi, yi, dt, xlen, ylen)?;
-
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) =
-            self.zyminmaxxing_cubic(xi, yi, du, xlen, ylen)?;
-
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) =
-            self.zxyminmaxxing_cubic(xi, yi, dt, du, xlen, ylen)?;
+        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = self.zxminmaxxing(xi, yi, dt)?;
+        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = self.zyminmaxxing(xi, yi, du)?;
+        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = self.zxyminmaxxing(xi, yi, dt, du)?;
 
         let (t0, t1, t2) = (T::one(), t, t * t);
 
@@ -340,17 +338,9 @@ where
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
-        let xlen = xa.len();
-        let ylen = ya.len();
-
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) =
-            self.zxminmaxxing_cubic(xi, yi, dt, xlen, ylen)?;
-
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) =
-            self.zyminmaxxing_cubic(xi, yi, du, xlen, ylen)?;
-
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) =
-            self.zxyminmaxxing_cubic(xi, yi, dt, du, xlen, ylen)?;
+        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = self.zxminmaxxing(xi, yi, dt)?;
+        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = self.zyminmaxxing(xi, yi, du)?;
+        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = self.zxyminmaxxing(xi, yi, dt, du)?;
 
         let t2 = t * t;
         let (t0, t1, t2, t3) = (T::one(), t, t2, t * t2);
@@ -429,17 +419,9 @@ where
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
-        let xlen = xa.len();
-        let ylen = ya.len();
-
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) =
-            self.zxminmaxxing_cubic(xi, yi, dt, xlen, ylen)?;
-
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) =
-            self.zyminmaxxing_cubic(xi, yi, du, xlen, ylen)?;
-
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) =
-            self.zxyminmaxxing_cubic(xi, yi, dt, du, xlen, ylen)?;
+        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = self.zxminmaxxing(xi, yi, dt)?;
+        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = self.zyminmaxxing(xi, yi, du)?;
+        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = self.zxyminmaxxing(xi, yi, dt, du)?;
 
         let (t0, t1) = (T::one(), t);
 
@@ -510,17 +492,9 @@ where
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
-        let xlen = xa.len();
-        let ylen = ya.len();
-
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) =
-            self.zxminmaxxing_cubic(xi, yi, dt, xlen, ylen)?;
-
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) =
-            self.zyminmaxxing_cubic(xi, yi, du, xlen, ylen)?;
-
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) =
-            self.zxyminmaxxing_cubic(xi, yi, dt, du, xlen, ylen)?;
+        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = self.zxminmaxxing(xi, yi, dt)?;
+        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = self.zyminmaxxing(xi, yi, du)?;
+        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = self.zxyminmaxxing(xi, yi, dt, du)?;
 
         let t2 = t * t;
         let (t0, t1, t2, t3) = (T::one(), t, t2, t * t2);
@@ -591,17 +565,9 @@ where
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
-        let xlen = xa.len();
-        let ylen = ya.len();
-
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) =
-            self.zxminmaxxing_cubic(xi, yi, dt, xlen, ylen)?;
-
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) =
-            self.zyminmaxxing_cubic(xi, yi, du, xlen, ylen)?;
-
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) =
-            self.zxyminmaxxing_cubic(xi, yi, dt, du, xlen, ylen)?;
+        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = self.zxminmaxxing(xi, yi, dt)?;
+        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = self.zyminmaxxing(xi, yi, du)?;
+        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = self.zxyminmaxxing(xi, yi, dt, du)?;
 
         let (t0, t1, t2) = (T::one(), t, t * t);
 
@@ -656,63 +622,41 @@ where
 }
 
 /// Common calculations
-impl<T> Bicubic<T>
+impl<T> BicubicInterp<T>
 where
-    T: num::Float + std::fmt::Debug,
+    T: crate::Num + Lapack,
 {
-    fn zxminmaxxing_cubic(
-        &self,
-        xi: usize,
-        yi: usize,
-        dt: T,
-        xlen: usize,
-        ylen: usize,
-    ) -> Result<(T, T, T, T), DomainError>
+    fn zxminmaxxing(&self, xi: usize, yi: usize, dt: T) -> Result<(T, T, T, T), DomainError>
     where
-        T: num::Float + std::fmt::Debug + ndarray_linalg::Lapack,
+        T: crate::Num + Lapack,
     {
-        let zxminmin = self.zx[z_idx(xi, yi, xlen, ylen)?] / dt;
-        let zxminmax = self.zx[z_idx(xi, yi + 1, xlen, ylen)?] / dt;
-        let zxmaxmin = self.zx[z_idx(xi + 1, yi, xlen, ylen)?] / dt;
-        let zxmaxmax = self.zx[z_idx(xi + 1, yi + 1, xlen, ylen)?] / dt;
+        let zxminmin = self.zx[z_idx(xi, yi, self.xsize, self.ysize)?] / dt;
+        let zxminmax = self.zx[z_idx(xi, yi + 1, self.xsize, self.ysize)?] / dt;
+        let zxmaxmin = self.zx[z_idx(xi + 1, yi, self.xsize, self.ysize)?] / dt;
+        let zxmaxmax = self.zx[z_idx(xi + 1, yi + 1, self.xsize, self.ysize)?] / dt;
         Ok((zxminmin, zxminmax, zxmaxmin, zxmaxmax))
     }
 
-    fn zyminmaxxing_cubic(
-        &self,
-        xi: usize,
-        yi: usize,
-        du: T,
-        xlen: usize,
-        ylen: usize,
-    ) -> Result<(T, T, T, T), DomainError>
+    fn zyminmaxxing(&self, xi: usize, yi: usize, du: T) -> Result<(T, T, T, T), DomainError>
     where
-        T: num::Float + std::fmt::Debug + ndarray_linalg::Lapack,
+        T: crate::Num + Lapack,
     {
-        let zyminmin = self.zy[z_idx(xi, yi, xlen, ylen)?] / du;
-        let zyminmax = self.zy[z_idx(xi, yi + 1, xlen, ylen)?] / du;
-        let zymaxmin = self.zy[z_idx(xi + 1, yi, xlen, ylen)?] / du;
-        let zymaxmax = self.zy[z_idx(xi + 1, yi + 1, xlen, ylen)?] / du;
+        let zyminmin = self.zy[z_idx(xi, yi, self.xsize, self.ysize)?] / du;
+        let zyminmax = self.zy[z_idx(xi, yi + 1, self.xsize, self.ysize)?] / du;
+        let zymaxmin = self.zy[z_idx(xi + 1, yi, self.xsize, self.ysize)?] / du;
+        let zymaxmax = self.zy[z_idx(xi + 1, yi + 1, self.xsize, self.ysize)?] / du;
         Ok((zyminmin, zyminmax, zymaxmin, zymaxmax))
     }
 
-    fn zxyminmaxxing_cubic(
-        &self,
-        xi: usize,
-        yi: usize,
-        dt: T,
-        du: T,
-        xlen: usize,
-        ylen: usize,
-    ) -> Result<(T, T, T, T), DomainError>
+    fn zxyminmaxxing(&self, xi: usize, yi: usize, dt: T, du: T) -> Result<(T, T, T, T), DomainError>
     where
-        T: num::Float + std::fmt::Debug + ndarray_linalg::Lapack,
+        T: crate::Num + Lapack,
     {
         let prod = dt * du;
-        let zxyminmin = self.zxy[z_idx(xi, yi, xlen, ylen)?] / prod;
-        let zxyminmax = self.zxy[z_idx(xi, yi + 1, xlen, ylen)?] / prod;
-        let zxymaxmin = self.zxy[z_idx(xi + 1, yi, xlen, ylen)?] / prod;
-        let zxymaxmax = self.zxy[z_idx(xi + 1, yi + 1, xlen, ylen)?] / prod;
+        let zxyminmin = self.zxy[z_idx(xi, yi, self.xsize, self.ysize)?] / prod;
+        let zxyminmax = self.zxy[z_idx(xi, yi + 1, self.xsize, self.ysize)?] / prod;
+        let zxymaxmin = self.zxy[z_idx(xi + 1, yi, self.xsize, self.ysize)?] / prod;
+        let zxymaxmax = self.zxy[z_idx(xi + 1, yi + 1, self.xsize, self.ysize)?] / prod;
         Ok((zxyminmin, zxyminmax, zxymaxmin, zxymaxmax))
     }
 }
@@ -720,7 +664,7 @@ where
 /// Common calculation
 fn tu_cubic_values<T>(x: T, y: T, xlo: T, ylo: T, dx: T, dy: T) -> (T, T, T, T)
 where
-    T: num::Float + std::fmt::Debug + ndarray_linalg::Lapack,
+    T: crate::Num + Lapack,
 {
     let t = (x - xlo) / dx;
     let u = (y - ylo) / dy;

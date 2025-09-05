@@ -1,4 +1,4 @@
-use crate::Interpolation;
+use crate::InterpType;
 use crate::Linear;
 use crate::tests::XYTable;
 use crate::tests::test_interp;
@@ -8,7 +8,7 @@ fn gsl_test_linear() {
     let xa = [0.0, 1.0, 2.0, 3.0];
     let ya = [0.0, 1.0, 2.0, 3.0];
 
-    let interp = Linear::new(&xa, &ya).unwrap();
+    let interp = Linear.build(&xa, &ya).unwrap();
 
     let xtest = [0.0, 0.5, 1.0, 1.5, 2.5, 3.0];
     let ytest = [0.0, 0.5, 1.0, 1.5, 2.5, 3.0];
