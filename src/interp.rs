@@ -4,10 +4,7 @@ use crate::Accelerator;
 use crate::{DomainError, InterpolationError};
 
 /// Representation of an Interpolation Type.
-pub trait InterpType<T>
-where
-    T: crate::Num,
-{
+pub trait InterpType<T> {
     /// The returned Interpolator, containing the calculated coefficients and providing the
     /// evaluation methods.
     type Interpolator: Interpolation<T>;
@@ -40,10 +37,7 @@ where
 }
 
 /// Defines the required evaluation methods.
-pub trait Interpolation<T>
-where
-    T: crate::Num,
-{
+pub trait Interpolation<T> {
     /// Returns the interpolated value `y` for a given point `x`, using the data arrays `xa` and `ya` and
     /// the [`Accelerator`] `acc`.
     ///

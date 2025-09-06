@@ -1,5 +1,3 @@
-use ndarray_linalg::Lapack;
-
 use crate::Accelerator;
 use crate::DomainError;
 use crate::InterpType;
@@ -40,11 +38,14 @@ use crate::InterpolationError;
 /// # Ok(())
 /// # }
 /// ```
-pub struct Spline<I, T> {
+pub struct Spline<I, T>
+where
+    I: InterpType<T>,
+{
     /// The lower-level [`Interpolator`].
     ///
     /// [`Interpolator`]: Interpolation#implementors
-    pub interp: I,
+    pub interp: I::Interpolator,
     /// The owned x data.
     pub xa: Vec<T>,
     /// The owned y data.
@@ -55,8 +56,7 @@ pub struct Spline<I, T> {
 
 impl<I, T> Spline<I, T>
 where
-    I: Interpolation<T>,
-    T: crate::Num + Lapack,
+    I: InterpType<T>,
 {
     /// Constructs a Spline of an Interpolation type `ty` from the data arrays `xa` and `ya`.
     ///
@@ -77,13 +77,12 @@ where
     /// # Ok(())
     /// # }
     #[doc(alias = "gsl_spline_init")]
-    pub fn build(
-        ty: impl InterpType<T, Interpolator = I>,
-        xa: &[T],
-        ya: &[T],
-    ) -> Result<Self, InterpolationError> {
-        let xa = xa.to_owned();
-        let ya = ya.to_owned();
+    pub fn build(ty: I, xa: &[T], ya: &[T]) -> Result<Self, InterpolationError>
+    where
+        T: Clone,
+    {
+        let xa = xa.to_vec();
+        let ya = ya.to_vec();
 
         let interp = ty.build(&xa, &ya)?;
         let name = ty.name().to_string();
