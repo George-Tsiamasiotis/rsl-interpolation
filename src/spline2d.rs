@@ -7,7 +7,7 @@ use crate::{DomainError, InterpolationError};
 
 /// 2D Higher level interface.
 ///
-/// A 2D Spline owns the data it is constructed with, and provides the same evalulation methods as the
+/// A 2D Spline owns the data it is constructed with, and provides the same evaluation methods as the
 /// lower-level Interpolator object, without needing to provide the data arrays in every call.
 ///
 /// # Example
@@ -35,8 +35,8 @@ use crate::{DomainError, InterpolationError};
 ///
 /// let interp = Bicubic.build(&xa, &ya, &za)?;
 ///
-/// let typ = Bicubic;
-/// let spline = Spline2d::build(typ, &xa, &ya, &za)?;
+/// let ty = Bicubic;
+/// let spline = Spline2d::build(ty, &xa, &ya, &za)?;
 ///
 /// let (x, y) = (2.5, 4.1);
 /// let y_interp = interp.eval(&xa, &ya, &za, x, y, &mut xacc, &mut yacc)?;
@@ -67,7 +67,7 @@ where
     I: Interpolation2d<T>,
     T: crate::Num + Lapack,
 {
-    /// Constructs a 2D Spline of a 2D Interpolation type `typ` from the data arrays `xa`, `ya` and
+    /// Constructs a 2D Spline of a 2D Interpolation type `ty` from the data arrays `xa`, `ya` and
     /// `za`.
     ///
     /// # Example
@@ -93,15 +93,15 @@ where
     ///     6.0, 7.0, 8.0, 9.0,
     /// ];
     ///
-    /// let typ = Bicubic;
-    /// let spline = Spline2d::build(typ, &xa, &ya, &za)?;
+    /// let ty = Bicubic;
+    /// let spline = Spline2d::build(ty, &xa, &ya, &za)?;
     /// #
     /// # Ok(())
     /// # }
     /// ```
     #[doc(alias = "gsl_spline2d_init")]
     pub fn build(
-        typ: impl Interp2dType<T, Interpolator2d = I>,
+        ty: impl Interp2dType<T, Interpolator2d = I>,
         xa: &[T],
         ya: &[T],
         za: &[T],
@@ -110,9 +110,9 @@ where
         let ya = ya.to_owned();
         let za = za.to_owned();
 
-        let interp = typ.build(&xa, &ya, &za)?;
-        let name = typ.name().to_string();
-        let min_size = typ.min_size();
+        let interp = ty.build(&xa, &ya, &za)?;
+        let name = ty.name().to_string();
+        let min_size = ty.min_size();
 
         let spline = Self {
             interp,
@@ -151,8 +151,8 @@ where
     ///     4.0, 5.0, 6.0,
     /// ];
     ///
-    /// let typ = Bilinear;
-    /// let spline = Spline2d::build(typ, &xa, &ya, &za)?;
+    /// let ty = Bilinear;
+    /// let spline = Spline2d::build(ty, &xa, &ya, &za)?;
     ///
     /// let z = spline.eval(1.5, 3.0, &mut xacc, &mut yacc)?;
     ///
@@ -210,8 +210,8 @@ where
     ///     4.0, 5.0, 6.0,
     /// ];
     ///
-    /// let typ = Bilinear;
-    /// let spline = Spline2d::build(typ, &xa, &ya, &za)?;
+    /// let ty = Bilinear;
+    /// let spline = Spline2d::build(ty, &xa, &ya, &za)?;
     ///
     /// let z = spline.eval_extrap(3.0, 6.0, &mut xacc, &mut yacc)?;
     ///
@@ -264,8 +264,8 @@ where
     ///     16.0, 17.0, 20.0,
     /// ];
     ///
-    /// let typ = Bilinear;
-    /// let spline = Spline2d::build(typ, &xa, &ya, &za)?;
+    /// let ty = Bilinear;
+    /// let spline = Spline2d::build(ty, &xa, &ya, &za)?;
     ///
     /// let dzdx = spline.eval_deriv_x(1.5, 3.0, &mut xacc, &mut yacc)?;
     ///
@@ -318,8 +318,8 @@ where
     ///     16.0, 17.0, 20.0,
     /// ];
     ///
-    /// let typ = Bilinear;
-    /// let spline = Spline2d::build(typ, &xa, &ya, &za)?;
+    /// let ty = Bilinear;
+    /// let spline = Spline2d::build(ty, &xa, &ya, &za)?;
     ///
     /// let dzdx = spline.eval_deriv_y(1.5, 3.0, &mut xacc, &mut yacc)?;
     ///
@@ -372,8 +372,8 @@ where
     ///     16.0, 17.0, 20.0,
     /// ];
     ///
-    /// let typ = Bilinear;
-    /// let spline = Spline2d::build(typ, &xa, &ya, &za)?;
+    /// let ty = Bilinear;
+    /// let spline = Spline2d::build(ty, &xa, &ya, &za)?;
     ///
     /// let dzdx2 = spline.eval_deriv_xx(1.5, 3.0, &mut xacc, &mut yacc)?;
     ///
@@ -426,8 +426,8 @@ where
     ///      4.0,  5.0,  8.0,
     ///     16.0, 17.0, 20.0,
     /// ];
-    /// let typ = Bilinear;
-    /// let spline = Spline2d::build(typ, &xa, &ya, &za)?;
+    /// let ty = Bilinear;
+    /// let spline = Spline2d::build(ty, &xa, &ya, &za)?;
     ///
     /// let dzdx2 = spline.eval_deriv_yy(1.5, 3.0, &mut xacc, &mut yacc)?;
     ///
@@ -480,8 +480,8 @@ where
     ///     16.0, 17.0, 20.0,
     /// ];
     ///
-    /// let typ = Bilinear;
-    /// let spline = Spline2d::build(typ, &xa, &ya, &za)?;
+    /// let ty = Bilinear;
+    /// let spline = Spline2d::build(ty, &xa, &ya, &za)?;
     ///
     /// let dzdxy = spline.eval_deriv_xy(1.5, 3.0, &mut xacc, &mut yacc)?;
     ///

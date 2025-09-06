@@ -8,7 +8,7 @@ use crate::InterpolationError;
 
 /// 1D Higher level interface.
 ///
-/// A Spline owns the data it is constructed with, and provides the same evalulation methods as the
+/// A Spline owns the data it is constructed with, and provides the same evaluation methods as the
 /// lower-level Interpolator object, without needing to provide the data arrays in every call.
 ///
 /// # Example
@@ -28,8 +28,8 @@ use crate::InterpolationError;
 ///
 /// let interp = Cubic.build(&xa, &ya)?;
 ///
-/// let typ = Cubic;
-/// let spline = Spline::build(typ, &xa, &ya)?;
+/// let ty = Cubic;
+/// let spline = Spline::build(ty, &xa, &ya)?;
 ///
 /// let x = 1.5;
 /// let y_interp = interp.eval(&xa, &ya, x, &mut acc)?;
@@ -58,7 +58,7 @@ where
     I: Interpolation<T>,
     T: crate::Num + Lapack,
 {
-    /// Constructs a Spline of an Interpolation type `typ` from the data arrays `xa` and `ya`.
+    /// Constructs a Spline of an Interpolation type `ty` from the data arrays `xa` and `ya`.
     ///
     /// # Example
     /// ```
@@ -70,24 +70,24 @@ where
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
-    /// let typ = Cubic;
+    /// let ty = Cubic;
     ///
-    /// let spline = Spline::build(typ, &xa, &ya)?;
+    /// let spline = Spline::build(ty, &xa, &ya)?;
     /// #
     /// # Ok(())
     /// # }
     #[doc(alias = "gsl_spline_init")]
     pub fn build(
-        typ: impl InterpType<T, Interpolator = I>,
+        ty: impl InterpType<T, Interpolator = I>,
         xa: &[T],
         ya: &[T],
     ) -> Result<Self, InterpolationError> {
         let xa = xa.to_owned();
         let ya = ya.to_owned();
 
-        let interp = typ.build(&xa, &ya)?;
-        let name = typ.name().to_string();
-        let min_size = typ.min_size();
+        let interp = ty.build(&xa, &ya)?;
+        let name = ty.name().to_string();
+        let min_size = ty.min_size();
 
         let spline = Self {
             interp,
@@ -116,8 +116,8 @@ where
     ///
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
-    /// let typ = Cubic;
-    /// let spline = Spline::build(typ, &xa, &ya)?;
+    /// let ty = Cubic;
+    /// let spline = Spline::build(ty, &xa, &ya)?;
     /// #
     /// let y = spline.eval(1.5, &mut acc)?;
     ///
@@ -152,8 +152,8 @@ where
     ///
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
-    /// let typ = Cubic;
-    /// let spline = Spline::build(typ, &xa, &ya)?;
+    /// let ty = Cubic;
+    /// let spline = Spline::build(ty, &xa, &ya)?;
     ///
     /// let dydx = spline.eval_deriv(1.5, &mut acc)?;
     ///
@@ -187,8 +187,8 @@ where
     ///
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
-    /// let typ = Cubic;
-    /// let spline = Spline::build(typ, &xa, &ya)?;
+    /// let ty = Cubic;
+    /// let spline = Spline::build(ty, &xa, &ya)?;
     ///
     /// let dydx = spline.eval_deriv2(1.5, &mut acc)?;
     ///
@@ -223,8 +223,8 @@ where
     ///
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
-    /// let typ = Cubic;
-    /// let spline = Spline::build(typ, &xa, &ya)?;
+    /// let ty = Cubic;
+    /// let spline = Spline::build(ty, &xa, &ya)?;
     ///
     /// let int = spline.eval_integ(0.0, 2.0, &mut acc)?;
     ///

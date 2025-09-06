@@ -47,7 +47,7 @@ where
         let two = T::from(2.0).unwrap();
         let three = T::from(3.0).unwrap();
 
-        // All m indeces are shifted by +2
+        // All m indices are shifted by +2
         let mut m = VecDeque::<T>::with_capacity(size);
         for i in 0..=size - 2 {
             m.push_back((ya[i + 1] - ya[i]) / (xa[i + 1] - xa[i]));
@@ -172,7 +172,7 @@ where
 
         let size = xa.len();
 
-        // All m indeces are shifted by +2
+        // All m indices are shifted by +2
         let mut m = VecDeque::<T>::with_capacity(size + 3);
         for i in 0..=size - 2 {
             m.push_back((ya[i + 1] - ya[i]) / (xa[i + 1] - xa[i]));

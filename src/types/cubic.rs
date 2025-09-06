@@ -108,7 +108,7 @@ where
         }
         c.push(T::zero());
 
-        // g, diag, and offdiag are only needed for the calculation of c and are not used anywere
+        // g, diag, and offdiag are only needed for the calculation of c and are not used anywhere
         // else from this point, but lets keep them.
         let state = CubicInterp {
             c,
@@ -328,7 +328,7 @@ where
             )
         }
 
-        // g, diag, and offdiag are only needed for the calculation of c and are not used anywere
+        // g, diag, and offdiag are only needed for the calculation of c and are not used anywhere
         // else from this point, but lets keep them.
         let state = CubicPeriodicInterp {
             c,

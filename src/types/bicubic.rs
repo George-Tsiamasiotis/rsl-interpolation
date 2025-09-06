@@ -8,7 +8,7 @@ use crate::InterpType;
 use crate::Interpolation;
 use crate::Interpolation2d;
 use crate::InterpolationError;
-use crate::interp2d::{acc_indeces, partials, xy_grid_indeces, z_grid_indeces};
+use crate::interp2d::{acc_indices, partials, xy_grid_indices, z_grid_indices};
 use crate::types::utils::check_if_inbounds;
 use crate::types::utils::check2d_data;
 use crate::z_idx;
@@ -57,7 +57,7 @@ where
         let ysize = ya.len();
 
         // NaN-fill the vecs since their elements are not added in a linear order. NaN ensures that
-        // utlimately all coefficients are calculated correctly
+        // ultimately all coefficients are calculated correctly
         let mut zx: Vec<T> = vec![T::nan(); xsize * ysize];
         let mut zy: Vec<T> = vec![T::nan(); xsize * ysize];
         let mut zxy: Vec<T> = vec![T::nan(); xsize * ysize];
@@ -165,9 +165,9 @@ where
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
     ) -> Result<T, DomainError> {
-        let (xi, yi) = acc_indeces(xa, ya, x, y, xacc, yacc);
-        let (xlo, xhi, ylo, yhi) = xy_grid_indeces(xa, ya, xi, yi);
-        let (zminmin, zminmax, zmaxmin, zmaxmax) = z_grid_indeces(za, xa.len(), ya.len(), xi, yi)?;
+        let (xi, yi) = acc_indices(xa, ya, x, y, xacc, yacc);
+        let (xlo, xhi, ylo, yhi) = xy_grid_indices(xa, ya, xi, yi);
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = z_grid_indices(za, xa.len(), ya.len(), xi, yi)?;
         let (dx, dy) = partials(xlo, xhi, ylo, yhi);
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
@@ -254,9 +254,9 @@ where
     ) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
-        let (xi, yi) = acc_indeces(xa, ya, x, y, xacc, yacc);
-        let (xlo, xhi, ylo, yhi) = xy_grid_indeces(xa, ya, xi, yi);
-        let (zminmin, zminmax, zmaxmin, zmaxmax) = z_grid_indeces(za, xa.len(), ya.len(), xi, yi)?;
+        let (xi, yi) = acc_indices(xa, ya, x, y, xacc, yacc);
+        let (xlo, xhi, ylo, yhi) = xy_grid_indices(xa, ya, xi, yi);
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = z_grid_indices(za, xa.len(), ya.len(), xi, yi)?;
         let (dx, dy) = partials(xlo, xhi, ylo, yhi);
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
@@ -335,9 +335,9 @@ where
     ) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
-        let (xi, yi) = acc_indeces(xa, ya, x, y, xacc, yacc);
-        let (xlo, xhi, ylo, yhi) = xy_grid_indeces(xa, ya, xi, yi);
-        let (zminmin, zminmax, zmaxmin, zmaxmax) = z_grid_indeces(za, xa.len(), ya.len(), xi, yi)?;
+        let (xi, yi) = acc_indices(xa, ya, x, y, xacc, yacc);
+        let (xlo, xhi, ylo, yhi) = xy_grid_indices(xa, ya, xi, yi);
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = z_grid_indices(za, xa.len(), ya.len(), xi, yi)?;
         let (dx, dy) = partials(xlo, xhi, ylo, yhi);
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
@@ -416,9 +416,9 @@ where
     ) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
-        let (xi, yi) = acc_indeces(xa, ya, x, y, xacc, yacc);
-        let (xlo, xhi, ylo, yhi) = xy_grid_indeces(xa, ya, xi, yi);
-        let (zminmin, zminmax, zmaxmin, zmaxmax) = z_grid_indeces(za, xa.len(), ya.len(), xi, yi)?;
+        let (xi, yi) = acc_indices(xa, ya, x, y, xacc, yacc);
+        let (xlo, xhi, ylo, yhi) = xy_grid_indices(xa, ya, xi, yi);
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = z_grid_indices(za, xa.len(), ya.len(), xi, yi)?;
         let (dx, dy) = partials(xlo, xhi, ylo, yhi);
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
@@ -489,9 +489,9 @@ where
     ) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
-        let (xi, yi) = acc_indeces(xa, ya, x, y, xacc, yacc);
-        let (xlo, xhi, ylo, yhi) = xy_grid_indeces(xa, ya, xi, yi);
-        let (zminmin, zminmax, zmaxmin, zmaxmax) = z_grid_indeces(za, xa.len(), ya.len(), xi, yi)?;
+        let (xi, yi) = acc_indices(xa, ya, x, y, xacc, yacc);
+        let (xlo, xhi, ylo, yhi) = xy_grid_indices(xa, ya, xi, yi);
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = z_grid_indices(za, xa.len(), ya.len(), xi, yi)?;
         let (dx, dy) = partials(xlo, xhi, ylo, yhi);
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
@@ -562,9 +562,9 @@ where
     ) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
-        let (xi, yi) = acc_indeces(xa, ya, x, y, xacc, yacc);
-        let (xlo, xhi, ylo, yhi) = xy_grid_indeces(xa, ya, xi, yi);
-        let (zminmin, zminmax, zmaxmin, zmaxmax) = z_grid_indeces(za, xa.len(), ya.len(), xi, yi)?;
+        let (xi, yi) = acc_indices(xa, ya, x, y, xacc, yacc);
+        let (xlo, xhi, ylo, yhi) = xy_grid_indices(xa, ya, xi, yi);
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = z_grid_indices(za, xa.len(), ya.len(), xi, yi)?;
         let (dx, dy) = partials(xlo, xhi, ylo, yhi);
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);

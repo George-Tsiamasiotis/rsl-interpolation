@@ -9,7 +9,7 @@ use crate::{Accelerator, DomainError, InterpolationError};
 /// > with GSL's interface.
 /// >
 ///
-/// For 2d interpolation, 2 seperate [`Accelerators`] are required for each of the grid variables.
+/// For 2d interpolation, 2 separate [`Accelerators`] are required for each of the grid variables.
 ///
 /// [`Accelerators`]: Accelerator
 pub trait Interp2dType<T>
@@ -61,7 +61,7 @@ where
     fn min_size(&self) -> usize;
 }
 
-/// Defines the required evaulation methods.
+/// Defines the required evaluation methods.
 #[allow(clippy::too_many_arguments)]
 pub trait Interpolation2d<T>
 where
@@ -72,7 +72,7 @@ where
     ///
     /// # Note
     ///
-    /// This function only performes the bounds check, and then calls `eval_extrap()`, where the
+    /// This function only performs the bounds check, and then calls `eval_extrap()`, where the
     /// actual evaluation is implemented.
     ///
     /// # Example
@@ -551,7 +551,7 @@ where
 // ===============================================================================================
 
 /// Common calculation to evaluation functions
-pub(crate) fn acc_indeces<T>(
+pub(crate) fn acc_indices<T>(
     xa: &[T],
     ya: &[T],
     x: T,
@@ -568,7 +568,7 @@ where
 }
 
 /// Common calculation to evaluation functions
-pub(crate) fn xy_grid_indeces<T>(xa: &[T], ya: &[T], xi: usize, yi: usize) -> (T, T, T, T)
+pub(crate) fn xy_grid_indices<T>(xa: &[T], ya: &[T], xi: usize, yi: usize) -> (T, T, T, T)
 where
     T: crate::Num,
 {
@@ -580,7 +580,7 @@ where
 }
 
 /// Common calculation to evaluation functions
-pub(crate) fn z_grid_indeces<T>(
+pub(crate) fn z_grid_indices<T>(
     za: &[T],
     xlen: usize,
     ylen: usize,
