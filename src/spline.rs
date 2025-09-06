@@ -46,11 +46,14 @@ where
     ///
     /// [`Interpolator`]: Interpolation#implementors
     pub interp: I::Interpolator,
+
     /// The owned x data.
-    pub xa: Vec<T>,
+    pub xa: Box<[T]>,
+
     /// The owned y data.
-    pub ya: Vec<T>,
-    name: String,
+    pub ya: Box<[T]>,
+
+    name: Box<str>,
     min_size: usize,
 }
 
@@ -81,22 +84,13 @@ where
     where
         T: Clone,
     {
-        let xa = xa.to_vec();
-        let ya = ya.to_vec();
-
-        let interp = ty.build(&xa, &ya)?;
-        let name = ty.name().to_string();
-        let min_size = ty.min_size();
-
-        let spline = Self {
-            interp,
-            xa,
-            ya,
-            name,
-            min_size,
-        };
-
-        Ok(spline)
+        Ok(Self {
+            interp: ty.build(xa, ya)?,
+            xa: xa.into(),
+            ya: ya.into(),
+            name: ty.name().into(),
+            min_size: ty.min_size(),
+        })
     }
 
     /// Returns the interpolated value `y` for a given point `x`, using the [`Accelerator`] `acc`.
@@ -243,8 +237,8 @@ where
 
     /// Returns the name of the Interpolator.
     #[doc(alias = "gsl_spline_name")]
-    pub fn name(&self) -> String {
-        self.name.clone()
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     /// Returns the minimum number of points required by the Interpolator.
