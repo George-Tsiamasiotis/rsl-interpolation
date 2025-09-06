@@ -2,9 +2,9 @@ use std::collections::VecDeque;
 
 use crate::Accelerator;
 use crate::DomainError;
-use crate::InterpType;
 use crate::Interpolation;
 use crate::InterpolationError;
+use crate::Interpolator;
 use crate::types::utils::integ_eval;
 use crate::types::utils::{check_if_inbounds, check1d_data};
 
@@ -17,24 +17,18 @@ const MIN_SIZE: usize = 5;
 #[doc(alias = "gsl_interp_akima")]
 pub struct Akima;
 
-impl<T> InterpType<T> for Akima
+impl<T> Interpolation<T> for Akima
 where
     T: crate::Num,
 {
     type Interpolator = AkimaInterp<T>;
-
-    const MIN_SIZE: usize = MIN_SIZE;
-    const NAME: &str = "Akima";
 
     /// Constructs an Akima Interpolator.
     ///
     /// ## Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Interpolation;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Akima;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
@@ -50,7 +44,7 @@ where
         let two = T::from(2.0).unwrap();
         let three = T::from(3.0).unwrap();
 
-        // All m indeces are shifted by +2
+        // All m indices are shifted by +2
         let mut m = VecDeque::<T>::with_capacity(size);
         for i in 0..=size - 2 {
             m.push_back((ya[i + 1] - ya[i]) / (xa[i + 1] - xa[i]));
@@ -67,6 +61,14 @@ where
 
         let state = AkimaInterp { b, c, d, m };
         Ok(state)
+    }
+
+    fn name(&self) -> &str {
+        "Akima"
+    }
+
+    fn min_size(&self) -> usize {
+        MIN_SIZE
     }
 }
 
@@ -89,7 +91,7 @@ where
     m: Vec<T>,
 }
 
-impl<T> Interpolation<T> for AkimaInterp<T>
+impl<T> Interpolator<T> for AkimaInterp<T>
 where
     T: crate::Num,
 {
@@ -139,24 +141,18 @@ where
 /// corner algorithm of Wodicka.
 pub struct AkimaPeriodic;
 
-impl<T> InterpType<T> for AkimaPeriodic
+impl<T> Interpolation<T> for AkimaPeriodic
 where
     T: crate::Num,
 {
     type Interpolator = AkimaPeriodicInterp<T>;
-
-    const MIN_SIZE: usize = MIN_SIZE;
-    const NAME: &str = "Akima Periodic";
 
     /// Constructs an Akima Periodic Interpolator.
     ///
     /// ## Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Interpolation;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::AkimaPeriodic;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
@@ -170,7 +166,7 @@ where
 
         let size = xa.len();
 
-        // All m indeces are shifted by +2
+        // All m indices are shifted by +2
         let mut m = VecDeque::<T>::with_capacity(size + 3);
         for i in 0..=size - 2 {
             m.push_back((ya[i + 1] - ya[i]) / (xa[i + 1] - xa[i]));
@@ -187,6 +183,14 @@ where
 
         let state = AkimaPeriodicInterp { b, c, d, m };
         Ok(state)
+    }
+
+    fn name(&self) -> &str {
+        "Akima Periodic"
+    }
+
+    fn min_size(&self) -> usize {
+        MIN_SIZE
     }
 }
 
@@ -209,7 +213,7 @@ where
     m: Vec<T>,
 }
 
-impl<T> Interpolation<T> for AkimaPeriodicInterp<T>
+impl<T> Interpolator<T> for AkimaPeriodicInterp<T>
 where
     T: crate::Num,
 {

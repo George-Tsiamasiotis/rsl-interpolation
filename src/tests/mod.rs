@@ -6,8 +6,8 @@ const EPS: f64 = 1e-10;
 const ATOL: f64 = 1e-9;
 
 use crate::Accelerator;
-use crate::Interpolation;
 use crate::Interpolation2d;
+use crate::Interpolator;
 
 mod test_accel;
 mod test_akima;
@@ -54,7 +54,7 @@ pub(crate) fn test_interp<I, T>(
     interp: I,
 ) where
     T: crate::Num,
-    I: Interpolation<T>,
+    I: Interpolator<T>,
 {
     let comp = build_comparator::<T>();
     let mut acc = Accelerator::new();
@@ -82,7 +82,7 @@ pub(crate) fn test_interp_extra<I, T>(
     interp: I,
 ) where
     T: crate::Num,
-    I: Interpolation<T>,
+    I: Interpolator<T>,
 {
     let comp = build_comparator::<T>();
     let mut acc = Accelerator::new();
