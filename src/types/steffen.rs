@@ -22,9 +22,6 @@ where
 {
     type Interpolator = SteffenInterp<T>;
 
-    const MIN_SIZE: usize = MIN_SIZE;
-    const NAME: &str = "Steffen";
-
     /// Constructs a Cubic Interpolator.
     ///
     /// ## Example
@@ -111,6 +108,14 @@ where
         };
 
         Ok(state)
+    }
+
+    fn name(&self) -> &str {
+        "Steffen"
+    }
+
+    fn min_size(&self) -> usize {
+        MIN_SIZE
     }
 }
 

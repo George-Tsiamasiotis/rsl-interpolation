@@ -23,9 +23,6 @@ where
 {
     type Interpolator = AkimaInterp<T>;
 
-    const MIN_SIZE: usize = MIN_SIZE;
-    const NAME: &str = "Akima";
-
     /// Constructs an Akima Interpolator.
     ///
     /// ## Example
@@ -67,6 +64,14 @@ where
 
         let state = AkimaInterp { b, c, d, m };
         Ok(state)
+    }
+
+    fn name(&self) -> &str {
+        "Akima"
+    }
+
+    fn min_size(&self) -> usize {
+        MIN_SIZE
     }
 }
 
@@ -145,9 +150,6 @@ where
 {
     type Interpolator = AkimaPeriodicInterp<T>;
 
-    const MIN_SIZE: usize = MIN_SIZE;
-    const NAME: &str = "Akima Periodic";
-
     /// Constructs an Akima Periodic Interpolator.
     ///
     /// ## Example
@@ -187,6 +189,14 @@ where
 
         let state = AkimaPeriodicInterp { b, c, d, m };
         Ok(state)
+    }
+
+    fn name(&self) -> &str {
+        "Akima Periodic"
+    }
+
+    fn min_size(&self) -> usize {
+        MIN_SIZE
     }
 }
 

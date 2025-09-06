@@ -25,9 +25,6 @@ where
 {
     type Interpolator2d = BicubicInterp<T>;
 
-    const MIN_SIZE: usize = MIN_SIZE;
-    const NAME: &str = "Bicubic";
-
     /// Constructs a Bicubic Interpolator.
     ///
     /// # Example
@@ -125,6 +122,14 @@ where
         };
 
         Ok(state)
+    }
+
+    fn name(&self) -> &str {
+        "Bicubic"
+    }
+
+    fn min_size(&self) -> usize {
+        MIN_SIZE
     }
 }
 

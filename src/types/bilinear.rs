@@ -23,9 +23,6 @@ where
 {
     type Interpolator2d = BilinearInterp<T>;
 
-    const MIN_SIZE: usize = MIN_SIZE;
-    const NAME: &str = "Bilinear";
-
     /// Constructs a Bilinear Interpolator.
     ///
     /// # Example
@@ -56,6 +53,14 @@ where
         Ok(BilinearInterp {
             _variable_type: PhantomData,
         })
+    }
+
+    fn name(&self) -> &str {
+        "Bilinear"
+    }
+
+    fn min_size(&self) -> usize {
+        MIN_SIZE
     }
 }
 

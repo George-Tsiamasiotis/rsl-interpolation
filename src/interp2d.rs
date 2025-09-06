@@ -16,12 +16,6 @@ pub trait Interp2dType<T>
 where
     T: crate::Num,
 {
-    /// The minimum number of points required by the Interpolator.
-    const MIN_SIZE: usize;
-
-    /// The name of the Interpolator.
-    const NAME: &str;
-
     /// The returned 2D Interpolator, containing the calculated coefficients and providing the
     /// evaluation methods.
     type Interpolator2d: Interpolation2d<T>;
@@ -60,15 +54,11 @@ where
 
     /// Returns the name of the Interpolator.
     #[doc(alias = "gsl_interp2d_name")]
-    fn name(&self) -> String {
-        Self::NAME.to_string()
-    }
+    fn name(&self) -> &str;
 
     /// Returns the minimum number of points required by the Interpolator.
     #[doc(alias = "gsl_interp2d_min_size")]
-    fn min_size(&self) -> usize {
-        Self::MIN_SIZE
-    }
+    fn min_size(&self) -> usize;
 }
 
 /// Defines the required evaulation methods.

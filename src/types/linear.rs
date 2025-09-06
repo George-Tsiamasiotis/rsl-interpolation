@@ -21,9 +21,6 @@ where
 {
     type Interpolator = LinearInterp<T>;
 
-    const MIN_SIZE: usize = MIN_SIZE;
-    const NAME: &str = "Linear";
-
     /// Constructs a Linear Interpolator.
     ///
     /// # Example
@@ -46,6 +43,14 @@ where
         Ok(LinearInterp {
             _variable_type: PhantomData,
         })
+    }
+
+    fn name(&self) -> &str {
+        "Linear"
+    }
+
+    fn min_size(&self) -> usize {
+        MIN_SIZE
     }
 }
 

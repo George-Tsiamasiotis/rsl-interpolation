@@ -31,9 +31,6 @@ where
 {
     type Interpolator = CubicInterp<T>;
 
-    const MIN_SIZE: usize = MIN_SIZE;
-    const NAME: &str = "Cubic";
-
     /// Constructs a Cubic Interpolator.
     ///
     /// # Example
@@ -121,6 +118,14 @@ where
         };
         Ok(state)
     }
+
+    fn name(&self) -> &str {
+        "Cubic"
+    }
+
+    fn min_size(&self) -> usize {
+        MIN_SIZE
+    }
 }
 
 // ===============================================================================================
@@ -203,9 +208,6 @@ where
     T: crate::Num + Lapack,
 {
     type Interpolator = CubicPeriodicInterp<T>;
-
-    const MIN_SIZE: usize = MIN_SIZE;
-    const NAME: &str = "Cubic Periodic";
 
     /// Constructs a Cubic Periodic Interpolator.
     ///
@@ -335,6 +337,14 @@ where
             offdiag,
         };
         Ok(state)
+    }
+
+    fn name(&self) -> &str {
+        "Cubic Periodic"
+    }
+
+    fn min_size(&self) -> usize {
+        MIN_SIZE
     }
 }
 
