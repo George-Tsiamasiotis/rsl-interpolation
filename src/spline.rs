@@ -22,7 +22,7 @@ use crate::Interpolator;
 /// let interp = Cubic.build(&xa, &ya)?;
 ///
 /// let ty = Cubic;
-/// let spline = Spline::build(ty, &xa, &ya)?;
+/// let spline = Spline::new(ty, &xa, &ya)?;
 ///
 /// let x = 1.5;
 /// let y_interp = interp.eval(&xa, &ya, x, &mut acc)?;
@@ -67,12 +67,12 @@ where
     /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
     /// let ty = Cubic;
     ///
-    /// let spline = Spline::build(ty, &xa, &ya)?;
+    /// let spline = Spline::new(ty, &xa, &ya)?;
     /// #
     /// # Ok(())
     /// # }
     #[doc(alias = "gsl_spline_init")]
-    pub fn build(ty: I, xa: &[T], ya: &[T]) -> Result<Self, InterpolationError>
+    pub fn new(ty: I, xa: &[T], ya: &[T]) -> Result<Self, InterpolationError>
     where
         T: Clone,
     {
@@ -98,7 +98,7 @@ where
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
     /// let ty = Cubic;
-    /// let spline = Spline::build(ty, &xa, &ya)?;
+    /// let spline = Spline::new(ty, &xa, &ya)?;
     /// #
     /// let y = spline.eval(1.5, &mut acc)?;
     ///
@@ -130,7 +130,7 @@ where
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
     /// let ty = Cubic;
-    /// let spline = Spline::build(ty, &xa, &ya)?;
+    /// let spline = Spline::new(ty, &xa, &ya)?;
     ///
     /// let dydx = spline.eval_deriv(1.5, &mut acc)?;
     ///
@@ -161,7 +161,7 @@ where
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
     /// let ty = Cubic;
-    /// let spline = Spline::build(ty, &xa, &ya)?;
+    /// let spline = Spline::new(ty, &xa, &ya)?;
     ///
     /// let dydx = spline.eval_deriv2(1.5, &mut acc)?;
     ///
@@ -193,7 +193,7 @@ where
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
     /// let ty = Cubic;
-    /// let spline = Spline::build(ty, &xa, &ya)?;
+    /// let spline = Spline::new(ty, &xa, &ya)?;
     ///
     /// let int = spline.eval_integ(0.0, 2.0, &mut acc)?;
     ///
@@ -234,14 +234,14 @@ mod test {
         let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
         let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
 
-        let _spline = Spline::build(Cubic, &xa, &ya).unwrap();
+        let _spline = Spline::new(Cubic, &xa, &ya).unwrap();
     }
 
     #[test]
     fn test_cubic_spline_eval() {
         let xa = [0.0, 1.0, 2.0];
         let ya = [0.0, 1.0, 2.0];
-        let spline = Spline::build(Cubic, &xa, &ya).unwrap();
+        let spline = Spline::new(Cubic, &xa, &ya).unwrap();
         let mut acc = Accelerator::new();
 
         let x = 0.5;
