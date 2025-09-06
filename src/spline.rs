@@ -1,5 +1,6 @@
 use crate::Accelerator;
 use crate::DomainError;
+use crate::DynInterpolation;
 use crate::Interpolation;
 use crate::InterpolationError;
 use crate::Interpolator;
@@ -221,6 +222,39 @@ where
     #[doc(alias = "gsl_spline_min_size")]
     pub fn min_size(&self) -> usize {
         self.min_size
+    }
+}
+
+pub type DynSpline<T> = Spline<DynInterpolation<T>, T>;
+
+impl<T> DynSpline<T> {
+    /// Constructs a Spline of a dynamic Interpolation type `ty` from the data arrays `xa` and `ya`.
+    ///
+    /// # Example
+    /// ```
+    /// # use rsl_interpolation::*;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError>{
+    /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
+    /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
+    /// let ty = "cubic";
+    ///
+    /// let spline = match ty {
+    ///     "cubic" => Spline::new_dyn(Cubic, &xa, &ya)?,
+    ///     "akima" => Spline::new_dyn(Akima, &xa, &ya)?,
+    ///     _ => unreachable!(),
+    /// };
+    /// #
+    /// # Ok(())
+    /// # }
+    #[doc(alias = "gsl_spline_init")]
+    pub fn new_dyn<I>(ty: I, xa: &[T], ya: &[T]) -> Result<Self, InterpolationError>
+    where
+        T: Clone,
+        I: Interpolation<T> + 'static,
+        I::Interpolator: 'static,
+    {
+        Self::new(DynInterpolation::new(ty), xa, ya)
     }
 }
 

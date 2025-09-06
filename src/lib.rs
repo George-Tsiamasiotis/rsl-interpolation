@@ -39,7 +39,7 @@ pub use error::*;
 pub use interp::{Interpolation, Interpolator};
 pub use interp2d::{Interp2dType, Interpolation2d, z_get, z_idx, z_set};
 
-pub use spline::Spline;
+pub use spline::{DynSpline, Spline};
 pub use spline2d::Spline2d;
 
 pub use types::*;

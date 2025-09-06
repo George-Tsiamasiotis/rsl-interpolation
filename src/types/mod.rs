@@ -7,6 +7,7 @@ mod steffen;
 
 mod bicubic;
 mod bilinear;
+mod dyn_interpolation;
 
 pub(crate) use utils::*;
 
@@ -19,3 +20,5 @@ pub use steffen::{Steffen, SteffenInterp};
 
 pub use bicubic::{Bicubic, BicubicInterp};
 pub use bilinear::{Bilinear, BilinearInterp};
+
+pub use dyn_interpolation::DynInterpolation;
