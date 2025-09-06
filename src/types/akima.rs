@@ -2,9 +2,9 @@ use std::collections::VecDeque;
 
 use crate::Accelerator;
 use crate::DomainError;
-use crate::InterpType;
 use crate::Interpolation;
 use crate::InterpolationError;
+use crate::Interpolator;
 use crate::types::utils::integ_eval;
 use crate::types::utils::{check_if_inbounds, check1d_data};
 
@@ -17,7 +17,7 @@ const MIN_SIZE: usize = 5;
 #[doc(alias = "gsl_interp_akima")]
 pub struct Akima;
 
-impl<T> InterpType<T> for Akima
+impl<T> Interpolation<T> for Akima
 where
     T: crate::Num,
 {
@@ -28,10 +28,7 @@ where
     /// ## Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Interpolation;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Akima;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
@@ -94,7 +91,7 @@ where
     m: Vec<T>,
 }
 
-impl<T> Interpolation<T> for AkimaInterp<T>
+impl<T> Interpolator<T> for AkimaInterp<T>
 where
     T: crate::Num,
 {
@@ -144,7 +141,7 @@ where
 /// corner algorithm of Wodicka.
 pub struct AkimaPeriodic;
 
-impl<T> InterpType<T> for AkimaPeriodic
+impl<T> Interpolation<T> for AkimaPeriodic
 where
     T: crate::Num,
 {
@@ -155,10 +152,7 @@ where
     /// ## Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Interpolation;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::AkimaPeriodic;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
@@ -219,7 +213,7 @@ where
     m: Vec<T>,
 }
 
-impl<T> Interpolation<T> for AkimaPeriodicInterp<T>
+impl<T> Interpolator<T> for AkimaPeriodicInterp<T>
 where
     T: crate::Num,
 {

@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
 use crate::Accelerator;
-use crate::InterpType;
 use crate::Interpolation;
+use crate::Interpolator;
 use crate::{DomainError, InterpolationError};
 
 use crate::{check_if_inbounds, check1d_data};
@@ -15,7 +15,7 @@ const MIN_SIZE: usize = 2;
 #[doc(alias = "gsl_interp_linear")]
 pub struct Linear;
 
-impl<T> InterpType<T> for Linear
+impl<T> Interpolation<T> for Linear
 where
     T: crate::Num,
 {
@@ -26,10 +26,7 @@ where
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Interpolation;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Linear;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -65,7 +62,7 @@ pub struct LinearInterp<T> {
     _variable_type: PhantomData<T>,
 }
 
-impl<T> Interpolation<T> for LinearInterp<T>
+impl<T> Interpolator<T> for LinearInterp<T>
 where
     T: crate::Num,
 {

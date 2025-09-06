@@ -1,8 +1,8 @@
 use crate::Accelerator;
 use crate::DomainError;
-use crate::InterpType;
 use crate::Interpolation;
 use crate::InterpolationError;
+use crate::Interpolator;
 use crate::types::utils::{check_if_inbounds, check1d_data};
 
 const MIN_SIZE: usize = 3;
@@ -16,7 +16,7 @@ const MIN_SIZE: usize = 3;
 /// continuous, but the second derivative may be discontinuous.
 pub struct Steffen;
 
-impl<T> InterpType<T> for Steffen
+impl<T> Interpolation<T> for Steffen
 where
     T: crate::Num,
 {
@@ -27,10 +27,7 @@ where
     /// ## Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Interpolation;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Steffen;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -138,7 +135,7 @@ where
     y_prime: Vec<T>,
 }
 
-impl<T> Interpolation<T> for SteffenInterp<T>
+impl<T> Interpolator<T> for SteffenInterp<T>
 where
     T: crate::Num,
 {

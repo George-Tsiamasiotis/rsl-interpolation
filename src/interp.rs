@@ -4,19 +4,17 @@ use crate::Accelerator;
 use crate::{DomainError, InterpolationError};
 
 /// Representation of an Interpolation Type.
-pub trait InterpType<T> {
+pub trait Interpolation<T> {
     /// The returned Interpolator, containing the calculated coefficients and providing the
     /// evaluation methods.
-    type Interpolator: Interpolation<T>;
+    type Interpolator: Interpolator<T>;
 
     /// Creates an Interpolator from the data arrays `xa` and `ya`.
     ///
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::InterpolationError;
-    /// use rsl_interpolation::Cubic;
+    /// # use rsl_interpolation::*;
     ///
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -37,18 +35,14 @@ pub trait InterpType<T> {
 }
 
 /// Defines the required evaluation methods.
-pub trait Interpolation<T> {
+pub trait Interpolator<T> {
     /// Returns the interpolated value `y` for a given point `x`, using the data arrays `xa` and `ya` and
     /// the [`Accelerator`] `acc`.
     ///
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Interpolation;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::Cubic;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -76,11 +70,7 @@ pub trait Interpolation<T> {
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Interpolation;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::Cubic;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -109,11 +99,7 @@ pub trait Interpolation<T> {
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Interpolation;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::Cubic;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -148,11 +134,7 @@ pub trait Interpolation<T> {
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Interpolation;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::Cubic;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];

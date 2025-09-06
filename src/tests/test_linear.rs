@@ -1,4 +1,4 @@
-use crate::InterpType;
+use crate::Interpolation;
 use crate::Linear;
 use crate::tests::XYTable;
 use crate::tests::test_interp;

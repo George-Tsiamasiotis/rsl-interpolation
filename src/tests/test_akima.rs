@@ -1,6 +1,6 @@
 use crate::Akima;
 use crate::AkimaPeriodic;
-use crate::InterpType;
+use crate::Interpolation;
 use crate::tests::XYTable;
 use crate::tests::test_interp;
 use crate::tests::test_interp_extra;

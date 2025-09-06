@@ -4,9 +4,9 @@ use num::One;
 
 use crate::Accelerator;
 use crate::DomainError;
-use crate::InterpType;
 use crate::Interpolation;
 use crate::InterpolationError;
+use crate::Interpolator;
 use crate::types::utils::integ_eval;
 use crate::types::utils::{check_if_inbounds, check1d_data, diff};
 
@@ -25,7 +25,7 @@ const MIN_SIZE: usize = 3;
 #[doc(alias = "gsl_interp_cspline")]
 pub struct Cubic;
 
-impl<T> InterpType<T> for Cubic
+impl<T> Interpolation<T> for Cubic
 where
     T: crate::Num + Lapack,
 {
@@ -36,10 +36,7 @@ where
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Interpolation;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Cubic;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -146,7 +143,7 @@ where
     offdiag: Vec<T>,
 }
 
-impl<T> Interpolation<T> for CubicInterp<T>
+impl<T> Interpolator<T> for CubicInterp<T>
 where
     T: crate::Num + Lapack,
 {
@@ -203,7 +200,7 @@ where
 #[doc(alias = "gsl_interp_cspline_periodic")]
 pub struct CubicPeriodic;
 
-impl<T> InterpType<T> for CubicPeriodic
+impl<T> Interpolation<T> for CubicPeriodic
 where
     T: crate::Num + Lapack,
 {
@@ -214,10 +211,7 @@ where
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Interpolation;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::CubicPeriodic;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -367,7 +361,7 @@ where
     offdiag: Vec<T>,
 }
 
-impl<T> Interpolation<T> for CubicPeriodicInterp<T>
+impl<T> Interpolator<T> for CubicPeriodicInterp<T>
 where
     T: crate::Num + Lapack,
 {

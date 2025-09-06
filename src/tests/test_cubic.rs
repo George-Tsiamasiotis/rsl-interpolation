@@ -1,5 +1,5 @@
 use crate::Cubic;
-use crate::InterpType;
+use crate::Interpolation;
 use crate::tests::XYTable;
 use crate::tests::test_interp;
 

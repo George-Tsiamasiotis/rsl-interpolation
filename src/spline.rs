@@ -1,8 +1,8 @@
 use crate::Accelerator;
 use crate::DomainError;
-use crate::InterpType;
 use crate::Interpolation;
 use crate::InterpolationError;
+use crate::Interpolator;
 
 /// 1D Higher level interface.
 ///
@@ -11,12 +11,7 @@ use crate::InterpolationError;
 ///
 /// # Example
 /// ```
-/// # use rsl_interpolation::Spline;
-/// # use rsl_interpolation::Cubic;
-/// # use rsl_interpolation::InterpType;
-/// # use rsl_interpolation::Accelerator;
-/// # use rsl_interpolation::Interpolation;
-/// # use rsl_interpolation::InterpolationError;
+/// # use rsl_interpolation::*;
 /// #
 /// # fn main() -> Result<(), InterpolationError>{
 /// let mut acc = Accelerator::new();
@@ -40,7 +35,7 @@ use crate::InterpolationError;
 /// ```
 pub struct Spline<I, T>
 where
-    I: InterpType<T>,
+    I: Interpolation<T>,
 {
     /// The lower-level [`Interpolator`].
     ///
@@ -59,16 +54,13 @@ where
 
 impl<I, T> Spline<I, T>
 where
-    I: InterpType<T>,
+    I: Interpolation<T>,
 {
     /// Constructs a Spline of an Interpolation type `ty` from the data arrays `xa` and `ya`.
     ///
     /// # Example
     /// ```
-    /// # use rsl_interpolation::Spline;
-    /// # use rsl_interpolation::Cubic;
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
@@ -98,11 +90,7 @@ where
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::Spline;
-    /// # use rsl_interpolation::Cubic;
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let mut acc = Accelerator::new();
@@ -134,11 +122,7 @@ where
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::Spline;
-    /// # use rsl_interpolation::Cubic;
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let mut acc = Accelerator::new();
@@ -169,11 +153,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rsl_interpolation::Spline;
-    /// # use rsl_interpolation::Cubic;
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let mut acc = Accelerator::new();
@@ -205,11 +185,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rsl_interpolation::Spline;
-    /// # use rsl_interpolation::Cubic;
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let mut acc = Accelerator::new();
