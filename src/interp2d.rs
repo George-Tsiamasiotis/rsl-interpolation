@@ -52,11 +52,23 @@ where
     /// # }
     /// ```
     fn build(
-        self,
+        &self,
         xa: &[T],
         ya: &[T],
         za: &[T],
     ) -> Result<Self::Interpolator2d, InterpolationError>;
+
+    /// Returns the name of the Interpolator.
+    #[doc(alias = "gsl_interp2d_name")]
+    fn name(&self) -> String {
+        Self::NAME.to_string()
+    }
+
+    /// Returns the minimum number of points required by the Interpolator.
+    #[doc(alias = "gsl_interp2d_min_size")]
+    fn min_size(&self) -> usize {
+        Self::MIN_SIZE
+    }
 }
 
 /// Defines the required evaulation methods.
@@ -409,7 +421,7 @@ where
     ///
     /// let dzdxy = interp.eval_deriv_xy(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc)?;
     ///
-    /// assert_eq!(dzdxy, 0.0); // Linear Interpolation!
+    /// assert_eq!(dzdxy, 0.0);
     /// # Ok(())
     /// # }
     /// ```

@@ -683,7 +683,7 @@ dependencies = [
 
 [[package]]
 name = "rsl-interpolation"
-version = "0.1.8-pre.1"
+version = "0.1.9"
 dependencies = [
  "is_close",
  "ndarray",

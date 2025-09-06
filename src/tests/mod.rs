@@ -21,7 +21,7 @@ mod test_bilinear;
 
 /// Custom Comparator with pre-set tolerances, to be used across all tests, instead of invoking the
 /// macro every time.
-fn build_comparator<'a, T>() -> Comparator<'a, T>
+pub(crate) fn build_comparator<'a, T>() -> Comparator<'a, T>
 where
     T: crate::Num + 'a,
 {
