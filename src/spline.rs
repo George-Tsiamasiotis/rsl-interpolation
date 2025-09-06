@@ -6,7 +6,40 @@ use crate::InterpType;
 use crate::Interpolation;
 use crate::InterpolationError;
 
-#[allow(dead_code)]
+/// 1D Higher level interface.
+///
+/// A Spline owns the data it is constructed with, and provides the same evalulation methods as the
+/// lower-level Interpolator object, without needing to provide the data arrays in every call.
+///
+/// # Example
+/// ```
+/// # use rsl_interpolation::Spline;
+/// # use rsl_interpolation::Cubic;
+/// # use rsl_interpolation::InterpType;
+/// # use rsl_interpolation::Accelerator;
+/// # use rsl_interpolation::Interpolation;
+/// # use rsl_interpolation::InterpolationError;
+/// #
+/// # fn main() -> Result<(), InterpolationError>{
+/// let mut acc = Accelerator::new();
+///
+/// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
+/// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
+///
+/// let interp = Cubic.build(&xa, &ya)?;
+///
+/// let typ = Cubic;
+/// let spline = Spline::build(typ, &xa, &ya)?;
+///
+/// let x = 1.5;
+/// let y_interp = interp.eval(&xa, &ya, x, &mut acc)?;
+/// let y_spline = spline.eval(x, &mut acc)?;
+///
+/// assert_eq!(y_interp, y_spline);
+/// #
+/// # Ok(())
+/// # }
+/// ```
 pub struct Spline<I, T> {
     /// The lower-level [`Interpolator`].
     ///
@@ -97,6 +130,7 @@ where
     ///
     /// Returns a [`DomainError`] if `x` is outside the range of `xa`.
     #[doc(alias = "gsl_spline_eval")]
+    #[doc(alias = "gsl_spline_eval_e")]
     pub fn eval(&self, x: T, acc: &mut Accelerator) -> Result<T, DomainError> {
         self.interp.eval(&self.xa, &self.ya, x, acc)
     }
@@ -132,6 +166,7 @@ where
     ///
     /// Returns a [`DomainError`] if `x` is outside the range of `xa`.
     #[doc(alias = "gsl_spline_eval_deriv")]
+    #[doc(alias = "gsl_spline_eval_deriv_e")]
     pub fn eval_deriv(&self, x: T, acc: &mut Accelerator) -> Result<T, DomainError> {
         self.interp.eval_deriv(&self.xa, &self.ya, x, acc)
     }
@@ -166,6 +201,7 @@ where
     ///
     /// Returns a [`DomainError`] if `x` is outside the range of `xa`.
     #[doc(alias = "gsl_spline_eval_deriv2")]
+    #[doc(alias = "gsl_spline_eval_deriv2_e")]
     pub fn eval_deriv2(&self, x: T, acc: &mut Accelerator) -> Result<T, DomainError> {
         self.interp.eval_deriv2(&self.xa, &self.ya, x, acc)
     }
@@ -201,18 +237,19 @@ where
     ///
     /// Returns a [`DomainError`] if `a` or `b` is outside the range of xa.
     #[doc(alias = "gsl_spline_eval_integ")]
+    #[doc(alias = "gsl_spline_eval_integ_e")]
     pub fn eval_integ(&self, a: T, b: T, acc: &mut Accelerator) -> Result<T, DomainError> {
         self.interp.eval_integ(&self.xa, &self.ya, a, b, acc)
     }
 
     /// Returns the name of the Interpolator.
-    #[doc(alias = "gsl_interp_name")]
+    #[doc(alias = "gsl_spline_name")]
     pub fn name(&self) -> String {
         self.name.clone()
     }
 
     /// Returns the minimum number of points required by the Interpolator.
-    #[doc(alias = "gsl_interp_min_size")]
+    #[doc(alias = "gsl_spline_min_size")]
     pub fn min_size(&self) -> usize {
         self.min_size
     }

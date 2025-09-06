@@ -16,6 +16,11 @@
 //! + [Bilinear]
 //! + [Bicubic]
 //!
+//! # Higher level Interface
+//!
+//! + [Spline]
+//! + [Spline2d]
+//!
 #![allow(rustdoc::broken_intra_doc_links)]
 #![doc = include_str!("../TODO.md")]
 
@@ -26,6 +31,7 @@ mod interp2d;
 mod types;
 
 mod spline;
+mod spline2d;
 
 pub use accel::Accelerator;
 
@@ -34,6 +40,7 @@ pub use interp::{InterpType, Interpolation};
 pub use interp2d::{Interp2dType, Interpolation2d, z_get, z_idx, z_set};
 
 pub use spline::Spline;
+pub use spline2d::Spline2d;
 
 pub use types::*;
 

@@ -1,4 +1,4 @@
-## GSL features to be implemented
+## Implemented GSL features
 
 - [x] 1D Interpolation
 	- [x] Instantiation [`gsl_interp_alloc()`, `gsl_interp_init()`, `gsl_interp_free()`]
@@ -39,7 +39,7 @@
 		- [x] fxx(x, y) evaluation [`gsl_interp2d_eval_deriv_xx()`]
 		- [x] fyy(x, y) evaluation [`gsl_interp2d_eval_deriv_yy()`]
 		- [x] fxy(x, y) evaluation [`gsl_interp2d_eval_deriv_xy()`]
-	- [ ] Higher level Interface (Splines)
+	- [x] Higher level Interface (Splines)
 	
 ---
 

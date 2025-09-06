@@ -50,7 +50,7 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    fn build(self, xa: &[T], ya: &[T], za: &[T]) -> Result<BilinearInterp<T>, InterpolationError> {
+    fn build(&self, xa: &[T], ya: &[T], za: &[T]) -> Result<BilinearInterp<T>, InterpolationError> {
         check2d_data(xa, ya, za, MIN_SIZE)?;
 
         Ok(BilinearInterp {

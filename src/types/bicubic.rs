@@ -53,7 +53,7 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    fn build(self, xa: &[T], ya: &[T], za: &[T]) -> Result<BicubicInterp<T>, InterpolationError> {
+    fn build(&self, xa: &[T], ya: &[T], za: &[T]) -> Result<BicubicInterp<T>, InterpolationError> {
         check2d_data(xa, ya, za, MIN_SIZE)?;
 
         let xsize = xa.len();
@@ -167,7 +167,6 @@ where
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
-        dbg!(y);
         let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = self.zxminmaxxing(xi, yi, dt)?;
         let (zyminmin, zyminmax, zymaxmin, zymaxmax) = self.zyminmaxxing(xi, yi, du)?;
         let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = self.zxyminmaxxing(xi, yi, dt, du)?;
