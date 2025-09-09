@@ -20,20 +20,14 @@ impl<T> InterpType<T> for Steffen
 where
     T: crate::Num,
 {
-    type Interpolator = SteffenInterp<T>;
-
-    const MIN_SIZE: usize = MIN_SIZE;
-    const NAME: &str = "Steffen";
+    type Interpolation = SteffenInterp<T>;
 
     /// Constructs a Cubic Interpolator.
     ///
     /// ## Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Interpolation;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Steffen;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -111,6 +105,14 @@ where
         };
 
         Ok(state)
+    }
+
+    fn name(&self) -> &str {
+        "Steffen"
+    }
+
+    fn min_size(&self) -> usize {
+        MIN_SIZE
     }
 }
 

@@ -1,5 +1,3 @@
-use ndarray_linalg::Lapack;
-
 use crate::Accelerator;
 use crate::Interp2dType;
 use crate::Interpolation2d;
@@ -7,17 +5,12 @@ use crate::{DomainError, InterpolationError};
 
 /// 2D Higher level interface.
 ///
-/// A 2D Spline owns the data it is constructed with, and provides the same evalulation methods as the
+/// A 2D Spline owns the data it is constructed with, and provides the same evaluation methods as the
 /// lower-level Interpolator object, without needing to provide the data arrays in every call.
 ///
 /// # Example
 /// ```
-/// # use rsl_interpolation::Spline2d;
-/// # use rsl_interpolation::Bicubic;
-/// # use rsl_interpolation::Interp2dType;
-/// # use rsl_interpolation::Accelerator;
-/// # use rsl_interpolation::Interpolation2d;
-/// # use rsl_interpolation::InterpolationError;
+/// # use rsl_interpolation::*;
 /// #
 /// # fn main() -> Result<(), InterpolationError>{
 /// let mut xacc = Accelerator::new();
@@ -36,7 +29,7 @@ use crate::{DomainError, InterpolationError};
 /// let interp = Bicubic.build(&xa, &ya, &za)?;
 ///
 /// let typ = Bicubic;
-/// let spline = Spline2d::build(typ, &xa, &ya, &za)?;
+/// let spline = Spline2d::new(typ, &xa, &ya, &za)?;
 ///
 /// let (x, y) = (2.5, 4.1);
 /// let y_interp = interp.eval(&xa, &ya, &za, x, y, &mut xacc, &mut yacc)?;
@@ -47,37 +40,33 @@ use crate::{DomainError, InterpolationError};
 /// # Ok(())
 /// # }
 /// ```
-pub struct Spline2d<I, T> {
+pub struct Spline2d<I, T>
+where
+    I: Interp2dType<T>,
+{
     /// The lower-level [`2D Interpolator`].
-    ///
     /// [`2D Interpolator`]: Interpolation2d#implementors
-    pub interp: I,
+    pub interp: I::Interpolation2d,
     /// The owned x data.
-    pub xa: Vec<T>,
+    pub xa: Box<[T]>,
     /// The owned y data.
-    pub ya: Vec<T>,
+    pub ya: Box<[T]>,
     /// The owned z data.
-    pub za: Vec<T>,
-    name: String,
+    pub za: Box<[T]>,
+    name: Box<str>,
     min_size: usize,
 }
 
 impl<I, T> Spline2d<I, T>
 where
-    I: Interpolation2d<T>,
-    T: crate::Num + Lapack,
+    I: Interp2dType<T>,
 {
     /// Constructs a 2D Spline of a 2D Interpolation type `typ` from the data arrays `xa`, `ya` and
     /// `za`.
     ///
     /// # Example
     /// ```
-    /// # use rsl_interpolation::Spline2d;
-    /// # use rsl_interpolation::Bicubic;
-    /// # use rsl_interpolation::Interp2dType;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::Interpolation2d;
-    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let mut xacc = Accelerator::new();
@@ -94,33 +83,23 @@ where
     /// ];
     ///
     /// let typ = Bicubic;
-    /// let spline = Spline2d::build(typ, &xa, &ya, &za)?;
+    /// let spline = Spline2d::new(typ, &xa, &ya, &za)?;
     /// #
     /// # Ok(())
     /// # }
     /// ```
     #[doc(alias = "gsl_spline2d_init")]
-    pub fn build(
-        typ: impl Interp2dType<T, Interpolator2d = I>,
-        xa: &[T],
-        ya: &[T],
-        za: &[T],
-    ) -> Result<Self, InterpolationError> {
-        let xa = xa.to_owned();
-        let ya = ya.to_owned();
-        let za = za.to_owned();
-
-        let interp = typ.build(&xa, &ya, &za)?;
-        let name = typ.name();
-        let min_size = typ.min_size();
-
+    pub fn new(typ: I, xa: &[T], ya: &[T], za: &[T]) -> Result<Self, InterpolationError>
+    where
+        T: Clone,
+    {
         let spline = Self {
-            interp,
-            xa,
-            ya,
-            za,
-            name,
-            min_size,
+            interp: typ.build(&xa, &ya, &za)?,
+            xa: xa.into(),
+            ya: ya.into(),
+            za: za.into(),
+            name: typ.name().into(),
+            min_size: typ.min_size(),
         };
 
         Ok(spline)
@@ -132,11 +111,7 @@ where
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::Spline2d;
-    /// # use rsl_interpolation::Bilinear;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::Interp2dType;
-    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let mut xacc = Accelerator::new();
@@ -152,7 +127,7 @@ where
     /// ];
     ///
     /// let typ = Bilinear;
-    /// let spline = Spline2d::build(typ, &xa, &ya, &za)?;
+    /// let spline = Spline2d::new(typ, &xa, &ya, &za)?;
     ///
     /// let z = spline.eval(1.5, 3.0, &mut xacc, &mut yacc)?;
     ///
@@ -175,7 +150,10 @@ where
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
-    ) -> Result<T, DomainError> {
+    ) -> Result<T, DomainError>
+    where
+        T: crate::Num,
+    {
         self.interp
             .eval(&self.xa, &self.ya, &self.za, x, y, xacc, yacc)
     }
@@ -191,11 +169,7 @@ where
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::Spline2d;
-    /// # use rsl_interpolation::Bilinear;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::Interp2dType;
-    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let mut xacc = Accelerator::new();
@@ -211,7 +185,7 @@ where
     /// ];
     ///
     /// let typ = Bilinear;
-    /// let spline = Spline2d::build(typ, &xa, &ya, &za)?;
+    /// let spline = Spline2d::new(typ, &xa, &ya, &za)?;
     ///
     /// let z = spline.eval_extrap(3.0, 6.0, &mut xacc, &mut yacc)?;
     ///
@@ -245,11 +219,7 @@ where
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::Spline2d;
-    /// # use rsl_interpolation::Bilinear;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::Interp2dType;
-    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let mut xacc = Accelerator::new();
@@ -265,7 +235,7 @@ where
     /// ];
     ///
     /// let typ = Bilinear;
-    /// let spline = Spline2d::build(typ, &xa, &ya, &za)?;
+    /// let spline = Spline2d::new(typ, &xa, &ya, &za)?;
     ///
     /// let dzdx = spline.eval_deriv_x(1.5, 3.0, &mut xacc, &mut yacc)?;
     ///
@@ -299,11 +269,7 @@ where
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::Spline2d;
-    /// # use rsl_interpolation::Bilinear;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::Interp2dType;
-    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let mut xacc = Accelerator::new();
@@ -319,7 +285,7 @@ where
     /// ];
     ///
     /// let typ = Bilinear;
-    /// let spline = Spline2d::build(typ, &xa, &ya, &za)?;
+    /// let spline = Spline2d::new(typ, &xa, &ya, &za)?;
     ///
     /// let dzdx = spline.eval_deriv_y(1.5, 3.0, &mut xacc, &mut yacc)?;
     ///
@@ -353,11 +319,7 @@ where
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::Spline2d;
-    /// # use rsl_interpolation::Bilinear;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::Interp2dType;
-    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let mut xacc = Accelerator::new();
@@ -373,7 +335,7 @@ where
     /// ];
     ///
     /// let typ = Bilinear;
-    /// let spline = Spline2d::build(typ, &xa, &ya, &za)?;
+    /// let spline = Spline2d::new(typ, &xa, &ya, &za)?;
     ///
     /// let dzdx2 = spline.eval_deriv_xx(1.5, 3.0, &mut xacc, &mut yacc)?;
     ///
@@ -407,11 +369,7 @@ where
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::Spline2d;
-    /// # use rsl_interpolation::Bilinear;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::Interp2dType;
-    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let mut xacc = Accelerator::new();
@@ -427,7 +385,7 @@ where
     ///     16.0, 17.0, 20.0,
     /// ];
     /// let typ = Bilinear;
-    /// let spline = Spline2d::build(typ, &xa, &ya, &za)?;
+    /// let spline = Spline2d::new(typ, &xa, &ya, &za)?;
     ///
     /// let dzdx2 = spline.eval_deriv_yy(1.5, 3.0, &mut xacc, &mut yacc)?;
     ///
@@ -461,11 +419,7 @@ where
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::Spline2d;
-    /// # use rsl_interpolation::Bilinear;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::Interp2dType;
-    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let mut xacc = Accelerator::new();
@@ -481,7 +435,7 @@ where
     /// ];
     ///
     /// let typ = Bilinear;
-    /// let spline = Spline2d::build(typ, &xa, &ya, &za)?;
+    /// let spline = Spline2d::new(typ, &xa, &ya, &za)?;
     ///
     /// let dzdxy = spline.eval_deriv_xy(1.5, 3.0, &mut xacc, &mut yacc)?;
     ///
@@ -511,8 +465,8 @@ where
 
     /// Returns the name of the Interpolator.
     #[doc(alias = "gsl_interp2d_name")]
-    pub fn name(&self) -> String {
-        self.name.clone()
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     /// Returns the minimum number of points required by the Interpolator.
@@ -525,22 +479,16 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::Bilinear;
     use crate::tests::build_comparator;
+    use crate::{Bicubic, Bilinear};
 
     #[test]
-    fn test_spline2d_info() {
+    fn test_spline2d_creation() {
         let xa = [0.0, 1.0, 2.0];
         let ya = [0.0, 2.0, 4.0];
         let za = [0.0, 1.0, 2.0, 2.0, 3.0, 4.0, 4.0, 5.0, 6.0];
 
-        let spline2d = Spline2d::build(Bilinear, &xa, &ya, &za).unwrap();
-
-        assert_eq!(spline2d.name(), <Bilinear as Interp2dType<f64>>::NAME);
-        assert_eq!(
-            spline2d.min_size(),
-            <Bilinear as Interp2dType<f64>>::MIN_SIZE
-        );
+        let _spline2d = Spline2d::new(Bilinear, &xa, &ya, &za).unwrap();
     }
 
     #[test]
@@ -560,7 +508,7 @@ mod test {
             1.3, 1.4, 1.5, 1.6,
         ];
 
-        let spline2d = Spline2d::build(Bilinear, &xa, &ya, &za).unwrap();
+        let spline2d = Spline2d::new(Bicubic, &xa, &ya, &za).unwrap();
 
         let (x, y) = (1.5, 1.5);
         let z = spline2d.eval(x, y, &mut xacc, &mut yacc).unwrap();

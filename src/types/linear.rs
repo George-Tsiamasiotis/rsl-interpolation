@@ -19,20 +19,14 @@ impl<T> InterpType<T> for Linear
 where
     T: crate::Num,
 {
-    type Interpolator = LinearInterp<T>;
-
-    const MIN_SIZE: usize = MIN_SIZE;
-    const NAME: &str = "Linear";
+    type Interpolation = LinearInterp<T>;
 
     /// Constructs a Linear Interpolator.
     ///
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Interpolation;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Linear;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -46,6 +40,14 @@ where
         Ok(LinearInterp {
             _variable_type: PhantomData,
         })
+    }
+
+    fn name(&self) -> &str {
+        "Linear"
+    }
+
+    fn min_size(&self) -> usize {
+        MIN_SIZE
     }
 }
 

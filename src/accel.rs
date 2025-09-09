@@ -3,7 +3,7 @@
 /// This object caches the previous value of an index lookup. When the subsequent interpolation
 /// point falls in the same interval, its index value can be returned immediately.
 ///
-/// The performance boost can be significant when continuously evalulating splines around the same
+/// The performance boost can be significant when continuously evaluating splines around the same
 /// area as the previous point. Moreover, the same Accelerator can be shared across multiple
 /// Splines, if they are defined over the same x points. This is especially useful in ODE solvers,
 /// as the solver's step size is usually much smaller that the xarray spacing.
@@ -13,7 +13,7 @@
 /// ## Example
 ///
 /// ```
-/// # use rsl_interpolation::Accelerator;
+/// # use rsl_interpolation::*;
 /// #
 /// # fn main() {
 /// let mut acc = Accelerator::new();

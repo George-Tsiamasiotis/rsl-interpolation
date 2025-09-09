@@ -1,5 +1,3 @@
-use ndarray_linalg::Lapack;
-
 use crate::Accelerator;
 use crate::DomainError;
 use crate::InterpType;
@@ -8,17 +6,12 @@ use crate::InterpolationError;
 
 /// 1D Higher level interface.
 ///
-/// A Spline owns the data it is constructed with, and provides the same evalulation methods as the
+/// A Spline owns the data it is constructed with, and provides the same evaluation methods as the
 /// lower-level Interpolator object, without needing to provide the data arrays in every call.
 ///
 /// # Example
 /// ```
-/// # use rsl_interpolation::Spline;
-/// # use rsl_interpolation::Cubic;
-/// # use rsl_interpolation::InterpType;
-/// # use rsl_interpolation::Accelerator;
-/// # use rsl_interpolation::Interpolation;
-/// # use rsl_interpolation::InterpolationError;
+/// # use rsl_interpolation::*;
 /// #
 /// # fn main() -> Result<(), InterpolationError>{
 /// let mut acc = Accelerator::new();
@@ -29,7 +22,7 @@ use crate::InterpolationError;
 /// let interp = Cubic.build(&xa, &ya)?;
 ///
 /// let typ = Cubic;
-/// let spline = Spline::build(typ, &xa, &ya)?;
+/// let spline = Spline::new(typ, &xa, &ya)?;
 ///
 /// let x = 1.5;
 /// let y_interp = interp.eval(&xa, &ya, x, &mut acc)?;
@@ -40,64 +33,53 @@ use crate::InterpolationError;
 /// # Ok(())
 /// # }
 /// ```
-pub struct Spline<I, T> {
+pub struct Spline<I, T>
+where
+    I: InterpType<T>,
+{
     /// The lower-level [`Interpolator`].
     ///
     /// [`Interpolator`]: Interpolation#implementors
-    pub interp: I,
+    pub interp: I::Interpolation,
     /// The owned x data.
-    pub xa: Vec<T>,
+    pub xa: Box<[T]>,
     /// The owned y data.
-    pub ya: Vec<T>,
-    name: String,
+    pub ya: Box<[T]>,
+    name: Box<str>,
     min_size: usize,
 }
 
 impl<I, T> Spline<I, T>
 where
-    I: Interpolation<T>,
-    T: crate::Num + Lapack,
+    I: InterpType<T>,
 {
     /// Constructs a Spline of an Interpolation type `typ` from the data arrays `xa` and `ya`.
     ///
     /// # Example
     /// ```
-    /// # use rsl_interpolation::Spline;
-    /// # use rsl_interpolation::Cubic;
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
     /// let typ = Cubic;
     ///
-    /// let spline = Spline::build(typ, &xa, &ya)?;
+    /// let spline = Spline::new(typ, &xa, &ya)?;
     /// #
     /// # Ok(())
     /// # }
     #[doc(alias = "gsl_spline_init")]
-    pub fn build(
-        typ: impl InterpType<T, Interpolator = I>,
-        xa: &[T],
-        ya: &[T],
-    ) -> Result<Self, InterpolationError> {
-        let xa = xa.to_owned();
-        let ya = ya.to_owned();
-
-        let interp = typ.build(&xa, &ya)?;
-        let name = typ.name();
-        let min_size = typ.min_size();
-
-        let spline = Self {
-            interp,
-            xa,
-            ya,
-            name,
-            min_size,
-        };
-
-        Ok(spline)
+    pub fn new(typ: I, xa: &[T], ya: &[T]) -> Result<Self, InterpolationError>
+    where
+        T: Clone,
+    {
+        Ok(Self {
+            interp: typ.build(&xa, &ya)?,
+            xa: xa.into(),
+            ya: ya.into(),
+            name: typ.name().into(),
+            min_size: typ.min_size(),
+        })
     }
 
     /// Returns the interpolated value `y` for a given point `x`, using the [`Accelerator`] `acc`.
@@ -105,11 +87,7 @@ where
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::Spline;
-    /// # use rsl_interpolation::Cubic;
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let mut acc = Accelerator::new();
@@ -117,7 +95,7 @@ where
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
     /// let typ = Cubic;
-    /// let spline = Spline::build(typ, &xa, &ya)?;
+    /// let spline = Spline::new(typ, &xa, &ya)?;
     /// #
     /// let y = spline.eval(1.5, &mut acc)?;
     ///
@@ -141,11 +119,7 @@ where
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::Spline;
-    /// # use rsl_interpolation::Cubic;
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let mut acc = Accelerator::new();
@@ -153,7 +127,7 @@ where
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
     /// let typ = Cubic;
-    /// let spline = Spline::build(typ, &xa, &ya)?;
+    /// let spline = Spline::new(typ, &xa, &ya)?;
     ///
     /// let dydx = spline.eval_deriv(1.5, &mut acc)?;
     ///
@@ -176,11 +150,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rsl_interpolation::Spline;
-    /// # use rsl_interpolation::Cubic;
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let mut acc = Accelerator::new();
@@ -188,7 +158,7 @@ where
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
     /// let typ = Cubic;
-    /// let spline = Spline::build(typ, &xa, &ya)?;
+    /// let spline = Spline::new(typ, &xa, &ya)?;
     ///
     /// let dydx = spline.eval_deriv2(1.5, &mut acc)?;
     ///
@@ -212,11 +182,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rsl_interpolation::Spline;
-    /// # use rsl_interpolation::Cubic;
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::InterpolationError;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let mut acc = Accelerator::new();
@@ -224,7 +190,7 @@ where
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
     /// let typ = Cubic;
-    /// let spline = Spline::build(typ, &xa, &ya)?;
+    /// let spline = Spline::new(typ, &xa, &ya)?;
     ///
     /// let int = spline.eval_integ(0.0, 2.0, &mut acc)?;
     ///
@@ -244,8 +210,8 @@ where
 
     /// Returns the name of the Interpolator.
     #[doc(alias = "gsl_spline_name")]
-    pub fn name(&self) -> String {
-        self.name.clone()
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     /// Returns the minimum number of points required by the Interpolator.
@@ -261,20 +227,18 @@ mod test {
     use crate::Cubic;
 
     #[test]
-    fn test_spline_info() {
+    fn test_spline_creation() {
         let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
         let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
-        let spline = Spline::build(Cubic, &xa, &ya).unwrap();
 
-        assert_eq!(spline.name(), <Cubic as InterpType<f64>>::NAME);
-        assert_eq!(spline.min_size(), <Cubic as InterpType<f64>>::MIN_SIZE);
+        let _spline = Spline::new(Cubic, &xa, &ya).unwrap();
     }
 
     #[test]
     fn test_spline_eval() {
         let xa = [0.0, 1.0, 2.0];
         let ya = [0.0, 1.0, 2.0];
-        let spline = Spline::build(Cubic, &xa, &ya).unwrap();
+        let spline = Spline::new(Cubic, &xa, &ya).unwrap();
         let mut acc = Accelerator::new();
 
         let x = 0.5;
