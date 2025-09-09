@@ -42,7 +42,7 @@ where
 
 pub(crate) fn check_if_inbounds<T>(xa: &[T], x: T) -> Result<(), DomainError>
 where
-    T: crate::Num,
+    T: PartialOrd,
 {
     if (x < *xa.first().unwrap()) | (x > *xa.last().unwrap()) {
         return Err(DomainError);

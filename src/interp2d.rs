@@ -9,32 +9,20 @@ use crate::{Accelerator, DomainError, InterpolationError};
 /// > with GSL's interface.
 /// >
 ///
-/// For 2d interpolation, 2 seperate [`Accelerators`] are required for each of the grid variables.
+/// For 2d interpolation, 2 separate [`Accelerators`] are required for each of the grid variables.
 ///
 /// [`Accelerators`]: Accelerator
-pub trait Interp2dType<T>
-where
-    T: crate::Num,
-{
-    /// The minimum number of points required by the Interpolator.
-    const MIN_SIZE: usize;
-
-    /// The name of the Interpolator.
-    const NAME: &str;
-
+pub trait Interp2dType<T> {
     /// The returned 2D Interpolator, containing the calculated coefficients and providing the
     /// evaluation methods.
-    type Interpolator2d: Interpolation2d<T>;
+    type Interpolation2d: Interpolation2d<T>;
 
     /// Creates a 2D Interpolator from the data arrays `xa`, `ya` and `za`.
     ///
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::Interp2dType;
-    /// # use rsl_interpolation::Interpolation2d;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Bicubic;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0, 3.0];
@@ -56,43 +44,32 @@ where
         xa: &[T],
         ya: &[T],
         za: &[T],
-    ) -> Result<Self::Interpolator2d, InterpolationError>;
+    ) -> Result<Self::Interpolation2d, InterpolationError>;
 
     /// Returns the name of the Interpolator.
-    #[doc(alias = "gsl_interp2d_name")]
-    fn name(&self) -> String {
-        Self::NAME.to_string()
-    }
+    #[doc(alias = "gsl_interp_name")]
+    fn name(&self) -> &str;
 
     /// Returns the minimum number of points required by the Interpolator.
-    #[doc(alias = "gsl_interp2d_min_size")]
-    fn min_size(&self) -> usize {
-        Self::MIN_SIZE
-    }
+    #[doc(alias = "gsl_interp_min_size")]
+    fn min_size(&self) -> usize;
 }
 
-/// Defines the required evaulation methods.
+/// Defines the required evaluation methods.
 #[allow(clippy::too_many_arguments)]
-pub trait Interpolation2d<T>
-where
-    T: crate::Num,
-{
+pub trait Interpolation2d<T> {
     /// Returns the interpolated value of `z` for a given point (`x`, `y`), using the data arrays
     /// `xa`, `ya`, `za` and the [`Accelerators`] `xacc` and `yacc`.
     ///
     /// # Note
     ///
-    /// This function only performes the bounds check, and then calls `eval_extrap()`, where the
+    /// This function only performs the bounds check, and then calls `eval_extrap()`, where the
     /// actual evaluation is implemented.
     ///
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::Interp2dType;
-    /// # use rsl_interpolation::Interpolation2d;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Bilinear;
-    /// # use rsl_interpolation::Accelerator;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -131,10 +108,13 @@ where
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
-    ) -> Result<T, DomainError> {
+    ) -> Result<T, DomainError>
+    where
+        T: PartialOrd + Clone,
+    {
         // Calculation is the same, with the added bounds check
-        check_if_inbounds(xa, x)?;
-        check_if_inbounds(ya, y)?;
+        check_if_inbounds(xa, x.clone())?;
+        check_if_inbounds(ya, y.clone())?;
 
         self.eval_extrap(xa, ya, za, x, y, xacc, yacc)
     }
@@ -150,11 +130,7 @@ where
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::Interp2dType;
-    /// # use rsl_interpolation::Interpolation2d;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Bilinear;
-    /// # use rsl_interpolation::Accelerator;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -196,11 +172,7 @@ where
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::Interp2dType;
-    /// # use rsl_interpolation::Interpolation2d;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Bilinear;
-    /// # use rsl_interpolation::Accelerator;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -247,11 +219,7 @@ where
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::Interp2dType;
-    /// # use rsl_interpolation::Interpolation2d;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Bilinear;
-    /// # use rsl_interpolation::Accelerator;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -298,11 +266,7 @@ where
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::Interp2dType;
-    /// # use rsl_interpolation::Interpolation2d;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Bilinear;
-    /// # use rsl_interpolation::Accelerator;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -349,11 +313,7 @@ where
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::Interp2dType;
-    /// # use rsl_interpolation::Interpolation2d;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Bilinear;
-    /// # use rsl_interpolation::Accelerator;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -400,11 +360,7 @@ where
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::Interp2dType;
-    /// # use rsl_interpolation::Interpolation2d;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Bilinear;
-    /// # use rsl_interpolation::Accelerator;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -457,7 +413,7 @@ where
 /// # Example
 ///
 /// ```
-/// # use rsl_interpolation::{DomainError, z_idx};
+/// # use rsl_interpolation::*;
 /// #
 /// # fn main() -> Result<(), DomainError>{
 /// let xa = [0.0, 1.0];
@@ -489,7 +445,7 @@ pub fn z_idx(xi: usize, yi: usize, xlen: usize, ylen: usize) -> Result<usize, Do
 /// # Example
 ///
 /// ```
-/// # use rsl_interpolation::{DomainError, z_set};
+/// # use rsl_interpolation::*;
 /// #
 /// # fn main() -> Result<(), DomainError>{
 /// let xa = [0.0, 1.0];
@@ -533,7 +489,7 @@ where
 /// # Example
 ///
 /// ```
-/// # use rsl_interpolation::{DomainError, z_get};
+/// # use rsl_interpolation::*;
 /// #
 /// # fn main() -> Result<(), DomainError>{
 /// let xa = [0.0, 1.0];
@@ -561,7 +517,7 @@ where
 // ===============================================================================================
 
 /// Common calculation to evaluation functions
-pub(crate) fn acc_indeces<T>(
+pub(crate) fn acc_indices<T>(
     xa: &[T],
     ya: &[T],
     x: T,
@@ -578,7 +534,7 @@ where
 }
 
 /// Common calculation to evaluation functions
-pub(crate) fn xy_grid_indeces<T>(xa: &[T], ya: &[T], xi: usize, yi: usize) -> (T, T, T, T)
+pub(crate) fn xy_grid_indices<T>(xa: &[T], ya: &[T], xi: usize, yi: usize) -> (T, T, T, T)
 where
     T: crate::Num,
 {
@@ -590,7 +546,7 @@ where
 }
 
 /// Common calculation to evaluation functions
-pub(crate) fn z_grid_indeces<T>(
+pub(crate) fn z_grid_indices<T>(
     za: &[T],
     xlen: usize,
     ylen: usize,

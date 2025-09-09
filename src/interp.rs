@@ -4,28 +4,17 @@ use crate::Accelerator;
 use crate::{DomainError, InterpolationError};
 
 /// Representation of an Interpolation Type.
-pub trait InterpType<T>
-where
-    T: crate::Num,
-{
-    /// The minimum number of points required by the Interpolator.
-    const MIN_SIZE: usize;
-
-    /// The name of the Interpolator.
-    const NAME: &str;
-
+pub trait InterpType<T> {
     /// The returned Interpolator, containing the calculated coefficients and providing the
     /// evaluation methods.
-    type Interpolator: Interpolation<T>;
+    type Interpolation: Interpolation<T>;
 
     /// Creates an Interpolator from the data arrays `xa` and `ya`.
     ///
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::InterpolationError;
-    /// use rsl_interpolation::Cubic;
+    /// # use rsl_interpolation::*;
     ///
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -34,37 +23,26 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    fn build(&self, xa: &[T], ya: &[T]) -> Result<Self::Interpolator, InterpolationError>;
+    fn build(&self, xa: &[T], ya: &[T]) -> Result<Self::Interpolation, InterpolationError>;
 
     /// Returns the name of the Interpolator.
     #[doc(alias = "gsl_interp_name")]
-    fn name(&self) -> String {
-        Self::NAME.to_string()
-    }
+    fn name(&self) -> &str;
 
     /// Returns the minimum number of points required by the Interpolator.
     #[doc(alias = "gsl_interp_min_size")]
-    fn min_size(&self) -> usize {
-        Self::MIN_SIZE
-    }
+    fn min_size(&self) -> usize;
 }
 
 /// Defines the required evaluation methods.
-pub trait Interpolation<T>
-where
-    T: crate::Num,
-{
+pub trait Interpolation<T> {
     /// Returns the interpolated value `y` for a given point `x`, using the data arrays `xa` and `ya` and
     /// the [`Accelerator`] `acc`.
     ///
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Interpolation;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::Cubic;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -92,11 +70,7 @@ where
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Interpolation;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::Cubic;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -125,11 +99,7 @@ where
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Interpolation;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::Cubic;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -164,11 +134,7 @@ where
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Interpolation;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Accelerator;
-    /// # use rsl_interpolation::Cubic;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];

@@ -5,7 +5,7 @@ use crate::DomainError;
 use crate::Interp2dType;
 use crate::Interpolation2d;
 use crate::InterpolationError;
-use crate::interp2d::{acc_indeces, partials, xy_grid_indeces, z_grid_indeces};
+use crate::interp2d::{acc_indices, partials, xy_grid_indices, z_grid_indices};
 use crate::types::utils::check_if_inbounds;
 use crate::types::utils::check2d_data;
 
@@ -21,20 +21,14 @@ impl<T> Interp2dType<T> for Bilinear
 where
     T: crate::Num,
 {
-    type Interpolator2d = BilinearInterp<T>;
-
-    const MIN_SIZE: usize = MIN_SIZE;
-    const NAME: &str = "Bilinear";
+    type Interpolation2d = BilinearInterp<T>;
 
     /// Constructs a Bilinear Interpolator.
     ///
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::Interp2dType;
-    /// # use rsl_interpolation::Interpolation2d;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Bilinear;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -56,6 +50,14 @@ where
         Ok(BilinearInterp {
             _variable_type: PhantomData,
         })
+    }
+
+    fn name(&self) -> &str {
+        "Bilinear"
+    }
+
+    fn min_size(&self) -> usize {
+        MIN_SIZE
     }
 }
 
@@ -84,9 +86,9 @@ where
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
     ) -> Result<T, DomainError> {
-        let (xi, yi) = acc_indeces(xa, ya, x, y, xacc, yacc);
-        let (xlo, xhi, ylo, yhi) = xy_grid_indeces(xa, ya, xi, yi);
-        let (zlolo, zlohi, zhilo, zhihi) = z_grid_indeces(za, xa.len(), ya.len(), xi, yi)?;
+        let (xi, yi) = acc_indices(xa, ya, x, y, xacc, yacc);
+        let (xlo, xhi, ylo, yhi) = xy_grid_indices(xa, ya, xi, yi);
+        let (zlolo, zlohi, zhilo, zhihi) = z_grid_indices(za, xa.len(), ya.len(), xi, yi)?;
         let (dx, dy) = partials(xlo, xhi, ylo, yhi);
 
         debug_assert!(dx > T::zero());
@@ -116,9 +118,9 @@ where
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
 
-        let (xi, yi) = acc_indeces(xa, ya, x, y, xacc, yacc);
-        let (xlo, xhi, ylo, yhi) = xy_grid_indeces(xa, ya, xi, yi);
-        let (zlolo, zlohi, zhilo, zhihi) = z_grid_indeces(za, xa.len(), ya.len(), xi, yi)?;
+        let (xi, yi) = acc_indices(xa, ya, x, y, xacc, yacc);
+        let (xlo, xhi, ylo, yhi) = xy_grid_indices(xa, ya, xi, yi);
+        let (zlolo, zlohi, zhilo, zhihi) = z_grid_indices(za, xa.len(), ya.len(), xi, yi)?;
         let (dx, dy) = partials(xlo, xhi, ylo, yhi);
 
         debug_assert!(dx > T::zero());
@@ -145,9 +147,9 @@ where
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
 
-        let (xi, yi) = acc_indeces(xa, ya, x, y, xacc, yacc);
-        let (xlo, xhi, ylo, yhi) = xy_grid_indeces(xa, ya, xi, yi);
-        let (zlolo, zlohi, zhilo, zhihi) = z_grid_indeces(za, xa.len(), ya.len(), xi, yi)?;
+        let (xi, yi) = acc_indices(xa, ya, x, y, xacc, yacc);
+        let (xlo, xhi, ylo, yhi) = xy_grid_indices(xa, ya, xi, yi);
+        let (zlolo, zlohi, zhilo, zhihi) = z_grid_indices(za, xa.len(), ya.len(), xi, yi)?;
         let (dx, dy) = partials(xlo, xhi, ylo, yhi);
 
         debug_assert!(dx > T::zero());
@@ -208,9 +210,9 @@ where
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
 
-        let (xi, yi) = acc_indeces(xa, ya, x, y, xacc, yacc);
-        let (xlo, xhi, ylo, yhi) = xy_grid_indeces(xa, ya, xi, yi);
-        let (zlolo, zlohi, zhilo, zhihi) = z_grid_indeces(za, xa.len(), ya.len(), xi, yi)?;
+        let (xi, yi) = acc_indices(xa, ya, x, y, xacc, yacc);
+        let (xlo, xhi, ylo, yhi) = xy_grid_indices(xa, ya, xi, yi);
+        let (zlolo, zlohi, zhilo, zhihi) = z_grid_indices(za, xa.len(), ya.len(), xi, yi)?;
         let (dx, dy) = partials(xlo, xhi, ylo, yhi);
 
         let one = T::one();

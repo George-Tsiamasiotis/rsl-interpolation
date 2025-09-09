@@ -29,20 +29,14 @@ impl<T> InterpType<T> for Cubic
 where
     T: crate::Num + Lapack,
 {
-    type Interpolator = CubicInterp<T>;
-
-    const MIN_SIZE: usize = MIN_SIZE;
-    const NAME: &str = "Cubic";
+    type Interpolation = CubicInterp<T>;
 
     /// Constructs a Cubic Interpolator.
     ///
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Interpolation;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Cubic;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -111,7 +105,7 @@ where
         }
         c.push(T::zero());
 
-        // g, diag, and offdiag are only needed for the calculation of c and are not used anywere
+        // g, diag, and offdiag are only needed for the calculation of c and are not used anywhere
         // else from this point, but lets keep them.
         let state = CubicInterp {
             c,
@@ -120,6 +114,14 @@ where
             offdiag,
         };
         Ok(state)
+    }
+
+    fn name(&self) -> &str {
+        "Cubic"
+    }
+
+    fn min_size(&self) -> usize {
+        MIN_SIZE
     }
 }
 
@@ -202,20 +204,14 @@ impl<T> InterpType<T> for CubicPeriodic
 where
     T: crate::Num + Lapack,
 {
-    type Interpolator = CubicPeriodicInterp<T>;
-
-    const MIN_SIZE: usize = MIN_SIZE;
-    const NAME: &str = "Cubic Periodic";
+    type Interpolation = CubicPeriodicInterp<T>;
 
     /// Constructs a Cubic Periodic Interpolator.
     ///
     /// # Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Interpolation;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::CubicPeriodic;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
@@ -326,7 +322,7 @@ where
             )
         }
 
-        // g, diag, and offdiag are only needed for the calculation of c and are not used anywere
+        // g, diag, and offdiag are only needed for the calculation of c and are not used anywhere
         // else from this point, but lets keep them.
         let state = CubicPeriodicInterp {
             c,
@@ -335,6 +331,14 @@ where
             offdiag,
         };
         Ok(state)
+    }
+
+    fn name(&self) -> &str {
+        "Cubic Periodic"
+    }
+
+    fn min_size(&self) -> usize {
+        MIN_SIZE
     }
 }
 

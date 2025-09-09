@@ -21,20 +21,14 @@ impl<T> InterpType<T> for Akima
 where
     T: crate::Num,
 {
-    type Interpolator = AkimaInterp<T>;
-
-    const MIN_SIZE: usize = MIN_SIZE;
-    const NAME: &str = "Akima";
+    type Interpolation = AkimaInterp<T>;
 
     /// Constructs an Akima Interpolator.
     ///
     /// ## Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Interpolation;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::Akima;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
@@ -50,7 +44,7 @@ where
         let two = T::from(2.0).unwrap();
         let three = T::from(3.0).unwrap();
 
-        // All m indeces are shifted by +2
+        // All m indices are shifted by +2
         let mut m = VecDeque::<T>::with_capacity(size);
         for i in 0..=size - 2 {
             m.push_back((ya[i + 1] - ya[i]) / (xa[i + 1] - xa[i]));
@@ -67,6 +61,14 @@ where
 
         let state = AkimaInterp { b, c, d, m };
         Ok(state)
+    }
+
+    fn name(&self) -> &str {
+        "Akima"
+    }
+
+    fn min_size(&self) -> usize {
+        MIN_SIZE
     }
 }
 
@@ -143,20 +145,14 @@ impl<T> InterpType<T> for AkimaPeriodic
 where
     T: crate::Num,
 {
-    type Interpolator = AkimaPeriodicInterp<T>;
-
-    const MIN_SIZE: usize = MIN_SIZE;
-    const NAME: &str = "Akima Periodic";
+    type Interpolation = AkimaPeriodicInterp<T>;
 
     /// Constructs an Akima Periodic Interpolator.
     ///
     /// ## Example
     ///
     /// ```
-    /// # use rsl_interpolation::InterpType;
-    /// # use rsl_interpolation::Interpolation;
-    /// # use rsl_interpolation::InterpolationError;
-    /// # use rsl_interpolation::AkimaPeriodic;
+    /// # use rsl_interpolation::*;
     /// #
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
@@ -170,7 +166,7 @@ where
 
         let size = xa.len();
 
-        // All m indeces are shifted by +2
+        // All m indices are shifted by +2
         let mut m = VecDeque::<T>::with_capacity(size + 3);
         for i in 0..=size - 2 {
             m.push_back((ya[i + 1] - ya[i]) / (xa[i + 1] - xa[i]));
@@ -187,6 +183,14 @@ where
 
         let state = AkimaPeriodicInterp { b, c, d, m };
         Ok(state)
+    }
+
+    fn name(&self) -> &str {
+        "Akima Periodic"
+    }
+
+    fn min_size(&self) -> usize {
+        MIN_SIZE
     }
 }
 
