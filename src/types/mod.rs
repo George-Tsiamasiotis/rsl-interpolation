@@ -8,6 +8,8 @@ mod steffen;
 mod bicubic;
 mod bilinear;
 
+mod dynamic1d;
+
 pub(crate) use utils::*;
 
 pub use akima::{Akima, AkimaInterp};
@@ -19,3 +21,5 @@ pub use steffen::{Steffen, SteffenInterp};
 
 pub use bicubic::{Bicubic, BicubicInterp};
 pub use bilinear::{Bilinear, BilinearInterp};
+
+pub use dynamic1d::DynInterpType;
