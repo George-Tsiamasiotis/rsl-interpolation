@@ -40,6 +40,7 @@ where
     }
 }
 
+#[inline(always)]
 pub(crate) fn check_if_inbounds<T>(xa: &[T], x: T) -> Result<(), DomainError>
 where
     T: PartialOrd,

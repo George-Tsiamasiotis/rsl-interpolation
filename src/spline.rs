@@ -75,7 +75,7 @@ where
         T: Clone,
     {
         Ok(Self {
-            interp: typ.build(&xa, &ya)?,
+            interp: typ.build(xa, ya)?,
             xa: xa.into(),
             ya: ya.into(),
             name: typ.name().into(),

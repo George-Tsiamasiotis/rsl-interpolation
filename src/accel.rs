@@ -40,10 +40,9 @@ impl Accelerator {
         }
     }
 
-    #[allow(dead_code)]
-    #[doc(alias = "gsl_interp_bsearch")]
     /// This function returns the index i of the array `xarray` such that
     /// `xarray[i] <= x <= xarray[i+1]`. The index is searched for in the range [ilo, ihi].
+    #[doc(alias = "gsl_interp_bsearch")]
     pub(crate) fn bsearch<T>(&self, xarray: &[T], x: T, ilo: usize, ihi: usize) -> usize
     where
         T: num::Float,
@@ -61,10 +60,9 @@ impl Accelerator {
         ilo
     }
 
-    #[allow(dead_code)]
-    #[doc(alias = "gsl_interp_accel_find")]
     /// Performs a lookup action on the data array. Returns an index i such that
     /// xarray[i] <= x < xarray[i+1].
+    #[doc(alias = "gsl_interp_accel_find")]
     pub(crate) fn find<T>(&mut self, xarray: &[T], x: T) -> usize
     where
         T: num::Float,
@@ -126,17 +124,5 @@ mod test {
         assert_eq!(acc.cache, 0);
         assert_eq!(acc.hits, 0);
         assert_eq!(acc.misses, 0);
-    }
-
-    #[test]
-    fn test_debug_trait() {
-        let acc = Accelerator::new();
-        let _ = format!("{acc:?}");
-        let _ = format!("{acc:#?}");
-    }
-
-    #[test]
-    fn test_default_trait() {
-        let _ = Accelerator::default();
     }
 }

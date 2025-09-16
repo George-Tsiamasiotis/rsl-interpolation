@@ -303,6 +303,7 @@ where
     Ok(b + delx * (two * c + three * d * delx))
 }
 
+#[inline(always)]
 fn akima_eval_deriv2<T>(
     xa: &[T],
     state: (&[T], &[T]),

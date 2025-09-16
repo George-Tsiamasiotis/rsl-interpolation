@@ -403,6 +403,7 @@ where
 
 //=================================================================================================
 
+#[inline(always)]
 fn cubic_eval<T>(xa: &[T], ya: &[T], c: &[T], x: T, acc: &mut Accelerator) -> Result<T, DomainError>
 where
     T: crate::Num + Lapack,
@@ -456,6 +457,7 @@ where
     Ok(b + delx * (two * c + three * d * delx))
 }
 
+#[inline(always)]
 fn cubic_eval_deriv2<T>(
     xa: &[T],
     ya: &[T],
@@ -487,6 +489,7 @@ where
     Ok(two * c + six * delx * d)
 }
 
+#[inline(always)]
 fn cubic_eval_integ<T>(
     xa: &[T],
     ya: &[T],
@@ -535,7 +538,7 @@ where
     }
     Ok(result)
 }
-/// Function for common coefficient determination.
+/// Function for common coefficient determination. No inline.
 fn coeff_calc<T>(carray: &[T], dx: T, dy: T, index: usize) -> (T, T, T)
 where
     T: crate::Num + Lapack,
