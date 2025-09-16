@@ -1,5 +1,6 @@
 use crate::Accelerator;
 use crate::DomainError;
+use crate::DynInterpType;
 use crate::InterpType;
 use crate::Interpolation;
 use crate::InterpolationError;
@@ -221,10 +222,45 @@ where
     }
 }
 
+pub type DynSpline<T> = Spline<DynInterpType<T>, T>;
+
+impl<T> DynSpline<T> {
+    /// Constructs a Spline of a dynamic Interpolation type `typ` from the data arrays `xa` and
+    /// `ya`.
+    ///
+    /// # Example
+    /// ```
+    /// # use rsl_interpolation::*;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError> {
+    /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
+    /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
+    /// let typ = "cubic";
+    ///
+    /// let spline = match typ {
+    ///     "cubic" => Spline::new_dyn(Cubic, &xa, &ya)?,
+    ///     "akima" => Spline::new_dyn(Akima, &xa, &ya)?,
+    ///     // ...
+    ///     _ => unreachable!()
+    /// };
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[doc(alias = "gsl_spline_init")]
+    pub fn new_dyn<I>(typ: I, xa: &[T], ya: &[T]) -> Result<Self, InterpolationError>
+    where
+        T: Clone,
+        I: InterpType<T> + 'static,
+        I::Interpolation: 'static,
+    {
+        Self::new(DynInterpType::new(typ), xa, ya)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::Cubic;
+    use crate::*;
 
     #[test]
     fn test_spline_creation() {
@@ -251,5 +287,14 @@ mod test {
         assert_eq!(dy, 1.0);
         assert_eq!(dy2, 0.0);
         assert_eq!(int, 0.125);
+    }
+
+    #[test]
+    fn test_dyn_spline() {
+        let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
+        let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
+
+        Spline::new(Cubic, &xa, &ya).unwrap();
+        Spline::new_dyn(Cubic, &xa, &ya).unwrap();
     }
 }
