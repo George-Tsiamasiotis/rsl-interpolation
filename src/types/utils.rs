@@ -45,10 +45,10 @@ pub(crate) fn check_if_inbounds<T>(xa: &[T], x: T) -> Result<(), DomainError>
 where
     T: PartialOrd,
 {
-    if (x < *xa.first().unwrap()) | (x > *xa.last().unwrap()) {
-        return Err(DomainError);
+    match (xa.first(), xa.last()) {
+        (Some(first), Some(last)) if x >= *first && x <= *last => Ok(()),
+        _ => Err(DomainError),
     }
-    Ok(())
 }
 
 /// Calculates the n-th discrete difference: out[i] = s[i+1]-s[i].

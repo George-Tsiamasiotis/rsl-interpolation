@@ -92,7 +92,7 @@ impl std::fmt::Debug for Accelerator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Accelerator")
             .field("cache", &self.cache)
-            .field("hits", &self.hits)
+            .field("hits  ", &self.hits)
             .field("misses", &self.misses)
             .finish()
     }
