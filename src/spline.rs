@@ -222,6 +222,7 @@ where
     }
 }
 
+/// 2D Spline with runtime-determined Interpolation Type.
 pub type DynSpline<T> = Spline<DynInterpType<T>, T>;
 
 impl<T> DynSpline<T> {
@@ -267,7 +268,9 @@ mod test {
         let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
         let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
 
-        let _spline = Spline::new(Cubic, &xa, &ya).unwrap();
+        let spline = Spline::new(Cubic, &xa, &ya).unwrap();
+        let _: &str = spline.name();
+        let _: usize = spline.min_size();
     }
 
     #[test]

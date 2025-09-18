@@ -603,4 +603,23 @@ mod test {
 
         assert_eq!(za, [100.0, 200.0, 300.0, 400.0,])
     }
+
+    #[test]
+    fn test_z_get() {
+        #[rustfmt::skip]
+        let xa = [0.0, 1.0, 2.0];
+        let ya = [0.0, 1.0, 2.0, 3.0];
+        #[rustfmt::skip]
+        let za = [
+            0.0, 1.0, 2.0,
+            3.0, 4.0, 5.0,
+            6.0, 5.0, 4.0,
+            3.0, 99.0, 1.0, // we want 99.0
+        ];
+
+        let (i, j) = (1, 3);
+        let idx = z_get(&za, i, j, xa.len(), ya.len()).unwrap();
+        let expected = 99.0;
+        assert_eq!(idx, expected);
+    }
 }

@@ -1,4 +1,5 @@
 use crate::Accelerator;
+use crate::DynInterp2dType;
 use crate::Interp2dType;
 use crate::Interpolation2d;
 use crate::{DomainError, InterpolationError};
@@ -45,6 +46,7 @@ where
     I: Interp2dType<T>,
 {
     /// The lower-level [`2D Interpolator`].
+    ///
     /// [`2D Interpolator`]: Interpolation2d#implementors
     pub interp: I::Interpolation2d,
     /// The owned x data.
@@ -94,7 +96,7 @@ where
         T: Clone,
     {
         let spline = Self {
-            interp: typ.build(&xa, &ya, &za)?,
+            interp: typ.build(xa, ya, za)?,
             xa: xa.into(),
             ya: ya.into(),
             za: za.into(),
@@ -476,11 +478,52 @@ where
     }
 }
 
+/// 2D Spline with runtime-determined Interpolation Type.
+pub type DynSpline2d<T> = Spline2d<DynInterp2dType<T>, T>;
+
+impl<T> DynSpline2d<T> {
+    /// Constructs a 2d Spline of a dynamic 2d Interpolation type `typ` from the data arrays `xa`,
+    /// `ya` and `za`.
+    ///
+    /// # Example
+    /// ```
+    /// # use rsl_interpolation::*;
+    /// #
+    /// # fn main() -> Result<(), InterpolationError> {
+    /// let xa = [0.0, 1.0, 2.0, 3.0];
+    /// let ya = [0.0, 2.0, 4.0, 6.0];
+    /// // z = x + y, in column-major order
+    /// let za = [
+    ///     0.0, 1.0, 2.0, 3.0,
+    ///     2.0, 3.0, 4.0, 5.0,
+    ///     4.0, 5.0, 6.0, 7.0,
+    ///     6.0, 7.0, 8.0, 9.0,
+    /// ];
+    /// let typ = "bicubic";
+    ///
+    /// let spline = match typ {
+    ///     "bilinear" => Spline2d::new_dyn(Bilinear, &xa, &ya, &za)?,
+    ///     "bicubic" => Spline2d::new_dyn(Bicubic, &xa, &ya, &za)?,
+    ///     _ => unreachable!()
+    /// };
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[doc(alias = "gsl_spline2d_init")]
+    pub fn new_dyn<I>(typ: I, xa: &[T], ya: &[T], za: &[T]) -> Result<Self, InterpolationError>
+    where
+        T: Clone,
+        I: Interp2dType<T> + 'static,
+        I::Interpolation2d: 'static,
+    {
+        Self::new(DynInterp2dType::new(typ), xa, ya, za)
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use super::*;
     use crate::tests::build_comparator;
-    use crate::{Bicubic, Bilinear};
+    use crate::*;
 
     #[test]
     fn test_spline2d_creation() {
@@ -488,7 +531,9 @@ mod test {
         let ya = [0.0, 2.0, 4.0];
         let za = [0.0, 1.0, 2.0, 2.0, 3.0, 4.0, 4.0, 5.0, 6.0];
 
-        let _spline2d = Spline2d::new(Bilinear, &xa, &ya, &za).unwrap();
+        let spline2d = Spline2d::new(Bilinear, &xa, &ya, &za).unwrap();
+        let _: &str = spline2d.name();
+        let _: usize = spline2d.min_size();
     }
 
     #[test]
@@ -529,5 +574,21 @@ mod test {
             .eval_extrap(4.0, 4.0, &mut xacc, &mut yacc)
             .unwrap();
         assert!(comp.is_close(ze, 1.8));
+    }
+
+    #[test]
+    fn test_dyn_spline2d() {
+        let xa = [0.0, 1.0, 2.0, 3.0];
+        let ya = [0.0, 1.0, 2.0, 3.0];
+        #[rustfmt::skip]
+        let za = [
+            1.0, 1.1, 1.2, 1.3,
+            1.1, 1.2, 1.3, 1.4,
+            1.2, 1.3, 1.4, 1.5,
+            1.3, 1.4, 1.5, 1.6,
+        ];
+
+        Spline2d::new(Bicubic, &xa, &ya, &za).unwrap();
+        Spline2d::new_dyn(Bicubic, &xa, &ya, &za).unwrap();
     }
 }

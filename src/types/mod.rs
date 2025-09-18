@@ -9,6 +9,7 @@ mod bicubic;
 mod bilinear;
 
 mod dynamic1d;
+mod dynamic2d;
 
 pub(crate) use utils::*;
 
@@ -23,3 +24,4 @@ pub use bicubic::{Bicubic, BicubicInterp};
 pub use bilinear::{Bilinear, BilinearInterp};
 
 pub use dynamic1d::DynInterpType;
+pub use dynamic2d::DynInterp2dType;

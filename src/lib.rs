@@ -20,8 +20,9 @@
 //! # Higher level Interface
 //!
 //! + [Spline]
-//! + [DynSpline]
 //! + [Spline2d]
+//! + [DynSpline]
+//! + [DynSpline2d]
 //!
 #![allow(rustdoc::broken_intra_doc_links)]
 #![doc = include_str!("../TODO.md")]
@@ -42,7 +43,7 @@ pub use interp::{InterpType, Interpolation};
 pub use interp2d::{Interp2dType, Interpolation2d, z_get, z_idx, z_set};
 
 pub use spline::{DynSpline, Spline};
-pub use spline2d::Spline2d;
+pub use spline2d::{DynSpline2d, Spline2d};
 
 pub use types::*;
 
