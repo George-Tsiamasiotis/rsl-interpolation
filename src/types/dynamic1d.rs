@@ -7,7 +7,7 @@ use crate::InterpolationError;
 /// Representation of an Interpolation Type that is not known in compile-time.
 pub struct DynInterpType<T> {
     #[allow(clippy::type_complexity)]
-    build: Box<dyn (Fn(&[T], &[T]) -> Result<Box<dyn Interpolation<T>>, InterpolationError>)>,
+    build: Box<dyn Fn(&[T], &[T]) -> Result<Box<dyn Interpolation<T>>, InterpolationError>>,
     name: Box<str>,
     min_size: usize,
 }

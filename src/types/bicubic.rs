@@ -627,6 +627,7 @@ impl<T> BicubicInterp<T>
 where
     T: crate::Num + Lapack,
 {
+    #[inline(always)]
     fn zxminmaxxing(&self, xi: usize, yi: usize, dt: T) -> Result<(T, T, T, T), DomainError>
     where
         T: crate::Num + Lapack,
@@ -638,6 +639,7 @@ where
         Ok((zxminmin, zxminmax, zxmaxmin, zxmaxmax))
     }
 
+    #[inline(always)]
     fn zyminmaxxing(&self, xi: usize, yi: usize, du: T) -> Result<(T, T, T, T), DomainError>
     where
         T: crate::Num + Lapack,
@@ -649,6 +651,7 @@ where
         Ok((zyminmin, zyminmax, zymaxmin, zymaxmax))
     }
 
+    #[inline(always)]
     fn zxyminmaxxing(&self, xi: usize, yi: usize, dt: T, du: T) -> Result<(T, T, T, T), DomainError>
     where
         T: crate::Num + Lapack,
@@ -663,6 +666,7 @@ where
 }
 
 /// Common calculation
+#[inline(always)]
 fn tu_cubic_values<T>(x: T, y: T, xlo: T, ylo: T, dx: T, dy: T) -> (T, T, T, T)
 where
     T: crate::Num + Lapack,

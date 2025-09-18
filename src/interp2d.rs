@@ -546,6 +546,7 @@ where
 }
 
 /// Common calculation to evaluation functions
+#[inline(always)]
 pub(crate) fn z_grid_indices<T>(
     za: &[T],
     xlen: usize,
