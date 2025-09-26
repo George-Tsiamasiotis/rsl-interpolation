@@ -520,6 +520,48 @@ impl<T> DynSpline2d<T> {
     }
 }
 
+/// Creates a [`DynSpline2d`] of `typ` type.
+///
+/// Useful when `typ` is not known at compile time.
+///
+/// # Example
+/// ```
+/// # use rsl_interpolation::*;
+/// #
+/// # fn main() -> Result<(), InterpolationError> {
+/// let xa = [0.0, 1.0, 2.0, 3.0];
+/// let ya = [0.0, 2.0, 4.0, 6.0];
+/// // z = x + y, in column-major order
+/// let za = [
+///     0.0, 1.0, 2.0, 3.0,
+///     2.0, 3.0, 4.0, 5.0,
+///     4.0, 5.0, 6.0, 7.0,
+///     6.0, 7.0, 8.0, 9.0,
+/// ];
+/// let typ = "bicubic";
+///
+/// let spline = make_spline(typ, &xa, &ya, &za)?;
+/// # Ok(())
+/// # }
+/// ```
+pub fn make_spline2d<T>(
+    typ: &str,
+    xa: &[T],
+    ya: &[T],
+    za: &[T],
+) -> Result<DynSpline2d<T>, InterpolationError>
+where
+    T: crate::Num + ndarray_linalg::Lapack,
+{
+    use crate::*;
+
+    match typ.to_lowercase().as_str() {
+        "bilinear" => Ok(DynSpline2d::new_dyn(Bilinear, xa, ya, za)?),
+        "bicubic" => Ok(DynSpline2d::new_dyn(Bicubic, xa, ya, za)?),
+        _ => Err(InterpolationError::InvalidType(typ.into())),
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::tests::build_comparator;

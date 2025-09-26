@@ -258,6 +258,40 @@ impl<T> DynSpline<T> {
     }
 }
 
+/// Creates a [`DynSpline`] of `typ` type.
+///
+/// Useful when `typ` is not known at compile time.
+///
+/// # Example
+/// ```
+/// # use rsl_interpolation::*;
+/// #
+/// # fn main() -> Result<(), InterpolationError> {
+/// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
+/// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
+/// let typ = "cubic";
+///
+/// let spline = make_spline(typ, &xa, &ya)?;
+/// # Ok(())
+/// # }
+/// ```
+pub fn make_spline<T>(typ: &str, xa: &[T], ya: &[T]) -> Result<DynSpline<T>, InterpolationError>
+where
+    T: crate::Num + ndarray_linalg::Lapack,
+{
+    use crate::*;
+
+    match typ.to_lowercase().as_str() {
+        "linear" => Ok(DynSpline::new_dyn(Linear, xa, ya)?),
+        "cubic" => Ok(DynSpline::new_dyn(Cubic, xa, ya)?),
+        "akima" => Ok(DynSpline::new_dyn(Akima, xa, ya)?),
+        "cubicperiodic" | "cubic periodic" => Ok(DynSpline::new_dyn(CubicPeriodic, xa, ya)?),
+        "akimaperiodic" | "akima periodic" => Ok(DynSpline::new_dyn(AkimaPeriodic, xa, ya)?),
+        "steffen" => Ok(DynSpline::new_dyn(Steffen, xa, ya)?),
+        _ => Err(InterpolationError::InvalidType(typ.into())),
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

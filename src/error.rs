@@ -31,6 +31,10 @@ pub enum InterpolationError {
     /// Supplied value is outside the range of the supplied xdata or ydata.
     #[error("{DOMAIN_ERROR_MSG}")]
     DomainError(#[from] DomainError),
+
+    /// Invalid Interpolation Type
+    #[error("`{0}`: Invalid Interpolation Type")]
+    InvalidType(Box<str>),
 }
 
 #[derive(thiserror::Error, Debug)]
