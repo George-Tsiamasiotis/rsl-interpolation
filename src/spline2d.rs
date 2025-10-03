@@ -540,7 +540,7 @@ impl<T> DynSpline2d<T> {
 /// ];
 /// let typ = "bicubic";
 ///
-/// let spline = make_spline(typ, &xa, &ya, &za)?;
+/// let spline = make_spline2d(typ, &xa, &ya, &za)?;
 /// # Ok(())
 /// # }
 /// ```

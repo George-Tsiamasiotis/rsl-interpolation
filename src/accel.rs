@@ -21,6 +21,7 @@
 /// ```
 /// [`GSL's Acceleration section`]: https://www.gnu.org/software/gsl/doc/html/interp.html#d-index-look-up-and-acceleration
 #[doc(alias = "gsl_interp_accel")]
+#[derive(Clone, Copy)]
 pub struct Accelerator {
     /// The current cached index.
     pub(crate) cache: usize,
