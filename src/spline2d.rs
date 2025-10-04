@@ -43,7 +43,7 @@ use crate::{DomainError, InterpolationError};
 /// ```
 pub struct Spline2d<I, T>
 where
-    I: Interp2dType<T>,
+    I: Interp2dType<T> + Send + Sync + 'static,
 {
     /// The lower-level [`2D Interpolator`].
     ///
@@ -61,7 +61,7 @@ where
 
 impl<I, T> Spline2d<I, T>
 where
-    I: Interp2dType<T>,
+    I: Interp2dType<T> + Send + Sync + 'static,
 {
     /// Constructs a 2D Spline of a 2D Interpolation type `typ` from the data arrays `xa`, `ya` and
     /// `za`.
@@ -513,8 +513,8 @@ impl<T> DynSpline2d<T> {
     pub fn new_dyn<I>(typ: I, xa: &[T], ya: &[T], za: &[T]) -> Result<Self, InterpolationError>
     where
         T: Clone,
-        I: Interp2dType<T> + 'static,
-        I::Interpolation2d: 'static,
+        I: Interp2dType<T> + Send + Sync + 'static,
+        I::Interpolation2d: Send + Sync + 'static,
     {
         Self::new(DynInterp2dType::new(typ), xa, ya, za)
     }

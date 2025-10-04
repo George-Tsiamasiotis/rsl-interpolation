@@ -7,7 +7,17 @@ use crate::InterpolationError;
 /// Representation of a 2d Interpolation Type that is not known in compile-time.
 pub struct DynInterp2dType<T> {
     #[allow(clippy::type_complexity)]
-    build: Box<dyn Fn(&[T], &[T], &[T]) -> Result<Box<dyn Interpolation2d<T>>, InterpolationError>>,
+    build: Box<
+        dyn Fn(
+                &[T],
+                &[T],
+                &[T],
+            )
+                -> Result<Box<dyn Interpolation2d<T> + Send + Sync + 'static>, InterpolationError>
+            + Send
+            + Sync
+            + 'static,
+    >,
     name: Box<str>,
     min_size: usize,
 }
@@ -15,8 +25,8 @@ pub struct DynInterp2dType<T> {
 impl<T> DynInterp2dType<T> {
     pub fn new<I>(interp: I) -> Self
     where
-        I: Interp2dType<T> + 'static,
-        I::Interpolation2d: 'static,
+        I: Interp2dType<T> + Send + Sync + 'static,
+        I::Interpolation2d: Send + Sync + 'static,
     {
         Self {
             name: interp.name().into(),
@@ -30,7 +40,7 @@ impl<T> DynInterp2dType<T> {
 }
 
 impl<T> Interp2dType<T> for DynInterp2dType<T> {
-    type Interpolation2d = Box<dyn Interpolation2d<T>>;
+    type Interpolation2d = Box<dyn Interpolation2d<T> + Send + Sync + 'static>;
 
     fn build(
         &self,
@@ -50,7 +60,7 @@ impl<T> Interp2dType<T> for DynInterp2dType<T> {
     }
 }
 
-impl<T> Interpolation2d<T> for Box<dyn Interpolation2d<T>> {
+impl<T> Interpolation2d<T> for Box<dyn Interpolation2d<T> + Send + Sync + 'static> {
     fn eval_extrap(
         &self,
         xa: &[T],

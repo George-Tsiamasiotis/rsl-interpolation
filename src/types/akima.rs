@@ -1,12 +1,12 @@
 use std::collections::VecDeque;
 
+use crate::types::utils::integ_eval;
+use crate::types::utils::{check1d_data, check_if_inbounds};
 use crate::Accelerator;
 use crate::DomainError;
 use crate::InterpType;
 use crate::Interpolation;
 use crate::InterpolationError;
-use crate::types::utils::integ_eval;
-use crate::types::utils::{check_if_inbounds, check1d_data};
 
 const MIN_SIZE: usize = 5;
 

@@ -15,7 +15,7 @@ use crate::{Accelerator, DomainError, InterpolationError};
 pub trait Interp2dType<T> {
     /// The returned 2D Interpolator, containing the calculated coefficients and providing the
     /// evaluation methods.
-    type Interpolation2d: Interpolation2d<T>;
+    type Interpolation2d: Interpolation2d<T> + Send + Sync;
 
     /// Creates a 2D Interpolator from the data arrays `xa`, `ya` and `za`.
     ///

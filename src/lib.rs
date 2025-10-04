@@ -40,10 +40,10 @@ pub use accel::Accelerator;
 
 pub use error::*;
 pub use interp::{InterpType, Interpolation};
-pub use interp2d::{Interp2dType, Interpolation2d, z_get, z_idx, z_set};
+pub use interp2d::{z_get, z_idx, z_set, Interp2dType, Interpolation2d};
 
-pub use spline::{DynSpline, Spline, make_spline};
-pub use spline2d::{DynSpline2d, Spline2d, make_spline2d};
+pub use spline::{make_spline, DynSpline, Spline};
+pub use spline2d::{make_spline2d, DynSpline2d, Spline2d};
 
 pub use types::*;
 
@@ -51,7 +51,7 @@ pub use types::*;
 mod tests;
 
 /// Trait for supported data types.
-pub trait Num: num::Float + num_traits::NumAssignOps {}
+pub trait Num: num::Float + num_traits::NumAssignOps + Sync + Send {}
 
 impl Num for f64 {}
 impl Num for f32 {}

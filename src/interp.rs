@@ -7,7 +7,7 @@ use crate::{DomainError, InterpolationError};
 pub trait InterpType<T> {
     /// The returned Interpolator, containing the calculated coefficients and providing the
     /// evaluation methods.
-    type Interpolation: Interpolation<T>;
+    type Interpolation: Interpolation<T> + Send + Sync;
 
     /// Creates an Interpolator from the data arrays `xa` and `ya`.
     ///
@@ -91,7 +91,7 @@ pub trait Interpolation<T> {
     #[doc(alias = "gsl_interp_eval_deriv")]
     #[doc(alias = "gsl_interp_eval_deriv_e")]
     fn eval_deriv(&self, xa: &[T], ya: &[T], x: T, acc: &mut Accelerator)
-    -> Result<T, DomainError>;
+        -> Result<T, DomainError>;
 
     /// Returns the second derivative `d²y/dx²` of an interpolated function for a given point `x`, using the
     /// data arrays `xa` and `ya` and the [`Accelerator`] `acc`.

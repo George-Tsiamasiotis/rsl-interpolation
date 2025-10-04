@@ -36,7 +36,7 @@ use crate::InterpolationError;
 /// ```
 pub struct Spline<I, T>
 where
-    I: InterpType<T>,
+    I: InterpType<T> + Send + Sync + 'static,
 {
     /// The lower-level [`Interpolator`].
     ///
@@ -52,7 +52,7 @@ where
 
 impl<I, T> Spline<I, T>
 where
-    I: InterpType<T>,
+    I: InterpType<T> + Send + Sync + 'static,
 {
     /// Constructs a Spline of an Interpolation type `typ` from the data arrays `xa` and `ya`.
     ///
@@ -251,8 +251,8 @@ impl<T> DynSpline<T> {
     pub fn new_dyn<I>(typ: I, xa: &[T], ya: &[T]) -> Result<Self, InterpolationError>
     where
         T: Clone,
-        I: InterpType<T> + 'static,
-        I::Interpolation: 'static,
+        I: InterpType<T> + Send + Sync + 'static,
+        I::Interpolation: Send + Sync + 'static,
     {
         Self::new(DynInterpType::new(typ), xa, ya)
     }

@@ -7,7 +7,16 @@ use crate::InterpolationError;
 /// Representation of an Interpolation Type that is not known in compile-time.
 pub struct DynInterpType<T> {
     #[allow(clippy::type_complexity)]
-    build: Box<dyn Fn(&[T], &[T]) -> Result<Box<dyn Interpolation<T>>, InterpolationError>>,
+    build: Box<
+        dyn Fn(
+                &[T],
+                &[T],
+            )
+                -> Result<Box<dyn Interpolation<T> + Send + Sync + 'static>, InterpolationError>
+            + Send
+            + Sync
+            + 'static,
+    >,
     name: Box<str>,
     min_size: usize,
 }
@@ -15,8 +24,8 @@ pub struct DynInterpType<T> {
 impl<T> DynInterpType<T> {
     pub fn new<I>(interp: I) -> Self
     where
-        I: InterpType<T> + 'static,
-        I::Interpolation: 'static,
+        I: InterpType<T> + Send + Sync + 'static,
+        I::Interpolation: Send + Sync + 'static,
     {
         Self {
             name: interp.name().into(),
@@ -30,7 +39,7 @@ impl<T> DynInterpType<T> {
 }
 
 impl<T> InterpType<T> for DynInterpType<T> {
-    type Interpolation = Box<dyn Interpolation<T>>;
+    type Interpolation = Box<dyn Interpolation<T> + Send + Sync>;
 
     fn build(&self, xa: &[T], ya: &[T]) -> Result<Self::Interpolation, InterpolationError> {
         (self.build)(xa, ya)
@@ -45,7 +54,7 @@ impl<T> InterpType<T> for DynInterpType<T> {
     }
 }
 
-impl<T> Interpolation<T> for Box<dyn Interpolation<T>> {
+impl<T> Interpolation<T> for Box<dyn Interpolation<T> + Send + Sync + 'static> {
     fn eval(
         &self,
         xa: &[T],
