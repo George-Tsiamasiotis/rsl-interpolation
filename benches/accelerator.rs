@@ -50,6 +50,7 @@ pub fn interp_accel_eval(c: &mut Criterion) {
 pub fn interp2d_accel_eval(c: &mut Criterion) {
     let mut xacc = Accelerator::new();
     let mut yacc = Accelerator::new();
+    let mut cache = Cache::new();
     let xa: Vec<f64> = (0..101).map(f64::from).collect();
     let ya: Vec<f64> = (0..101).map(f64::from).collect();
     let za: Vec<f64> = (0..10201).map(f64::from).collect();
@@ -67,7 +68,7 @@ pub fn interp2d_accel_eval(c: &mut Criterion) {
             for x in xarr.iter() {
                 for y in yarr.iter() {
                     interp2d
-                        .eval(&xa, &ya, &za, *x, *y, &mut xacc, &mut yacc)
+                        .eval(&xa, &ya, &za, *x, *y, &mut xacc, &mut yacc, &mut cache)
                         .unwrap();
                 }
             }
@@ -84,7 +85,7 @@ pub fn interp2d_accel_eval(c: &mut Criterion) {
                 for y in yarr.iter() {
                     yacc.reset();
                     interp2d
-                        .eval(&xa, &ya, &za, *x, *y, &mut xacc, &mut yacc)
+                        .eval(&xa, &ya, &za, *x, *y, &mut xacc, &mut yacc, &mut cache)
                         .unwrap();
                 }
             }

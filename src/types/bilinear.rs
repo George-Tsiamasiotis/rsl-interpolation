@@ -6,7 +6,6 @@ use crate::DomainError;
 use crate::Interp2dType;
 use crate::Interpolation2d;
 use crate::InterpolationError;
-use crate::interp2d::{acc_indices, partials, xy_grid_indices, z_grid_indices};
 use crate::types::utils::check_if_inbounds;
 use crate::types::utils::check2d_data;
 
@@ -89,10 +88,14 @@ where
         yacc: &mut Accelerator,
         cache: &mut Cache<T>,
     ) -> Result<T, DomainError> {
-        let (xi, yi) = acc_indices(xa, ya, x, y, xacc, yacc);
-        let (xlo, xhi, ylo, yhi) = xy_grid_indices(xa, ya, xi, yi);
-        let (zlolo, zlohi, zhilo, zhihi) = z_grid_indices(za, xa.len(), ya.len(), xi, yi)?;
-        let (dx, dy) = partials(xlo, xhi, ylo, yhi);
+        let is_uptodate = cache.is_uptodate(xa, ya, x, y);
+        if !is_uptodate {
+            cache.update_step1(xa, ya, za, x, y, xacc, yacc)?;
+        }
+
+        let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
+        let (dx, dy) = cache.get_partials();
 
         debug_assert!(dx > T::zero());
         debug_assert!(dy > T::zero());
@@ -101,10 +104,10 @@ where
         let u = (y - ylo) / dy;
 
         let one = T::one();
-        let result = (one - t) * (one - u) * zlolo
-            + t * (one - u) * zhilo
-            + (one - t) * u * zlohi
-            + t * u * zhihi;
+        let result = (one - t) * (one - u) * zminmin
+            + t * (one - u) * zmaxmin
+            + (one - t) * u * zminmax
+            + t * u * zmaxmax;
         Ok(result)
     }
 
@@ -123,10 +126,14 @@ where
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
 
-        let (xi, yi) = acc_indices(xa, ya, x, y, xacc, yacc);
-        let (xlo, xhi, ylo, yhi) = xy_grid_indices(xa, ya, xi, yi);
-        let (zlolo, zlohi, zhilo, zhihi) = z_grid_indices(za, xa.len(), ya.len(), xi, yi)?;
-        let (dx, dy) = partials(xlo, xhi, ylo, yhi);
+        let is_uptodate = cache.is_uptodate(xa, ya, x, y);
+        if !is_uptodate {
+            cache.update_step1(xa, ya, za, x, y, xacc, yacc)?;
+        }
+
+        let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
+        let (dx, dy) = cache.get_partials();
 
         debug_assert!(dx > T::zero());
         debug_assert!(dy > T::zero());
@@ -135,7 +142,7 @@ where
         let dt = one / dx;
         let u = (y - ylo) / dy;
 
-        let result = dt * (-(one - u) * zlolo + (one - u) * zhilo - u * zlohi + u * zhihi);
+        let result = dt * (-(one - u) * zminmin + (one - u) * zmaxmin - u * zminmax + u * zmaxmax);
         Ok(result)
     }
 
@@ -154,10 +161,14 @@ where
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
 
-        let (xi, yi) = acc_indices(xa, ya, x, y, xacc, yacc);
-        let (xlo, xhi, ylo, yhi) = xy_grid_indices(xa, ya, xi, yi);
-        let (zlolo, zlohi, zhilo, zhihi) = z_grid_indices(za, xa.len(), ya.len(), xi, yi)?;
-        let (dx, dy) = partials(xlo, xhi, ylo, yhi);
+        let is_uptodate = cache.is_uptodate(xa, ya, x, y);
+        if !is_uptodate {
+            cache.update_step1(xa, ya, za, x, y, xacc, yacc)?;
+        }
+
+        let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
+        let (dx, dy) = cache.get_partials();
 
         debug_assert!(dx > T::zero());
         debug_assert!(dy > T::zero());
@@ -166,7 +177,7 @@ where
         let t = (x - xlo) / dx;
         let du = one / dy;
 
-        let result = du * (-(one - t) * zlolo - t * zhilo + (one - t) * zlohi + t * zhihi);
+        let result = du * (-(one - t) * zminmin - t * zmaxmin + (one - t) * zminmax + t * zmaxmax);
         Ok(result)
     }
 
@@ -221,16 +232,20 @@ where
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
 
-        let (xi, yi) = acc_indices(xa, ya, x, y, xacc, yacc);
-        let (xlo, xhi, ylo, yhi) = xy_grid_indices(xa, ya, xi, yi);
-        let (zlolo, zlohi, zhilo, zhihi) = z_grid_indices(za, xa.len(), ya.len(), xi, yi)?;
-        let (dx, dy) = partials(xlo, xhi, ylo, yhi);
+        let is_uptodate = cache.is_uptodate(xa, ya, x, y);
+        if !is_uptodate {
+            cache.update_step1(xa, ya, za, x, y, xacc, yacc)?;
+        }
+
+        let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
+        let (dx, dy) = cache.get_partials();
 
         let one = T::one();
         let dt = one / dx;
         let du = one / dy;
 
-        let result = dt * du * (zlolo - zhilo - zlohi + zhihi);
+        let result = dt * du * (zminmin - zmaxmin - zminmax + zmaxmax);
         Ok(result)
     }
 }

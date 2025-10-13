@@ -18,6 +18,7 @@ const TYP: Bicubic = Bicubic;
 pub fn interp2d_evals(c: &mut Criterion) {
     let mut xacc = Accelerator::new();
     let mut yacc = Accelerator::new();
+    let mut cache = Cache::new();
     let za: Vec<f64> = (0..100).map(f64::from).collect();
     let interp2d = TYP.build(&XA, &YA, &za).unwrap();
 
@@ -26,22 +27,22 @@ pub fn interp2d_evals(c: &mut Criterion) {
     group.measurement_time(Duration::from_secs(MEASUREMENT_SECS));
 
     group.bench_function("interp2d.eval()", |b| {
-        b.iter(|| interp2d.eval(&XA, &YA, &za, X, Y, &mut xacc, &mut yacc))
+        b.iter(|| interp2d.eval(&XA, &YA, &za, X, Y, &mut xacc, &mut yacc, &mut cache))
     });
     group.bench_function("interp2d.eval_deriv_x()", |b| {
-        b.iter(|| interp2d.eval_deriv_x(&XA, &YA, &za, X, Y, &mut xacc, &mut yacc))
+        b.iter(|| interp2d.eval_deriv_x(&XA, &YA, &za, X, Y, &mut xacc, &mut yacc, &mut cache))
     });
     group.bench_function("interp2d.eval_deriv_y()", |b| {
-        b.iter(|| interp2d.eval_deriv_y(&XA, &YA, &za, X, Y, &mut xacc, &mut yacc))
+        b.iter(|| interp2d.eval_deriv_y(&XA, &YA, &za, X, Y, &mut xacc, &mut yacc, &mut cache))
     });
     group.bench_function("interp2d.eval_deriv_xx()", |b| {
-        b.iter(|| interp2d.eval_deriv_xx(&XA, &YA, &za, X, Y, &mut xacc, &mut yacc))
+        b.iter(|| interp2d.eval_deriv_xx(&XA, &YA, &za, X, Y, &mut xacc, &mut yacc, &mut cache))
     });
     group.bench_function("interp2d.eval_deriv_yy()", |b| {
-        b.iter(|| interp2d.eval_deriv_yy(&XA, &YA, &za, X, Y, &mut xacc, &mut yacc))
+        b.iter(|| interp2d.eval_deriv_yy(&XA, &YA, &za, X, Y, &mut xacc, &mut yacc, &mut cache))
     });
     group.bench_function("interp2d.eval_deriv_xy()", |b| {
-        b.iter(|| interp2d.eval_deriv_xy(&XA, &YA, &za, X, Y, &mut xacc, &mut yacc))
+        b.iter(|| interp2d.eval_deriv_xy(&XA, &YA, &za, X, Y, &mut xacc, &mut yacc, &mut cache))
     });
 }
 

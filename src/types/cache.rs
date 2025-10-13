@@ -3,7 +3,20 @@ use crate::DomainError;
 use crate::z_idx;
 
 #[derive(Debug)]
-/// Cache holding values retrieved from the `za` array, that are used by all [`Bicubic`] evaluations.
+/// Cache holding values retrieved from the `za` array.
+///
+/// This object caches the values extracted from the `za` array, which are more likely to be used
+/// again, either by evaluating the spline to a nearby point, or/and by evaluating it's derivates
+/// as well.
+///
+/// Only the **grid** points are cached, **not any interpolated values**.
+///
+/// This optimization seems to be quite effective (up to +50% from my testing), and could be
+/// important in cases where `za` arrays are big and don't fit in the CPU's cache. It is of course,
+/// very situational, since it also depends on the way one evaluates his splines.
+///
+/// The overhead of cache misses should be trully negligible, since the process just falls back to
+/// calculating the values in the usual manner.
 pub struct Cache<T> {
     acc_indices: (usize, usize),
     xgrid_values: (T, T),
@@ -32,6 +45,10 @@ where
             zxy_values: (def, def, def, def),
             partials: (def, def),
         }
+    }
+
+    pub fn reset(&mut self) {
+        *self = Self::new()
     }
 
     pub(crate) fn is_uptodate(&self, xa: &[T], ya: &[T], x: T, y: T) -> bool {

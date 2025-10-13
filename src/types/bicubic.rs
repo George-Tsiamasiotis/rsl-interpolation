@@ -9,7 +9,6 @@ use crate::InterpType;
 use crate::Interpolation;
 use crate::Interpolation2d;
 use crate::InterpolationError;
-use crate::interp2d::{acc_indices, partials, xy_grid_indices, z_grid_indices};
 use crate::types::utils::check_if_inbounds;
 use crate::types::utils::check2d_data;
 use crate::z_idx;
@@ -111,13 +110,7 @@ where
             }
         }
 
-        let state = BicubicInterp {
-            zx,
-            zy,
-            zxy,
-            xsize,
-            ysize,
-        };
+        let state = BicubicInterp { zx, zy, zxy };
 
         Ok(state)
     }
@@ -145,8 +138,6 @@ where
     pub(crate) zx: Vec<T>,
     pub(crate) zy: Vec<T>,
     pub(crate) zxy: Vec<T>,
-    pub(crate) xsize: usize,
-    pub(crate) ysize: usize,
 }
 
 impl<T> Interpolation2d<T> for BicubicInterp<T>
@@ -264,16 +255,25 @@ where
     ) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
-        let (xi, yi) = acc_indices(xa, ya, x, y, xacc, yacc);
-        let (xlo, xhi, ylo, yhi) = xy_grid_indices(xa, ya, xi, yi);
-        let (zminmin, zminmax, zmaxmin, zmaxmax) = z_grid_indices(za, xa.len(), ya.len(), xi, yi)?;
-        let (dx, dy) = partials(xlo, xhi, ylo, yhi);
+        let is_uptodate = cache.is_uptodate(xa, ya, x, y);
+        if !is_uptodate {
+            cache.update_step1(xa, ya, za, x, y, xacc, yacc)?;
+        }
+
+        let (_xi, _yi) = cache.get_xy_indeces();
+        let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
+        let (dx, dy) = cache.get_partials();
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = self.zxminmaxxing(xi, yi, dt)?;
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = self.zyminmaxxing(xi, yi, du)?;
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = self.zxyminmaxxing(xi, yi, dt, du)?;
+        if !is_uptodate {
+            cache.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du)?;
+        };
+
+        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = cache.get_zxminmaxxing();
+        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = cache.get_zyminmaxxing();
+        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = cache.get_zxyminmaxxing();
 
         let (t0, t1, t2) = (T::one(), t, t * t);
 
@@ -347,16 +347,25 @@ where
     ) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
-        let (xi, yi) = acc_indices(xa, ya, x, y, xacc, yacc);
-        let (xlo, xhi, ylo, yhi) = xy_grid_indices(xa, ya, xi, yi);
-        let (zminmin, zminmax, zmaxmin, zmaxmax) = z_grid_indices(za, xa.len(), ya.len(), xi, yi)?;
-        let (dx, dy) = partials(xlo, xhi, ylo, yhi);
+        let is_uptodate = cache.is_uptodate(xa, ya, x, y);
+        if !is_uptodate {
+            cache.update_step1(xa, ya, za, x, y, xacc, yacc)?;
+        }
+
+        let (_xi, _yi) = cache.get_xy_indeces();
+        let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
+        let (dx, dy) = cache.get_partials();
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = self.zxminmaxxing(xi, yi, dt)?;
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = self.zyminmaxxing(xi, yi, du)?;
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = self.zxyminmaxxing(xi, yi, dt, du)?;
+        if !is_uptodate {
+            cache.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du)?;
+        };
+
+        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = cache.get_zxminmaxxing();
+        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = cache.get_zyminmaxxing();
+        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = cache.get_zxyminmaxxing();
 
         let t2 = t * t;
         let (t0, t1, t2, t3) = (T::one(), t, t2, t * t2);
@@ -430,16 +439,25 @@ where
     ) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
-        let (xi, yi) = acc_indices(xa, ya, x, y, xacc, yacc);
-        let (xlo, xhi, ylo, yhi) = xy_grid_indices(xa, ya, xi, yi);
-        let (zminmin, zminmax, zmaxmin, zmaxmax) = z_grid_indices(za, xa.len(), ya.len(), xi, yi)?;
-        let (dx, dy) = partials(xlo, xhi, ylo, yhi);
+        let is_uptodate = cache.is_uptodate(xa, ya, x, y);
+        if !is_uptodate {
+            cache.update_step1(xa, ya, za, x, y, xacc, yacc)?;
+        }
+
+        let (_xi, _yi) = cache.get_xy_indeces();
+        let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
+        let (dx, dy) = cache.get_partials();
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = self.zxminmaxxing(xi, yi, dt)?;
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = self.zyminmaxxing(xi, yi, du)?;
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = self.zxyminmaxxing(xi, yi, dt, du)?;
+        if !is_uptodate {
+            cache.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du)?;
+        };
+
+        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = cache.get_zxminmaxxing();
+        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = cache.get_zyminmaxxing();
+        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = cache.get_zxyminmaxxing();
 
         let (t0, t1) = (T::one(), t);
 
@@ -505,16 +523,25 @@ where
     ) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
-        let (xi, yi) = acc_indices(xa, ya, x, y, xacc, yacc);
-        let (xlo, xhi, ylo, yhi) = xy_grid_indices(xa, ya, xi, yi);
-        let (zminmin, zminmax, zmaxmin, zmaxmax) = z_grid_indices(za, xa.len(), ya.len(), xi, yi)?;
-        let (dx, dy) = partials(xlo, xhi, ylo, yhi);
+        let is_uptodate = cache.is_uptodate(xa, ya, x, y);
+        if !is_uptodate {
+            cache.update_step1(xa, ya, za, x, y, xacc, yacc)?;
+        }
+
+        let (_xi, _yi) = cache.get_xy_indeces();
+        let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
+        let (dx, dy) = cache.get_partials();
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = self.zxminmaxxing(xi, yi, dt)?;
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = self.zyminmaxxing(xi, yi, du)?;
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = self.zxyminmaxxing(xi, yi, dt, du)?;
+        if !is_uptodate {
+            cache.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du)?;
+        };
+
+        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = cache.get_zxminmaxxing();
+        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = cache.get_zyminmaxxing();
+        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = cache.get_zxyminmaxxing();
 
         let t2 = t * t;
         let (t0, t1, t2, t3) = (T::one(), t, t2, t * t2);
@@ -580,16 +607,25 @@ where
     ) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
-        let (xi, yi) = acc_indices(xa, ya, x, y, xacc, yacc);
-        let (xlo, xhi, ylo, yhi) = xy_grid_indices(xa, ya, xi, yi);
-        let (zminmin, zminmax, zmaxmin, zmaxmax) = z_grid_indices(za, xa.len(), ya.len(), xi, yi)?;
-        let (dx, dy) = partials(xlo, xhi, ylo, yhi);
+        let is_uptodate = cache.is_uptodate(xa, ya, x, y);
+        if !is_uptodate {
+            cache.update_step1(xa, ya, za, x, y, xacc, yacc)?;
+        }
+
+        let (_xi, _yi) = cache.get_xy_indeces();
+        let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
+        let (dx, dy) = cache.get_partials();
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = self.zxminmaxxing(xi, yi, dt)?;
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = self.zyminmaxxing(xi, yi, du)?;
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = self.zxyminmaxxing(xi, yi, dt, du)?;
+        if !is_uptodate {
+            cache.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du)?;
+        };
+
+        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = cache.get_zxminmaxxing();
+        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = cache.get_zyminmaxxing();
+        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = cache.get_zxyminmaxxing();
 
         let (t0, t1, t2) = (T::one(), t, t * t);
 
@@ -640,49 +676,6 @@ where
         dd = dd * dt * du;
 
         Ok(dd)
-    }
-}
-
-/// Common calculations
-impl<T> BicubicInterp<T>
-where
-    T: crate::Num + Lapack,
-{
-    #[inline(always)]
-    fn zxminmaxxing(&self, xi: usize, yi: usize, dt: T) -> Result<(T, T, T, T), DomainError>
-    where
-        T: crate::Num + Lapack,
-    {
-        let zxminmin = self.zx[z_idx(xi, yi, self.xsize, self.ysize)?] / dt;
-        let zxminmax = self.zx[z_idx(xi, yi + 1, self.xsize, self.ysize)?] / dt;
-        let zxmaxmin = self.zx[z_idx(xi + 1, yi, self.xsize, self.ysize)?] / dt;
-        let zxmaxmax = self.zx[z_idx(xi + 1, yi + 1, self.xsize, self.ysize)?] / dt;
-        Ok((zxminmin, zxminmax, zxmaxmin, zxmaxmax))
-    }
-
-    #[inline(always)]
-    fn zyminmaxxing(&self, xi: usize, yi: usize, du: T) -> Result<(T, T, T, T), DomainError>
-    where
-        T: crate::Num + Lapack,
-    {
-        let zyminmin = self.zy[z_idx(xi, yi, self.xsize, self.ysize)?] / du;
-        let zyminmax = self.zy[z_idx(xi, yi + 1, self.xsize, self.ysize)?] / du;
-        let zymaxmin = self.zy[z_idx(xi + 1, yi, self.xsize, self.ysize)?] / du;
-        let zymaxmax = self.zy[z_idx(xi + 1, yi + 1, self.xsize, self.ysize)?] / du;
-        Ok((zyminmin, zyminmax, zymaxmin, zymaxmax))
-    }
-
-    #[inline(always)]
-    fn zxyminmaxxing(&self, xi: usize, yi: usize, dt: T, du: T) -> Result<(T, T, T, T), DomainError>
-    where
-        T: crate::Num + Lapack,
-    {
-        let prod = dt * du;
-        let zxyminmin = self.zxy[z_idx(xi, yi, self.xsize, self.ysize)?] / prod;
-        let zxyminmax = self.zxy[z_idx(xi, yi + 1, self.xsize, self.ysize)?] / prod;
-        let zxymaxmin = self.zxy[z_idx(xi + 1, yi, self.xsize, self.ysize)?] / prod;
-        let zxymaxmax = self.zxy[z_idx(xi + 1, yi + 1, self.xsize, self.ysize)?] / prod;
-        Ok((zxyminmin, zxyminmax, zxymaxmin, zxymaxmax))
     }
 }
 

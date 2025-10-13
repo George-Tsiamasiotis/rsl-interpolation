@@ -531,64 +531,6 @@ where
 
 // ===============================================================================================
 
-/// Common calculation to evaluation functions
-pub(crate) fn acc_indices<T>(
-    xa: &[T],
-    ya: &[T],
-    x: T,
-    y: T,
-    xacc: &mut Accelerator,
-    yacc: &mut Accelerator,
-) -> (usize, usize)
-where
-    T: crate::Num,
-{
-    let xi = xacc.find(xa, x);
-    let yi = yacc.find(ya, y);
-    (xi, yi)
-}
-
-/// Common calculation to evaluation functions
-pub(crate) fn xy_grid_indices<T>(xa: &[T], ya: &[T], xi: usize, yi: usize) -> (T, T, T, T)
-where
-    T: crate::Num,
-{
-    let xlo = xa[xi];
-    let xhi = xa[xi + 1];
-    let ylo = ya[yi];
-    let yhi = ya[yi + 1];
-    (xlo, xhi, ylo, yhi)
-}
-
-/// Common calculation to evaluation functions
-#[inline(always)]
-pub(crate) fn z_grid_indices<T>(
-    za: &[T],
-    xlen: usize,
-    ylen: usize,
-    xi: usize,
-    yi: usize,
-) -> Result<(T, T, T, T), DomainError>
-where
-    T: crate::Num,
-{
-    let zlolo = za[z_idx(xi, yi, xlen, ylen)?];
-    let zlohi = za[z_idx(xi, yi + 1, xlen, ylen)?];
-    let zhilo = za[z_idx(xi + 1, yi, xlen, ylen)?];
-    let zhihi = za[z_idx(xi + 1, yi + 1, xlen, ylen)?];
-    Ok((zlolo, zlohi, zhilo, zhihi))
-}
-
-/// Common calculation to evaluation functions
-pub(crate) fn partials<T>(xlo: T, xhi: T, ylo: T, yhi: T) -> (T, T)
-where
-    T: crate::Num,
-{
-    let dx = xhi - xlo;
-    let dy = yhi - ylo;
-    (dx, dy)
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
