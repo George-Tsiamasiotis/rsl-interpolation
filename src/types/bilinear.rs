@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::Accelerator;
+use crate::Cache;
 use crate::DomainError;
 use crate::Interp2dType;
 use crate::Interpolation2d;
@@ -76,6 +77,7 @@ impl<T> Interpolation2d<T> for BilinearInterp<T>
 where
     T: crate::Num,
 {
+    #[allow(unused_variables)]
     fn eval_extrap(
         &self,
         xa: &[T],
@@ -85,6 +87,7 @@ where
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError> {
         let (xi, yi) = acc_indices(xa, ya, x, y, xacc, yacc);
         let (xlo, xhi, ylo, yhi) = xy_grid_indices(xa, ya, xi, yi);
@@ -105,6 +108,7 @@ where
         Ok(result)
     }
 
+    #[allow(unused_variables)]
     fn eval_deriv_x(
         &self,
         xa: &[T],
@@ -114,6 +118,7 @@ where
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
@@ -134,6 +139,7 @@ where
         Ok(result)
     }
 
+    #[allow(unused_variables)]
     fn eval_deriv_y(
         &self,
         xa: &[T],
@@ -143,6 +149,7 @@ where
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
@@ -173,6 +180,7 @@ where
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
@@ -190,6 +198,7 @@ where
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
@@ -197,6 +206,7 @@ where
         Ok(T::zero())
     }
 
+    #[allow(unused_variables)]
     fn eval_deriv_xy(
         &self,
         xa: &[T],
@@ -206,6 +216,7 @@ where
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;

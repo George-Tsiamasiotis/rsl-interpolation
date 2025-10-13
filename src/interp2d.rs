@@ -1,5 +1,6 @@
 use crate::types::check_if_inbounds;
-use crate::{Accelerator, DomainError, InterpolationError};
+use crate::{Accelerator, Cache};
+use crate::{DomainError, InterpolationError};
 
 /// Representation of a 2D Interpolation Type.
 ///
@@ -59,7 +60,7 @@ pub trait Interp2dType<T> {
 #[allow(clippy::too_many_arguments)]
 pub trait Interpolation2d<T> {
     /// Returns the interpolated value of `z` for a given point (`x`, `y`), using the data arrays
-    /// `xa`, `ya`, `za` and the [`Accelerators`] `xacc` and `yacc`.
+    /// `xa`, `ya`, `za` and the [`Accelerators`] `xacc` and `yacc`, and the [`Cache`] `cache`.
     ///
     /// # Note
     ///
@@ -83,8 +84,9 @@ pub trait Interpolation2d<T> {
     /// let interp = Bilinear.build(&xa, &ya, &za)?;
     /// let mut xacc = Accelerator::new();
     /// let mut yacc = Accelerator::new();
+    /// let mut cache = Cache::new();
     ///
-    /// let z = interp.eval(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc)?;
+    /// let z = interp.eval(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc, &mut cache)?;
     ///
     /// assert_eq!(z, 4.5);
     /// # Ok(())
@@ -108,6 +110,7 @@ pub trait Interpolation2d<T> {
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError>
     where
         T: PartialOrd + Clone,
@@ -116,11 +119,11 @@ pub trait Interpolation2d<T> {
         check_if_inbounds(xa, x.clone())?;
         check_if_inbounds(ya, y.clone())?;
 
-        self.eval_extrap(xa, ya, za, x, y, xacc, yacc)
+        self.eval_extrap(xa, ya, za, x, y, xacc, yacc, cache)
     }
 
     /// Returns the interpolated value of `z` for a given point (`x`, `y`), using the data arrays
-    /// `xa`, `ya`, `za` and the [`Accelerators`]` `xacc` and `yacc`.
+    /// `xa`, `ya`, `za` and the [`Accelerators`] `xacc` and `yacc`, and the [`Cache`] `cache`.
     ///
     /// # Note
     ///
@@ -144,8 +147,9 @@ pub trait Interpolation2d<T> {
     /// let interp = Bilinear.build(&xa, &ya, &za)?;
     /// let mut xacc = Accelerator::new();
     /// let mut yacc = Accelerator::new();
+    /// let mut cache = Cache::new();
     ///
-    /// let z = interp.eval_extrap(&xa, &ya, &za, 3.0, 6.0, &mut xacc, &mut yacc)?;
+    /// let z = interp.eval_extrap(&xa, &ya, &za, 3.0, 6.0, &mut xacc, &mut yacc, &mut cache)?;
     ///
     /// assert_eq!(z, 9.0);
     /// # Ok(())
@@ -164,10 +168,11 @@ pub trait Interpolation2d<T> {
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError>;
 
     /// Returns the interpolated value `d = ∂z/∂x` for a given point (`x`, `y`), using the data arrays
-    /// `xa`, `ya`, `za` and the [`Accelerators`] `xacc` and `yacc`.
+    /// `xa`, `ya`, `za` and the [`Accelerators`] `xacc` and `yacc`, and the [`Cache`] `cache`.
     ///
     /// # Example
     ///
@@ -186,8 +191,9 @@ pub trait Interpolation2d<T> {
     /// let interp = Bilinear.build(&xa, &ya, &za)?;
     /// let mut xacc = Accelerator::new();
     /// let mut yacc = Accelerator::new();
+    /// let mut cache = Cache::new();
     ///
-    /// let dzdx = interp.eval_deriv_x(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc)?;
+    /// let dzdx = interp.eval_deriv_x(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc, &mut cache)?;
     ///
     /// assert_eq!(dzdx, 3.0);
     /// # Ok(())
@@ -211,10 +217,11 @@ pub trait Interpolation2d<T> {
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError>;
 
     /// Returns the interpolated value `d = ∂z/∂y` for a given point (`x`, `y`), using the data arrays
-    /// `xa`, `ya`, `za` and the [`Accelerators`] `xacc` and `yacc`.
+    /// `xa`, `ya`, `za` and the [`Accelerators`] `xacc` and `yacc`, and the [`Cache`] `cache`.
     ///
     /// # Example
     ///
@@ -233,8 +240,9 @@ pub trait Interpolation2d<T> {
     /// let interp = Bilinear.build(&xa, &ya, &za)?;
     /// let mut xacc = Accelerator::new();
     /// let mut yacc = Accelerator::new();
+    /// let mut cache = Cache::new();
     ///
-    /// let dzdy = interp.eval_deriv_y(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc)?;
+    /// let dzdy = interp.eval_deriv_y(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc, &mut cache)?;
     ///
     /// assert_eq!(dzdy, 6.0);
     /// # Ok(())
@@ -258,10 +266,11 @@ pub trait Interpolation2d<T> {
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError>;
 
     /// Returns the interpolated value `d = 𝜕²z/𝜕x²` for a given point (`x`, `y`), using the data arrays
-    /// `xa`, `ya`, `za` and the [`Accelerators`] `xacc` and `yacc`.
+    /// `xa`, `ya`, `za` and the [`Accelerators`] `xacc` and `yacc`, and the [`Cache`] `cache`.
     ///
     /// # Example
     ///
@@ -280,8 +289,9 @@ pub trait Interpolation2d<T> {
     /// let interp = Bilinear.build(&xa, &ya, &za)?;
     /// let mut xacc = Accelerator::new();
     /// let mut yacc = Accelerator::new();
+    /// let mut cache = Cache::new();
     ///
-    /// let dzdx2 = interp.eval_deriv_xx(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc)?;
+    /// let dzdx2 = interp.eval_deriv_xx(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc, &mut cache)?;
     ///
     /// assert_eq!(dzdx2, 0.0); // Linear Interpolation!
     /// # Ok(())
@@ -305,10 +315,11 @@ pub trait Interpolation2d<T> {
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError>;
 
     /// Returns the interpolated value `d = 𝜕²z/𝜕y²` for a given point (`x`, `y`), using the data arrays
-    /// `xa`, `ya`, `za` and the [`Accelerators`] `xacc` and `yacc`.
+    /// `xa`, `ya`, `za` and the [`Accelerators`] `xacc` and `yacc`, and the [`Cache`] `cache`.
     ///
     /// # Example
     ///
@@ -327,8 +338,9 @@ pub trait Interpolation2d<T> {
     /// let interp = Bilinear.build(&xa, &ya, &za)?;
     /// let mut xacc = Accelerator::new();
     /// let mut yacc = Accelerator::new();
+    /// let mut cache = Cache::new();
     ///
-    /// let dzdy2 = interp.eval_deriv_yy(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc)?;
+    /// let dzdy2 = interp.eval_deriv_yy(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc, &mut cache)?;
     ///
     /// assert_eq!(dzdy2, 0.0); // Linear Interpolation!
     /// # Ok(())
@@ -352,10 +364,11 @@ pub trait Interpolation2d<T> {
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError>;
 
     /// Returns the interpolated value `d = 𝜕²z/𝜕x𝜕y` for a given point (`x`, `y`), using the data arrays
-    /// `xa`, `ya`, `za` and the [`Accelerators`] `xacc` and `yacc`.
+    /// `xa`, `ya`, `za` and the [`Accelerators`] `xacc` and `yacc`, and the [`Cache`] `cache`.
     ///
     /// # Example
     ///
@@ -374,8 +387,9 @@ pub trait Interpolation2d<T> {
     /// let interp = Bilinear.build(&xa, &ya, &za)?;
     /// let mut xacc = Accelerator::new();
     /// let mut yacc = Accelerator::new();
+    /// let mut cache = Cache::new();
     ///
-    /// let dzdxy = interp.eval_deriv_xy(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc)?;
+    /// let dzdxy = interp.eval_deriv_xy(&xa, &ya, &za, 1.5, 3.0, &mut xacc, &mut yacc, &mut cache)?;
     ///
     /// assert_eq!(dzdxy, 0.0);
     /// # Ok(())
@@ -399,6 +413,7 @@ pub trait Interpolation2d<T> {
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError>;
 }
 

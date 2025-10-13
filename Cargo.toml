@@ -1,7 +1,7 @@
 [package]
 name = "rsl-interpolation"
 authors = ["George Tsiamasiotis"]
-version = "0.1.13"
+version = "0.1.14"
 edition = "2024"
 keywords = ["math", "science", "interpolation"]
 readme = "README.md"
@@ -23,6 +23,7 @@ ndarray-linalg = { version = "0.17.0", features = ["openblas-system"] }
 criterion = "0.7.0"
 
 [features]
+default = ["openblas-system"]
 openblas-static = ["ndarray-linalg/openblas-static"]
 openblas-system = ["ndarray-linalg/openblas-system"]
 
@@ -44,3 +45,7 @@ harness = false
 [[bench]]
 name = "accelerator"
 harness = false
+
+[[bin]]
+name = "cache"
+path = "src/bin/cache.rs"

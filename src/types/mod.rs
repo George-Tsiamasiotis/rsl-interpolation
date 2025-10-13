@@ -1,3 +1,4 @@
+mod cache;
 mod utils;
 
 mod akima;
@@ -15,6 +16,7 @@ pub(crate) use utils::*;
 
 pub use akima::{Akima, AkimaInterp};
 pub use akima::{AkimaPeriodic, AkimaPeriodicInterp};
+pub use cache::Cache;
 pub use cubic::{Cubic, CubicInterp};
 pub use cubic::{CubicPeriodic, CubicPeriodicInterp};
 pub use linear::{Linear, LinearInterp};

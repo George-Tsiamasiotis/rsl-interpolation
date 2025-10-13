@@ -1,5 +1,7 @@
 use std::ops::Deref;
 
+use crate::Accelerator;
+use crate::Cache;
 use crate::Interp2dType;
 use crate::Interpolation2d;
 use crate::InterpolationError;
@@ -68,10 +70,12 @@ impl<T> Interpolation2d<T> for Box<dyn Interpolation2d<T> + Send + Sync + 'stati
         za: &[T],
         x: T,
         y: T,
-        xacc: &mut crate::Accelerator,
-        yacc: &mut crate::Accelerator,
+        xacc: &mut Accelerator,
+        yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, crate::DomainError> {
-        self.deref().eval_extrap(xa, ya, za, x, y, xacc, yacc)
+        self.deref()
+            .eval_extrap(xa, ya, za, x, y, xacc, yacc, cache)
     }
 
     fn eval_deriv_x(
@@ -81,10 +85,12 @@ impl<T> Interpolation2d<T> for Box<dyn Interpolation2d<T> + Send + Sync + 'stati
         za: &[T],
         x: T,
         y: T,
-        xacc: &mut crate::Accelerator,
-        yacc: &mut crate::Accelerator,
+        xacc: &mut Accelerator,
+        yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, crate::DomainError> {
-        self.deref().eval_deriv_x(xa, ya, za, x, y, xacc, yacc)
+        self.deref()
+            .eval_deriv_x(xa, ya, za, x, y, xacc, yacc, cache)
     }
 
     fn eval_deriv_y(
@@ -94,10 +100,12 @@ impl<T> Interpolation2d<T> for Box<dyn Interpolation2d<T> + Send + Sync + 'stati
         za: &[T],
         x: T,
         y: T,
-        xacc: &mut crate::Accelerator,
-        yacc: &mut crate::Accelerator,
+        xacc: &mut Accelerator,
+        yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, crate::DomainError> {
-        self.deref().eval_deriv_y(xa, ya, za, x, y, xacc, yacc)
+        self.deref()
+            .eval_deriv_y(xa, ya, za, x, y, xacc, yacc, cache)
     }
 
     fn eval_deriv_xx(
@@ -107,10 +115,12 @@ impl<T> Interpolation2d<T> for Box<dyn Interpolation2d<T> + Send + Sync + 'stati
         za: &[T],
         x: T,
         y: T,
-        xacc: &mut crate::Accelerator,
-        yacc: &mut crate::Accelerator,
+        xacc: &mut Accelerator,
+        yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, crate::DomainError> {
-        self.deref().eval_deriv_xx(xa, ya, za, x, y, xacc, yacc)
+        self.deref()
+            .eval_deriv_xx(xa, ya, za, x, y, xacc, yacc, cache)
     }
 
     fn eval_deriv_yy(
@@ -120,10 +130,12 @@ impl<T> Interpolation2d<T> for Box<dyn Interpolation2d<T> + Send + Sync + 'stati
         za: &[T],
         x: T,
         y: T,
-        xacc: &mut crate::Accelerator,
-        yacc: &mut crate::Accelerator,
+        xacc: &mut Accelerator,
+        yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, crate::DomainError> {
-        self.deref().eval_deriv_yy(xa, ya, za, x, y, xacc, yacc)
+        self.deref()
+            .eval_deriv_yy(xa, ya, za, x, y, xacc, yacc, cache)
     }
 
     fn eval_deriv_xy(
@@ -133,10 +145,12 @@ impl<T> Interpolation2d<T> for Box<dyn Interpolation2d<T> + Send + Sync + 'stati
         za: &[T],
         x: T,
         y: T,
-        xacc: &mut crate::Accelerator,
-        yacc: &mut crate::Accelerator,
+        xacc: &mut Accelerator,
+        yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, crate::DomainError> {
-        self.deref().eval_deriv_xy(xa, ya, za, x, y, xacc, yacc)
+        self.deref()
+            .eval_deriv_xy(xa, ya, za, x, y, xacc, yacc, cache)
     }
 }
 
@@ -158,11 +172,12 @@ mod test {
 
         let mut xacc = Accelerator::new();
         let mut yacc = Accelerator::new();
+        let mut cache = Cache::new();
         let interp: Box<dyn Interpolation2d<_>> =
             DynInterp2dType::new(Bicubic).build(&xa, &ya, &za).unwrap();
 
         let _ = interp
-            .eval(&xa, &ya, &za, 1.0, 1.0, &mut xacc, &mut yacc)
+            .eval(&xa, &ya, &za, 1.0, 1.0, &mut xacc, &mut yacc, &mut cache)
             .unwrap();
     }
 }

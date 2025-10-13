@@ -6,6 +6,7 @@ const EPS: f64 = 1e-10;
 const ATOL: f64 = 1e-9;
 
 use crate::Accelerator;
+use crate::Cache;
 use crate::Interpolation;
 use crate::Interpolation2d;
 
@@ -122,10 +123,11 @@ where
     let comp = build_comparator::<T>();
     let mut xacc = Accelerator::new();
     let mut yacc = Accelerator::new();
+    let mut cache = Cache::new();
 
     for (i, x) in test_e_table.x.iter().enumerate() {
         let y = test_e_table.y[i];
-        let s1 = interp.eval(data_table.x, data_table.y, data_table.z, *x, y, &mut xacc, &mut yacc).unwrap();
+        let s1 = interp.eval(data_table.x, data_table.y, data_table.z, *x, y, &mut xacc, &mut yacc, &mut cache).unwrap();
 
         // No deriv tests apparently
         let expected = test_e_table.z[i];
@@ -152,17 +154,18 @@ pub(crate) fn test_interp2d_extra<I, T>(
     let comp = build_comparator::<T>();
     let mut xacc = Accelerator::new();
     let mut yacc = Accelerator::new();
+    let mut cache = Cache::new();
 
     // Access the z values linearly instead of using idx(), to comply with gsl's test output
     let mut index = 0; 
     for x in test_e_table.x.iter() {
         for y in test_e_table.y.iter() {
-            let eval =          interp.eval( data_table.x, data_table.y, data_table.z, *x, *y, &mut xacc, &mut yacc).unwrap();
-            let dx   =  interp.eval_deriv_x( data_table.x, data_table.y, data_table.z, *x, *y, &mut xacc, &mut yacc).unwrap();
-            let dy   =  interp.eval_deriv_y( data_table.x, data_table.y, data_table.z, *x, *y, &mut xacc, &mut yacc).unwrap();
-            let dxx  = interp.eval_deriv_xx( data_table.x, data_table.y, data_table.z, *x, *y, &mut xacc, &mut yacc).unwrap();
-            let dyy  = interp.eval_deriv_yy( data_table.x, data_table.y, data_table.z, *x, *y, &mut xacc, &mut yacc).unwrap();
-            let dxy  = interp.eval_deriv_xy( data_table.x, data_table.y, data_table.z, *x, *y, &mut xacc, &mut yacc).unwrap();
+            let eval =          interp.eval( data_table.x, data_table.y, data_table.z, *x, *y, &mut xacc, &mut yacc, &mut cache).unwrap();
+            let dx   =  interp.eval_deriv_x( data_table.x, data_table.y, data_table.z, *x, *y, &mut xacc, &mut yacc, &mut cache).unwrap();
+            let dy   =  interp.eval_deriv_y( data_table.x, data_table.y, data_table.z, *x, *y, &mut xacc, &mut yacc, &mut cache).unwrap();
+            let dxx  = interp.eval_deriv_xx( data_table.x, data_table.y, data_table.z, *x, *y, &mut xacc, &mut yacc, &mut cache).unwrap();
+            let dyy  = interp.eval_deriv_yy( data_table.x, data_table.y, data_table.z, *x, *y, &mut xacc, &mut yacc, &mut cache).unwrap();
+            let dxy  = interp.eval_deriv_xy( data_table.x, data_table.y, data_table.z, *x, *y, &mut xacc, &mut yacc, &mut cache).unwrap();
 
             let expected_eval = test_e_table.z[index];
             let expected_dx= test_dx_table.z[index];

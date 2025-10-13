@@ -1,4 +1,5 @@
 use crate::Accelerator;
+use crate::Cache;
 use crate::DynInterp2dType;
 use crate::Interp2dType;
 use crate::Interpolation2d;
@@ -16,6 +17,7 @@ use crate::{DomainError, InterpolationError};
 /// # fn main() -> Result<(), InterpolationError>{
 /// let mut xacc = Accelerator::new();
 /// let mut yacc = Accelerator::new();
+/// let mut cache = Cache::new();
 ///
 /// let xa = [0.0, 1.0, 2.0, 3.0];
 /// let ya = [0.0, 2.0, 4.0, 6.0];
@@ -33,8 +35,8 @@ use crate::{DomainError, InterpolationError};
 /// let spline = Spline2d::new(typ, &xa, &ya, &za)?;
 ///
 /// let (x, y) = (2.5, 4.1);
-/// let y_interp = interp.eval(&xa, &ya, &za, x, y, &mut xacc, &mut yacc)?;
-/// let y_spline = spline.eval(x, y, &mut xacc, &mut yacc)?;
+/// let y_interp = interp.eval(&xa, &ya, &za, x, y, &mut xacc, &mut yacc, &mut cache)?;
+/// let y_spline = spline.eval(x, y, &mut xacc, &mut yacc, &mut cache)?;
 ///
 /// assert_eq!(y_interp, y_spline);
 /// #
@@ -108,7 +110,7 @@ where
     }
 
     /// Returns the interpolated value of `z` for a given point (`x`, `y`), using the
-    /// [`Accelerators`] `xacc` and `yacc`.
+    /// [`Accelerators`] `xacc` and `yacc`, and the [`Cache`] `cache`.
     ///
     /// # Example
     ///
@@ -118,6 +120,7 @@ where
     /// # fn main() -> Result<(), InterpolationError>{
     /// let mut xacc = Accelerator::new();
     /// let mut yacc = Accelerator::new();
+    /// let mut cache = Cache::new();
     ///
     /// let xa = [0.0, 1.0, 2.0];
     /// let ya = [0.0, 2.0, 4.0];
@@ -131,7 +134,7 @@ where
     /// let typ = Bilinear;
     /// let spline = Spline2d::new(typ, &xa, &ya, &za)?;
     ///
-    /// let z = spline.eval(1.5, 3.0, &mut xacc, &mut yacc)?;
+    /// let z = spline.eval(1.5, 3.0, &mut xacc, &mut yacc, &mut cache)?;
     ///
     /// assert_eq!(z, 4.5);
     /// # Ok(())
@@ -152,16 +155,17 @@ where
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError>
     where
         T: crate::Num,
     {
         self.interp
-            .eval(&self.xa, &self.ya, &self.za, x, y, xacc, yacc)
+            .eval(&self.xa, &self.ya, &self.za, x, y, xacc, yacc, cache)
     }
 
     /// Returns the interpolated value of `z` for a given point (`x`, `y`), using the
-    /// [`Accelerators`]` `xacc` and `yacc`.
+    /// [`Accelerators`] `xacc` and `yacc`, and the [`Cache`] `cache`.
     ///
     /// # Note
     ///
@@ -176,6 +180,7 @@ where
     /// # fn main() -> Result<(), InterpolationError>{
     /// let mut xacc = Accelerator::new();
     /// let mut yacc = Accelerator::new();
+    /// let mut cache = Cache::new();
     ///
     /// let xa = [0.0, 1.0, 2.0];
     /// let ya = [0.0, 2.0, 4.0];
@@ -189,7 +194,7 @@ where
     /// let typ = Bilinear;
     /// let spline = Spline2d::new(typ, &xa, &ya, &za)?;
     ///
-    /// let z = spline.eval_extrap(3.0, 6.0, &mut xacc, &mut yacc)?;
+    /// let z = spline.eval_extrap(3.0, 6.0, &mut xacc, &mut yacc, &mut cache)?;
     ///
     /// assert_eq!(z, 9.0);
     /// # Ok(())
@@ -210,13 +215,14 @@ where
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError> {
         self.interp
-            .eval_extrap(&self.xa, &self.ya, &self.za, x, y, xacc, yacc)
+            .eval_extrap(&self.xa, &self.ya, &self.za, x, y, xacc, yacc, cache)
     }
 
     /// Returns the interpolated value `d = ∂z/∂x` for a given point (`x`, `y`), using the
-    /// [`Accelerators`] `xacc` and `yacc`.
+    /// [`Accelerators`] `xacc` and `yacc`, and the [`Cache`] `cache`.
     ///
     /// # Example
     ///
@@ -226,6 +232,7 @@ where
     /// # fn main() -> Result<(), InterpolationError>{
     /// let mut xacc = Accelerator::new();
     /// let mut yacc = Accelerator::new();
+    /// let mut cache = Cache::new();
     ///
     /// let xa = [0.0, 1.0, 2.0];
     /// let ya = [0.0, 2.0, 4.0];
@@ -239,7 +246,7 @@ where
     /// let typ = Bilinear;
     /// let spline = Spline2d::new(typ, &xa, &ya, &za)?;
     ///
-    /// let dzdx = spline.eval_deriv_x(1.5, 3.0, &mut xacc, &mut yacc)?;
+    /// let dzdx = spline.eval_deriv_x(1.5, 3.0, &mut xacc, &mut yacc, &mut cache)?;
     ///
     /// assert_eq!(dzdx, 3.0);
     /// # Ok(())
@@ -260,13 +267,14 @@ where
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError> {
         self.interp
-            .eval_deriv_x(&self.xa, &self.ya, &self.za, x, y, xacc, yacc)
+            .eval_deriv_x(&self.xa, &self.ya, &self.za, x, y, xacc, yacc, cache)
     }
 
     /// Returns the interpolated value `d = ∂z/∂y` for a given point (`x`, `y`), using the
-    /// [`Accelerators`] `xacc` and `yacc`.
+    /// [`Accelerators`] `xacc` and `yacc`, and the [`Cache`] `cache`.
     ///
     /// # Example
     ///
@@ -276,6 +284,7 @@ where
     /// # fn main() -> Result<(), InterpolationError>{
     /// let mut xacc = Accelerator::new();
     /// let mut yacc = Accelerator::new();
+    /// let mut cache = Cache::new();
     ///
     /// let xa = [0.0, 1.0, 2.0];
     /// let ya = [0.0, 2.0, 4.0];
@@ -289,7 +298,7 @@ where
     /// let typ = Bilinear;
     /// let spline = Spline2d::new(typ, &xa, &ya, &za)?;
     ///
-    /// let dzdx = spline.eval_deriv_y(1.5, 3.0, &mut xacc, &mut yacc)?;
+    /// let dzdx = spline.eval_deriv_y(1.5, 3.0, &mut xacc, &mut yacc, &mut cache)?;
     ///
     /// assert_eq!(dzdx, 6.0);
     /// # Ok(())
@@ -310,13 +319,14 @@ where
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError> {
         self.interp
-            .eval_deriv_y(&self.xa, &self.ya, &self.za, x, y, xacc, yacc)
+            .eval_deriv_y(&self.xa, &self.ya, &self.za, x, y, xacc, yacc, cache)
     }
 
     /// Returns the interpolated value `d = 𝜕²z/𝜕x²` for a given point (`x`, `y`), using the
-    /// [`Accelerators`] `xacc` and `yacc`.
+    /// [`Accelerators`] `xacc` and `yacc`, and the [`Cache`] `cache`.
     ///
     /// # Example
     ///
@@ -326,6 +336,7 @@ where
     /// # fn main() -> Result<(), InterpolationError>{
     /// let mut xacc = Accelerator::new();
     /// let mut yacc = Accelerator::new();
+    /// let mut cache = Cache::new();
     ///
     /// let xa = [0.0, 1.0, 2.0];
     /// let ya = [0.0, 2.0, 4.0];
@@ -339,7 +350,7 @@ where
     /// let typ = Bilinear;
     /// let spline = Spline2d::new(typ, &xa, &ya, &za)?;
     ///
-    /// let dzdx2 = spline.eval_deriv_xx(1.5, 3.0, &mut xacc, &mut yacc)?;
+    /// let dzdx2 = spline.eval_deriv_xx(1.5, 3.0, &mut xacc, &mut yacc, &mut cache)?;
     ///
     /// assert_eq!(dzdx2, 0.0); // Linear Interpolation!
     /// # Ok(())
@@ -360,13 +371,14 @@ where
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError> {
         self.interp
-            .eval_deriv_xx(&self.xa, &self.ya, &self.za, x, y, xacc, yacc)
+            .eval_deriv_xx(&self.xa, &self.ya, &self.za, x, y, xacc, yacc, cache)
     }
 
-    /// Returns the interpolated value `d = 𝜕²z/𝜕x²` for a given point (`x`, `y`), using the
-    /// [`Accelerators`] `xacc` and `yacc`.
+    /// Returns the interpolated value `d = 𝜕²z/𝜕y²` for a given point (`x`, `y`), using the
+    /// [`Accelerators`] `xacc` and `yacc`, and the [`Cache`] `cache`.
     ///
     /// # Example
     ///
@@ -376,6 +388,7 @@ where
     /// # fn main() -> Result<(), InterpolationError>{
     /// let mut xacc = Accelerator::new();
     /// let mut yacc = Accelerator::new();
+    /// let mut cache = Cache::new();
     ///
     /// let xa = [0.0, 1.0, 2.0];
     /// let ya = [0.0, 2.0, 4.0];
@@ -389,7 +402,7 @@ where
     /// let typ = Bilinear;
     /// let spline = Spline2d::new(typ, &xa, &ya, &za)?;
     ///
-    /// let dzdx2 = spline.eval_deriv_yy(1.5, 3.0, &mut xacc, &mut yacc)?;
+    /// let dzdx2 = spline.eval_deriv_yy(1.5, 3.0, &mut xacc, &mut yacc, &mut cache)?;
     ///
     /// assert_eq!(dzdx2, 0.0); // Linear Interpolation!
     /// # Ok(())
@@ -410,13 +423,14 @@ where
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError> {
         self.interp
-            .eval_deriv_yy(&self.xa, &self.ya, &self.za, x, y, xacc, yacc)
+            .eval_deriv_yy(&self.xa, &self.ya, &self.za, x, y, xacc, yacc, cache)
     }
 
     /// Returns the interpolated value `d = 𝜕²z/𝜕x𝜕y` for a given point (`x`, `y`), using the
-    /// [`Accelerators`] `xacc` and `yacc`.
+    /// [`Accelerators`] `xacc` and `yacc`, and the [`Cache`] `cache`.
     ///
     /// # Example
     ///
@@ -426,6 +440,7 @@ where
     /// # fn main() -> Result<(), InterpolationError>{
     /// let mut xacc = Accelerator::new();
     /// let mut yacc = Accelerator::new();
+    /// let mut cache = Cache::new();
     ///
     /// let xa = [0.0, 1.0, 2.0];
     /// let ya = [0.0, 2.0, 4.0];
@@ -439,7 +454,7 @@ where
     /// let typ = Bilinear;
     /// let spline = Spline2d::new(typ, &xa, &ya, &za)?;
     ///
-    /// let dzdxy = spline.eval_deriv_xy(1.5, 3.0, &mut xacc, &mut yacc)?;
+    /// let dzdxy = spline.eval_deriv_xy(1.5, 3.0, &mut xacc, &mut yacc, &mut cache)?;
     ///
     /// assert_eq!(dzdxy, 0.0);
     /// # Ok(())
@@ -460,9 +475,10 @@ where
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError> {
         self.interp
-            .eval_deriv_xy(&self.xa, &self.ya, &self.za, x, y, xacc, yacc)
+            .eval_deriv_xy(&self.xa, &self.ya, &self.za, x, y, xacc, yacc, cache)
     }
 
     /// Returns the name of the Interpolator.
@@ -584,6 +600,7 @@ mod test {
 
         let mut xacc = Accelerator::new();
         let mut yacc = Accelerator::new();
+        let mut cache = Cache::new();
 
         let xa = [0.0, 1.0, 2.0, 3.0];
         let ya = [0.0, 1.0, 2.0, 3.0];
@@ -598,12 +615,24 @@ mod test {
         let spline2d = Spline2d::new(Bicubic, &xa, &ya, &za).unwrap();
 
         let (x, y) = (1.5, 1.5);
-        let z = spline2d.eval(x, y, &mut xacc, &mut yacc).unwrap();
-        let dzdx = spline2d.eval_deriv_x(x, y, &mut xacc, &mut yacc).unwrap();
-        let dzdy = spline2d.eval_deriv_y(x, y, &mut xacc, &mut yacc).unwrap();
-        let dzdx2 = spline2d.eval_deriv_xx(x, y, &mut xacc, &mut yacc).unwrap();
-        let dzdy2 = spline2d.eval_deriv_yy(x, y, &mut xacc, &mut yacc).unwrap();
-        let dzdxy = spline2d.eval_deriv_xy(x, y, &mut xacc, &mut yacc).unwrap();
+        let z = spline2d
+            .eval(x, y, &mut xacc, &mut yacc, &mut cache)
+            .unwrap();
+        let dzdx = spline2d
+            .eval_deriv_x(x, y, &mut xacc, &mut yacc, &mut cache)
+            .unwrap();
+        let dzdy = spline2d
+            .eval_deriv_y(x, y, &mut xacc, &mut yacc, &mut cache)
+            .unwrap();
+        let dzdx2 = spline2d
+            .eval_deriv_xx(x, y, &mut xacc, &mut yacc, &mut cache)
+            .unwrap();
+        let dzdy2 = spline2d
+            .eval_deriv_yy(x, y, &mut xacc, &mut yacc, &mut cache)
+            .unwrap();
+        let dzdxy = spline2d
+            .eval_deriv_xy(x, y, &mut xacc, &mut yacc, &mut cache)
+            .unwrap();
 
         assert!(comp.is_close(z, 1.3));
         assert!(comp.is_close(dzdx, 0.1));
@@ -613,7 +642,7 @@ mod test {
         assert!(comp.is_close(dzdxy, 0.0));
 
         let ze = spline2d
-            .eval_extrap(4.0, 4.0, &mut xacc, &mut yacc)
+            .eval_extrap(4.0, 4.0, &mut xacc, &mut yacc, &mut cache)
             .unwrap();
         assert!(comp.is_close(ze, 1.8));
     }

@@ -1,6 +1,7 @@
 use ndarray_linalg::Lapack;
 
 use crate::Accelerator;
+use crate::Cache;
 use crate::Cubic;
 use crate::DomainError;
 use crate::Interp2dType;
@@ -161,17 +162,27 @@ where
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError> {
-        let (xi, yi) = acc_indices(xa, ya, x, y, xacc, yacc);
-        let (xlo, xhi, ylo, yhi) = xy_grid_indices(xa, ya, xi, yi);
-        let (zminmin, zminmax, zmaxmin, zmaxmax) = z_grid_indices(za, xa.len(), ya.len(), xi, yi)?;
-        let (dx, dy) = partials(xlo, xhi, ylo, yhi);
+        let is_uptodate = cache.is_uptodate(xa, ya, x, y);
+        if !is_uptodate {
+            cache.update_step1(xa, ya, za, x, y, xacc, yacc)?;
+        }
+
+        let (_xi, _yi) = cache.get_xy_indeces();
+        let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
+        let (dx, dy) = cache.get_partials();
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = self.zxminmaxxing(xi, yi, dt)?;
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = self.zyminmaxxing(xi, yi, du)?;
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = self.zxyminmaxxing(xi, yi, dt, du)?;
+        if !is_uptodate {
+            cache.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du)?;
+        };
+
+        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = cache.get_zxminmaxxing();
+        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = cache.get_zyminmaxxing();
+        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = cache.get_zxyminmaxxing();
 
         let t2 = t * t;
         let (t0, t1, t2, t3) = (T::one(), t, t2, t * t2);
@@ -239,6 +250,7 @@ where
         Ok(z)
     }
 
+    #[allow(unused_variables)]
     fn eval_deriv_x(
         &self,
         xa: &[T],
@@ -248,6 +260,7 @@ where
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
@@ -320,6 +333,7 @@ where
         Ok(d)
     }
 
+    #[allow(unused_variables)]
     fn eval_deriv_y(
         &self,
         xa: &[T],
@@ -329,6 +343,7 @@ where
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
@@ -401,6 +416,7 @@ where
         Ok(d)
     }
 
+    #[allow(unused_variables)]
     fn eval_deriv_xx(
         &self,
         xa: &[T],
@@ -410,6 +426,7 @@ where
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
@@ -474,6 +491,7 @@ where
         Ok(dd)
     }
 
+    #[allow(unused_variables)]
     fn eval_deriv_yy(
         &self,
         xa: &[T],
@@ -483,6 +501,7 @@ where
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
@@ -547,6 +566,7 @@ where
         Ok(dd)
     }
 
+    #[allow(unused_variables)]
     fn eval_deriv_xy(
         &self,
         xa: &[T],
@@ -556,6 +576,7 @@ where
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
+        cache: &mut Cache<T>,
     ) -> Result<T, DomainError> {
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
