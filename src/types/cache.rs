@@ -2,7 +2,7 @@ use crate::Accelerator;
 use crate::DomainError;
 use crate::z_idx;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 /// Cache holding values retrieved from the `za` array.
 ///
 /// This object caches the values extracted from the `za` array, which are more likely to be used
@@ -51,7 +51,13 @@ where
         *self = Self::new()
     }
 
-    pub(crate) fn is_uptodate(&self, xa: &[T], ya: &[T], x: T, y: T) -> bool {
+    /// Resets the indeces. Useful for benchmarking, to avoid the overhead of resetting all the
+    /// fields at each iteration.
+    pub fn soft_reset(&mut self) {
+        self.acc_indices = (0, 0)
+    }
+
+    pub(crate) fn is_uptodate(&mut self, xa: &[T], ya: &[T], x: T, y: T) -> bool {
         let xi = self.acc_indices.0;
         let yi = self.acc_indices.1;
         let x_inbounds: bool = (x > xa[xi]) && (x < xa[xi + 1]);
