@@ -34,6 +34,7 @@ use crate::InterpolationError;
 /// # Ok(())
 /// # }
 /// ```
+#[derive(Clone)]
 pub struct Spline<I, T>
 where
     I: InterpType<T> + Send + Sync + 'static,
