@@ -43,6 +43,7 @@ use crate::{DomainError, InterpolationError};
 /// # Ok(())
 /// # }
 /// ```
+#[derive(Clone)]
 pub struct Spline2d<I, T>
 where
     I: Interp2dType<T> + Send + Sync + 'static,
