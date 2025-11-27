@@ -1,5 +1,5 @@
 use crate::types::check_if_inbounds;
-use crate::{Accelerator, Cache};
+use crate::{Accelerator, Cache, DynInterp2dType};
 use crate::{DomainError, InterpolationError};
 
 /// Representation of a 2D Interpolation Type.
@@ -529,11 +529,50 @@ where
     Ok(za[z_idx(i, j, xlen, ylen)?])
 }
 
+/// Creates a [`DynInterp2dType`] of `typ` type.
+///
+/// Useful when `typ` is not known at compile time.
+///
+/// # Example
+/// ```
+/// # use rsl_interpolation::*;
+/// #
+/// # fn main() -> Result<(), InterpolationError> {
+/// let xa = [0.0, 1.0, 2.0, 3.0];
+/// let ya = [0.0, 2.0, 4.0, 6.0];
+/// // z = x + y
+/// let za = [
+///     0.0, 1.0, 2.0, 3.0,
+///     2.0, 3.0, 4.0, 5.0,
+///     4.0, 5.0, 6.0, 7.0,
+///     6.0, 7.0, 8.0, 9.0,
+/// ];
+/// let typ = "bicubic";
+///
+/// let interp2d_type = make_interp2d_type(typ)?;
+/// let interp = interp2d_type.build(&xa, &ya, &za)?;
+/// # Ok(())
+/// # }
+/// ```
+pub fn make_interp2d_type<T>(typ: &str) -> Result<DynInterp2dType<T>, InterpolationError>
+where
+    T: crate::Num + ndarray_linalg::Lapack,
+{
+    use crate::*;
+
+    match typ.to_lowercase().as_str() {
+        "bilinear" => Ok(DynInterp2dType::new(Bilinear)),
+        "bicubic" => Ok(DynInterp2dType::new(Bicubic)),
+        _ => Err(InterpolationError::InvalidType(typ.into())),
+    }
+}
+
 // ===============================================================================================
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::*;
 
     #[test]
     fn test_set() {
@@ -579,5 +618,29 @@ mod test {
         let idx = z_get(&za, i, j, xa.len(), ya.len()).unwrap();
         let expected = 99.0;
         assert_eq!(idx, expected);
+    }
+
+    #[test]
+    fn test_dyn_interp_type() {
+        let xa = [0.0, 1.0, 2.0, 3.0];
+        let ya = [0.0, 2.0, 4.0, 6.0];
+        #[rustfmt::skip]
+        let za = [
+            0.0, 1.0, 2.0, 3.0,
+            2.0, 3.0, 4.0, 5.0,
+            4.0, 5.0, 6.0, 7.0,
+            6.0, 7.0, 8.0, 9.0,
+        ];
+        let mut xacc = Accelerator::new();
+        let mut yacc = Accelerator::new();
+        let mut cache = Cache::new();
+
+        let x = 0.5;
+        let y = 1.0;
+        let interp2d_type = DynInterp2dType::new(Bicubic);
+        let interp2d = interp2d_type.build(&xa, &ya, &za).unwrap();
+        interp2d
+            .eval(&xa, &ya, &za, x, y, &mut xacc, &mut yacc, &mut cache)
+            .unwrap();
     }
 }
