@@ -6,16 +6,14 @@ use crate::Interp2dType;
 use crate::Interpolation2d;
 use crate::InterpolationError;
 
+/// 2D Interpolator with runtime-determined Interpolation Type.
+pub type DynInterpolation2d<T> = Box<dyn Interpolation2d<T> + Send + Sync + 'static>;
+
 /// Representation of a 2d Interpolation Type that is not known in compile-time.
 pub struct DynInterp2dType<T> {
     #[allow(clippy::type_complexity)]
     build: Box<
-        dyn Fn(
-                &[T],
-                &[T],
-                &[T],
-            )
-                -> Result<Box<dyn Interpolation2d<T> + Send + Sync + 'static>, InterpolationError>
+        dyn Fn(&[T], &[T], &[T]) -> Result<DynInterpolation2d<T>, InterpolationError>
             + Send
             + Sync
             + 'static,
@@ -42,14 +40,14 @@ impl<T> DynInterp2dType<T> {
 }
 
 impl<T> Interp2dType<T> for DynInterp2dType<T> {
-    type Interpolation2d = Box<dyn Interpolation2d<T> + Send + Sync + 'static>;
+    type Interpolation2d = DynInterpolation2d<T>;
 
     fn build(
         &self,
         xa: &[T],
         ya: &[T],
         za: &[T],
-    ) -> Result<Self::Interpolation2d, InterpolationError> {
+    ) -> Result<DynInterpolation2d<T>, InterpolationError> {
         (self.build)(xa, ya, za)
     }
 
@@ -62,7 +60,7 @@ impl<T> Interp2dType<T> for DynInterp2dType<T> {
     }
 }
 
-impl<T> Interpolation2d<T> for Box<dyn Interpolation2d<T> + Send + Sync + 'static> {
+impl<T> Interpolation2d<T> for DynInterpolation2d<T> {
     fn eval_extrap(
         &self,
         xa: &[T],
@@ -156,6 +154,7 @@ impl<T> Interpolation2d<T> for Box<dyn Interpolation2d<T> + Send + Sync + 'stati
 
 #[cfg(test)]
 mod test {
+    use super::*;
     use crate::*;
 
     #[test]
@@ -173,7 +172,7 @@ mod test {
         let mut xacc = Accelerator::new();
         let mut yacc = Accelerator::new();
         let mut cache = Cache::new();
-        let interp: Box<dyn Interpolation2d<_>> =
+        let interp: DynInterpolation2d<f64> =
             DynInterp2dType::new(Bicubic).build(&xa, &ya, &za).unwrap();
 
         let _ = interp

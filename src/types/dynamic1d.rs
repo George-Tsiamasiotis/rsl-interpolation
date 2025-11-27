@@ -4,15 +4,14 @@ use crate::InterpType;
 use crate::Interpolation;
 use crate::InterpolationError;
 
+/// 1D Interpolator with runtime-determined Interpolation Type.
+pub type DynInterpolation<T> = Box<dyn Interpolation<T> + Send + Sync + 'static>;
+
 /// Representation of an Interpolation Type that is not known in compile-time.
 pub struct DynInterpType<T> {
     #[allow(clippy::type_complexity)]
     build: Box<
-        dyn Fn(
-                &[T],
-                &[T],
-            )
-                -> Result<Box<dyn Interpolation<T> + Send + Sync + 'static>, InterpolationError>
+        dyn Fn(&[T], &[T]) -> Result<DynInterpolation<T>, InterpolationError>
             + Send
             + Sync
             + 'static,
@@ -39,9 +38,9 @@ impl<T> DynInterpType<T> {
 }
 
 impl<T> InterpType<T> for DynInterpType<T> {
-    type Interpolation = Box<dyn Interpolation<T> + Send + Sync>;
+    type Interpolation = DynInterpolation<T>;
 
-    fn build(&self, xa: &[T], ya: &[T]) -> Result<Self::Interpolation, InterpolationError> {
+    fn build(&self, xa: &[T], ya: &[T]) -> Result<DynInterpolation<T>, InterpolationError> {
         (self.build)(xa, ya)
     }
 
@@ -54,7 +53,7 @@ impl<T> InterpType<T> for DynInterpType<T> {
     }
 }
 
-impl<T> Interpolation<T> for Box<dyn Interpolation<T> + Send + Sync + 'static> {
+impl<T> Interpolation<T> for DynInterpolation<T> {
     fn eval(
         &self,
         xa: &[T],
@@ -99,6 +98,7 @@ impl<T> Interpolation<T> for Box<dyn Interpolation<T> + Send + Sync + 'static> {
 
 #[cfg(test)]
 mod test {
+    use super::*;
     use crate::*;
 
     #[test]
@@ -107,8 +107,7 @@ mod test {
         let ya = [1.0, 2.0, 3.0];
 
         let mut acc = Accelerator::new();
-        let interp: Box<dyn Interpolation<_>> = DynInterpType::new(Cubic).build(&xa, &ya).unwrap();
-
+        let interp: DynInterpolation<f64> = DynInterpType::new(Cubic).build(&xa, &ya).unwrap();
         let _ = interp.eval(&xa, &ya, 1.5, &mut acc).unwrap();
     }
 }

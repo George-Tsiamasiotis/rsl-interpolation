@@ -25,5 +25,5 @@ pub use steffen::{Steffen, SteffenInterp};
 pub use bicubic::{Bicubic, BicubicInterp};
 pub use bilinear::{Bilinear, BilinearInterp};
 
-pub use dynamic1d::DynInterpType;
-pub use dynamic2d::DynInterp2dType;
+pub use dynamic1d::{DynInterpType, DynInterpolation};
+pub use dynamic2d::{DynInterp2dType, DynInterpolation2d};
