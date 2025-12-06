@@ -1,8 +1,10 @@
 use crate::Bicubic;
+use crate::Interpolation2d;
 use crate::interp2d::Interp2dType;
 use crate::tests::XYZTable;
 use crate::tests::test_interp2d;
 use crate::tests::test_interp2d_extra;
+use crate::{Accelerator, Cache};
 
 /// Linear case
 #[test]
@@ -335,4 +337,33 @@ fn extra_test_bicubic() {
         test_dxy_table,
         interp,
     );
+}
+
+/// Fixes a bug where the uninitialized Cache appears updated the first time it is called.
+///
+/// If x[0] <= x <= x[1] AND y[0] <= y <= y[0] on the first called, the Cache's acc indeces are
+/// zero, while all the other fields where NaNs.
+///
+/// This caused the interpolator to believe that the Cache is updated, causing NaNs to bubble up.
+#[test]
+fn test_uninit_cache_00eval() {
+    let xa = [0.0, 1.0, 2.0, 3.0];
+    let ya = [0.0, 1.0, 2.0, 3.0];
+    #[rustfmt::skip]
+    let za = [
+        1.0, 1.1, 1.2, 1.3,
+        1.1, 1.2, 1.3, 1.4,
+        1.2, 1.3, 1.4, 1.5,
+        1.3, 1.4, 1.5, 1.6,
+    ];
+
+    let interp = Bicubic.build(&xa, &ya, &za).unwrap();
+    let mut xacc = Accelerator::new();
+    let mut yacc = Accelerator::new();
+    let mut cache = Cache::new();
+
+    let v: f64 = interp
+        .eval(&xa, &ya, &za, 0.5, 0.5, &mut xacc, &mut yacc, &mut cache)
+        .unwrap();
+    assert!(v.is_finite());
 }

@@ -26,6 +26,7 @@ pub struct Cache<T> {
     zy_values: (T, T, T, T),
     zxy_values: (T, T, T, T),
     partials: (T, T),
+    uninit: bool,
 }
 
 impl<T> Cache<T>
@@ -34,7 +35,7 @@ where
 {
     /// Creates a new empty [`Cache2d`]
     pub fn new() -> Self {
-        let def = T::default();
+        let def = T::nan();
         Self {
             acc_indices: (0, 0),
             xgrid_values: (def, def),
@@ -44,6 +45,7 @@ where
             zy_values: (def, def, def, def),
             zxy_values: (def, def, def, def),
             partials: (def, def),
+            uninit: true,
         }
     }
 
@@ -58,6 +60,16 @@ where
     }
 
     pub(crate) fn is_uptodate(&mut self, xa: &[T], ya: &[T], x: T, y: T) -> bool {
+        // The first time that the Cache is being called, the values are uninitialized, but the
+        // interpolator does not know that. This forces the Cache to be updated the first time it
+        // is called after initialization.
+        //
+        // Every evaluation after that is not affected.
+        if self.uninit {
+            self.uninit = false;
+            return false;
+        }
+
         let xi = self.acc_indices.0;
         let yi = self.acc_indices.1;
         let x_inbounds: bool = (x > xa[xi]) && (x < xa[xi + 1]);
