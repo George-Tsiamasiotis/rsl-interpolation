@@ -1,7 +1,7 @@
 //! Accelerator benchmark
 //!
 //! Use Bicubic, since it is by far the most computationally expensive
-//! evaulation, and resetting the Accelerator should be negligible.
+//! evaluation, and resetting the Accelerator should be negligible.
 
 use std::time::Duration;
 

@@ -660,7 +660,32 @@ mod test {
             1.3, 1.4, 1.5, 1.6,
         ];
 
-        Spline2d::new(Bicubic, &xa, &ya, &za).unwrap();
-        Spline2d::new_dyn(Bicubic, &xa, &ya, &za).unwrap();
+        let spline = Spline2d::new_dyn(Bicubic, &xa, &ya, &za).unwrap();
+        let xacc = &mut Accelerator::new();
+        let yacc = &mut Accelerator::new();
+        let cache = &mut Cache::new();
+        spline.eval(1.5, 2.5, xacc, yacc, cache).unwrap();
+        spline.eval_deriv_x(1.5, 2.5, xacc, yacc, cache).unwrap();
+        spline.eval_deriv_y(1.5, 2.5, xacc, yacc, cache).unwrap();
+        spline.eval_deriv_xx(1.5, 2.5, xacc, yacc, cache).unwrap();
+        spline.eval_deriv_yy(1.5, 2.5, xacc, yacc, cache).unwrap();
+        spline.eval_deriv_xy(1.5, 2.5, xacc, yacc, cache).unwrap();
+    }
+
+    #[test]
+    fn test_make_spline2d() {
+        let xa = [0.0, 1.0, 2.0, 3.0];
+        let ya = [0.0, 1.0, 2.0, 3.0];
+        #[rustfmt::skip]
+        let za = [
+            1.0, 1.1, 1.2, 1.3,
+            1.1, 1.2, 1.3, 1.4,
+            1.2, 1.3, 1.4, 1.5,
+            1.3, 1.4, 1.5, 1.6,
+        ];
+
+        make_spline2d("bilinear", &xa, &ya, &za).unwrap();
+        make_spline2d("bicubic", &xa, &ya, &za).unwrap();
+        assert!(make_spline2d("wrong", &xa, &ya, &za).is_err());
     }
 }

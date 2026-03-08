@@ -6,6 +6,12 @@ use crate::tests::test_interp2d;
 use crate::tests::test_interp2d_extra;
 use crate::{Accelerator, Cache};
 
+#[test]
+fn test_type_fields() {
+    let _ = <Bicubic as Interp2dType<f64>>::name(&Bicubic);
+    let _ = <Bicubic as Interp2dType<f64>>::min_size(&Bicubic);
+}
+
 /// Linear case
 #[test]
 fn gsl_test_bicubic1() {
@@ -47,7 +53,7 @@ fn gsl_test_bicubic2() {
 
     /* least common multiple of x and y */
     #[rustfmt::skip]
-    let za = [ 
+    let za = [
         1.0,  2.0,  3.0,  4.0,  5.0,  6.0,  7.0,  8.0,
         2.0,  2.0,  6.0,  4.0, 10.0,  6.0, 14.0,  8.0,
         3.0,  6.0,  3.0, 12.0, 15.0,  6.0, 21.0, 24.0,
@@ -141,7 +147,7 @@ fn extra_test_bicubic() {
     let xa = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
     let ya = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
     #[rustfmt::skip]
-    let za = [ 
+    let za = [
         1.0,  2.0,  3.0,  4.0,  5.0,  6.0,  7.0,  8.0,
         2.0,  2.0,  6.0,  4.0, 10.0,  6.0, 14.0,  8.0,
         3.0,  6.0,  3.0, 12.0, 15.0,  6.0, 21.0, 24.0,
@@ -341,7 +347,7 @@ fn extra_test_bicubic() {
 
 /// Fixes a bug where the uninitialized Cache appears updated the first time it is called.
 ///
-/// If x[0] <= x <= x[1] AND y[0] <= y <= y[0] on the first called, the Cache's acc indeces are
+/// If x[0] <= x <= x[1] AND y[0] <= y <= y[0] on the first called, the Cache's acc indices are
 /// zero, while all the other fields where NaNs.
 ///
 /// This caused the interpolator to believe that the Cache is updated, causing NaNs to bubble up.

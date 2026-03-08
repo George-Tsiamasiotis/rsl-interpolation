@@ -87,6 +87,21 @@ impl Accelerator {
         self.hits = 0;
         self.misses = 0;
     }
+
+    /// Returns the total cache hits of the Accelerator.
+    pub fn hits(&self) -> usize {
+        self.hits
+    }
+
+    /// Returns the total cache misses of the Accelerator.
+    pub fn misses(&self) -> usize {
+        self.misses
+    }
+
+    /// Returns the cached index of the Accelerator.
+    pub fn cache(&self) -> usize {
+        self.cache
+    }
 }
 
 impl std::fmt::Debug for Accelerator {
@@ -111,7 +126,11 @@ mod test {
 
     #[test]
     fn test_instantiation() {
-        let _ = Accelerator::new();
+        let acc = Accelerator::default();
+        let _ = format!("{:?}", acc);
+        assert_eq!(acc.hits(), 0);
+        assert_eq!(acc.misses(), 0);
+        assert_eq!(acc.cache(), 0);
     }
 
     #[test]

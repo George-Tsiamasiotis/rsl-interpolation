@@ -332,7 +332,33 @@ mod test {
         let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
         let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
 
-        Spline::new(Cubic, &xa, &ya).unwrap();
-        Spline::new_dyn(Cubic, &xa, &ya).unwrap();
+        let spline = Spline::new_dyn(Cubic, &xa, &ya).unwrap();
+        let mut acc = Accelerator::new();
+        spline.eval(1.5, &mut acc).unwrap();
+        spline.eval_deriv(1.5, &mut acc).unwrap();
+        spline.eval_deriv2(1.5, &mut acc).unwrap();
+        spline.eval_integ(1.5, 2.5, &mut acc).unwrap();
+    }
+
+    #[test]
+    fn test_make_spline() {
+        let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
+        let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
+
+        make_spline("linear", &xa, &ya).unwrap();
+        make_spline("cubic", &xa, &ya).unwrap();
+        make_spline("akima", &xa, &ya).unwrap();
+        make_spline("akimaperiodic", &xa, &ya).unwrap();
+        make_spline("steffen", &xa, &ya).unwrap();
+        assert!(make_spline("wrong", &xa, &ya).is_err());
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_make_cubic_periodic_spline_panic() {
+        let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
+        let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
+
+        make_spline("cubicperiodic", &xa, &ya).unwrap();
     }
 }

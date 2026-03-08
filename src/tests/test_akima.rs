@@ -6,6 +6,14 @@ use crate::tests::test_interp;
 use crate::tests::test_interp_extra;
 
 #[test]
+fn test_type_fields() {
+    let _ = <Akima as InterpType<f64>>::name(&Akima);
+    let _ = <Akima as InterpType<f64>>::min_size(&Akima);
+    let _ = <AkimaPeriodic as InterpType<f64>>::name(&AkimaPeriodic);
+    let _ = <AkimaPeriodic as InterpType<f64>>::min_size(&AkimaPeriodic);
+}
+
+#[test]
 fn gsl_test_akima() {
     let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     let ya = [0.0, 1.0, 2.0, 3.0, 4.0];

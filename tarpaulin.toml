@@ -1,9 +1,10 @@
 [test]
-name = "poincare-maps"
 manifest-path = "./Cargo.toml"
 force-clean = false
 skip-clean = true
 output-dir = "./htmlcov/"
+out = ["Html"]
 no-fail-fast = true
 fail-immediately = true
 color = "Always"
+exclude-files = ["src/bin/*"]

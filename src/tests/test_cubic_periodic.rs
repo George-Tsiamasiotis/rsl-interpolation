@@ -3,6 +3,12 @@ use crate::InterpType;
 use crate::tests::XYTable;
 use crate::tests::test_interp;
 
+#[test]
+fn test_type_fields() {
+    let _ = <CubicPeriodic as InterpType<f64>>::name(&CubicPeriodic);
+    let _ = <CubicPeriodic as InterpType<f64>>::min_size(&CubicPeriodic);
+}
+
 // Not implemented: Cubic Periodic Splines with more than 3 points require a solver for cyclically
 // tridiagonal matrices, which is currently not implemented by ndarray_linalg.
 #[ignore = "not implemented"]
@@ -160,7 +166,7 @@ fn gsl_test_cubic_periodic2() {
         -2.7535350567021593, -2.6055929319451354, -2.4153816286861045, -2.1829011469250656,
         -1.9081514866620242, -1.5911326478969716, -1.2318446306299160, -0.8302874348608498,
         -0.3864610605897769, 0.0996344921832995, 0.6279992234583824, 1.1986331332354769,
-        1.8115362215145772 
+        1.8115362215145772
     ];
 
     #[rustfmt::skip]

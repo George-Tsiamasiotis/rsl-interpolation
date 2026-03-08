@@ -4,6 +4,12 @@ use crate::tests::XYTable;
 use crate::tests::test_interp;
 
 #[test]
+fn test_type_fields() {
+    let _ = <Cubic as InterpType<f64>>::name(&Cubic);
+    let _ = <Cubic as InterpType<f64>>::min_size(&Cubic);
+}
+
+#[test]
 fn gsl_test_cubic1() {
     let xa = [0.0, 1.0, 2.0];
     let ya = [0.0, 1.0, 2.0];

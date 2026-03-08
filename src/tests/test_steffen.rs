@@ -5,6 +5,12 @@ use crate::tests::test_interp;
 use crate::tests::test_interp_extra;
 
 #[test]
+fn test_type_fields() {
+    let _ = <Steffen as InterpType<f64>>::name(&Steffen);
+    let _ = <Steffen as InterpType<f64>>::min_size(&Steffen);
+}
+
+#[test]
 fn gsl_test_steffen1() {
     let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     let ya = [0.0, 1.0, 2.0, 3.0, 4.0];

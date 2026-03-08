@@ -39,6 +39,5 @@ pub enum InterpolationError {
 
 #[derive(thiserror::Error, Debug)]
 #[error("{DOMAIN_ERROR_MSG}")]
-#[non_exhaustive]
 /// Returned  when the supplied value is outside the range of the supplied xdata or ydata.
 pub struct DomainError;

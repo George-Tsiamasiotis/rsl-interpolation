@@ -160,7 +160,7 @@ where
             cache.update_step1(xa, ya, za, x, y, xacc, yacc)?;
         }
 
-        let (_xi, _yi) = cache.get_xy_indeces();
+        let (_xi, _yi) = cache.get_xy_indices();
         let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
         let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
         let (dx, dy) = cache.get_partials();
@@ -260,7 +260,7 @@ where
             cache.update_step1(xa, ya, za, x, y, xacc, yacc)?;
         }
 
-        let (_xi, _yi) = cache.get_xy_indeces();
+        let (_xi, _yi) = cache.get_xy_indices();
         let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
         let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
         let (dx, dy) = cache.get_partials();
@@ -352,7 +352,7 @@ where
             cache.update_step1(xa, ya, za, x, y, xacc, yacc)?;
         }
 
-        let (_xi, _yi) = cache.get_xy_indeces();
+        let (_xi, _yi) = cache.get_xy_indices();
         let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
         let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
         let (dx, dy) = cache.get_partials();
@@ -444,7 +444,7 @@ where
             cache.update_step1(xa, ya, za, x, y, xacc, yacc)?;
         }
 
-        let (_xi, _yi) = cache.get_xy_indeces();
+        let (_xi, _yi) = cache.get_xy_indices();
         let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
         let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
         let (dx, dy) = cache.get_partials();
@@ -528,7 +528,7 @@ where
             cache.update_step1(xa, ya, za, x, y, xacc, yacc)?;
         }
 
-        let (_xi, _yi) = cache.get_xy_indeces();
+        let (_xi, _yi) = cache.get_xy_indices();
         let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
         let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
         let (dx, dy) = cache.get_partials();
@@ -612,7 +612,7 @@ where
             cache.update_step1(xa, ya, za, x, y, xacc, yacc)?;
         }
 
-        let (_xi, _yi) = cache.get_xy_indeces();
+        let (_xi, _yi) = cache.get_xy_indices();
         let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
         let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
         let (dx, dy) = cache.get_partials();

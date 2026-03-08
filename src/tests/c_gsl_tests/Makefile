@@ -20,8 +20,8 @@ akima: out
 	@./out/akima > ./out/akima.dat
 
 akima_plot: akima
-	@graph -T png $(GRAPHFLAGS) < ./out/akima.dat > ./plots/akima.png 
-	$(info Plot saved at src/tests/plots/akima.png)
+	@graph -T png $(GRAPHFLAGS) < ./out/akima.dat > ./plots/akima.png
+	$(info Plot saved at src/tests/c_gsl_tests/plots/akima.png)
 
 # ==============================================================
 
@@ -30,8 +30,8 @@ akima_periodic: out
 
 akima_periodic_plot: akima_periodic
 	@./out/akima_periodic > ./out/akima_periodic.dat
-	@graph -T png $(GRAPHFLAGS) < ./out/akima_periodic.dat > ./plots/akima_periodic.png 
-	$(info Plot saved at src/tests/plots/akima_periodic.png)
+	@graph -T png $(GRAPHFLAGS) < ./out/akima_periodic.dat > ./plots/akima_periodic.png
+	$(info Plot saved at src/tests/c_gsl_tests/plots/akima_periodic.png)
 
 # ==============================================================
 
@@ -40,8 +40,8 @@ steffen: out
 	@./out/steffen > ./out/steffen.dat
 
 steffen_plot: steffen
-	@graph -T png $(GRAPHFLAGS) < ./out/steffen.dat > ./plots/steffen.png 
-	$(info Plot saved at src/tests/plots/steffen.png)
+	@graph -T png $(GRAPHFLAGS) < ./out/steffen.dat > ./plots/steffen.png
+	$(info Plot saved at src/tests/c_gsl_tests/plots/steffen.png)
 
 # ==============================================================
 
@@ -51,7 +51,7 @@ bilinear: out
 
 bilinear_plot: bilinear
 	$(shell ./bilinear_plot.sh)
-	$(info Plot saved at src/tests/plots/bilinear.png)
+	$(info Plot saved at src/tests/c_gsl_tests/plots/bilinear.png)
 
 # ==============================================================
 
@@ -61,4 +61,4 @@ bicubic: out
 
 bicubic_plot: bicubic
 	$(shell ./bicubic_plot.sh)
-	$(info Plot saved at src/tests/out/bicubic.png)
+	$(info Plot saved at src/tests/c_gsl_tests/plots/bicubic.png)

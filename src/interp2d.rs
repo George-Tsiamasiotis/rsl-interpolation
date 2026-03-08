@@ -575,6 +575,19 @@ mod test {
     use crate::*;
 
     #[test]
+    fn test_z_idx() {
+        // [
+        //      0, 0, 0,
+        //      0, 0, 1,
+        //      0, 0, 0,
+        //      0, 0, 0,
+        // ]
+        let shape = (4, 3); // Fortran style
+        assert_eq!(z_idx(1, 2, shape.0, shape.1).unwrap(), 9);
+        assert!(matches!(z_idx(10, 200, shape.0, shape.1), Err(DomainError)));
+    }
+
+    #[test]
     fn test_set() {
         let xa = [0.0, 1.0];
         let ya = [0.0, 2.0];
@@ -598,7 +611,11 @@ mod test {
         z_set(&mut za, za10, 1, 0, xlen, ylen).unwrap();
         z_set(&mut za, za11, 1, 1, xlen, ylen).unwrap();
 
-        assert_eq!(za, [100.0, 200.0, 300.0, 400.0,])
+        assert_eq!(za, [100.0, 200.0, 300.0, 400.0,]);
+        assert!(matches!(
+            z_set(&mut za, za11, 10, 10000, xlen, ylen),
+            Err(DomainError)
+        ));
     }
 
     #[test]
@@ -618,6 +635,10 @@ mod test {
         let idx = z_get(&za, i, j, xa.len(), ya.len()).unwrap();
         let expected = 99.0;
         assert_eq!(idx, expected);
+        assert!(matches!(
+            z_get(&za, 10, 2000, xa.len(), ya.len()),
+            Err(DomainError)
+        ));
     }
 
     #[test]
@@ -642,5 +663,12 @@ mod test {
         interp2d
             .eval(&xa, &ya, &za, x, y, &mut xacc, &mut yacc, &mut cache)
             .unwrap();
+    }
+
+    #[test]
+    fn test_make_interp2d_type() {
+        make_interp2d_type::<f64>("bilinear").unwrap();
+        make_interp2d_type::<f64>("bicubic").unwrap();
+        assert!(make_interp2d_type::<f64>("wrong").is_err());
     }
 }

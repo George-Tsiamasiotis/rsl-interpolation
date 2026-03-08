@@ -1,7 +1,7 @@
 [package]
 name = "rsl-interpolation"
 authors = ["George Tsiamasiotis"]
-version = "0.1.17"
+version = "0.1.18"
 edition = "2024"
 keywords = ["math", "science", "interpolation"]
 readme = "README.md"
@@ -19,7 +19,6 @@ num-traits = "0.2.19"
 thiserror = "2.0.18"
 
 [dev-dependencies]
-ndarray-linalg = { version = "0.18.1" }
 criterion = "0.7.0"
 
 [features]
@@ -30,6 +29,10 @@ netlib-static = ["ndarray-linalg/netlib-static"]
 netlib-system = ["ndarray-linalg/netlib-system"]
 intel-mkl-static = ["ndarray-linalg/intel-mkl-static"]
 intel-mkl-system = ["ndarray-linalg/intel-mkl-system"]
+
+[profile.profiling]
+inherits = "release"
+debug = true
 
 [lib] # Needed for Criterion to detect extra command line options
 bench = false

@@ -215,4 +215,15 @@ mod test {
         let interp = interp_type.build(&xa, &ya).unwrap();
         interp.eval(&xa, &ya, x, &mut acc).unwrap();
     }
+
+    #[test]
+    fn test_make_interp_type() {
+        make_interp_type::<f64>("linear").unwrap();
+        make_interp_type::<f64>("cubic").unwrap();
+        make_interp_type::<f64>("cubicperiodic").unwrap();
+        make_interp_type::<f64>("akima").unwrap();
+        make_interp_type::<f64>("akimaperiodic").unwrap();
+        make_interp_type::<f64>("steffen").unwrap();
+        assert!(make_interp_type::<f64>("wrong").is_err());
+    }
 }

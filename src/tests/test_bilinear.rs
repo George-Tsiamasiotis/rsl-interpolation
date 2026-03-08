@@ -3,6 +3,12 @@ use crate::{
     tests::{XYZTable, test_interp2d, test_interp2d_extra},
 };
 
+#[test]
+fn test_type_fields() {
+    let _ = <Bilinear as Interp2dType<f64>>::name(&Bilinear);
+    let _ = <Bilinear as Interp2dType<f64>>::min_size(&Bilinear);
+}
+
 /// Tests bilinear interpolation using a symmetric function, f(x,y)=f(y,x), and diagonal
 /// interpolation points (x,y) where x=y. If these tests don't pass, something is seriously broken.
 #[test]
@@ -86,7 +92,7 @@ fn extra_test_bilinear() {
     let ya = [0.0, 1.0];
     #[rustfmt::skip]
     let za = [
-        0.0, 1.0, 
+        0.0, 1.0,
         1.0, 0.5
     ];
     let xtest = [

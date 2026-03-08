@@ -15,7 +15,7 @@ use crate::z_idx;
 /// important in cases where `za` arrays are big and don't fit in the CPU's cache. It is of course,
 /// very situational, since it also depends on the way one evaluates his splines.
 ///
-/// The overhead of cache misses should be trully negligible, since the process just falls back to
+/// The overhead of cache misses should be truly negligible, since the process just falls back to
 /// calculating the values in the usual manner.
 pub struct Cache<T> {
     acc_indices: (usize, usize),
@@ -53,7 +53,7 @@ where
         *self = Self::new()
     }
 
-    /// Resets the indeces. Useful for benchmarking, to avoid the overhead of resetting all the
+    /// Resets the indices. Useful for benchmarking, to avoid the overhead of resetting all the
     /// fields at each iteration.
     pub fn soft_reset(&mut self) {
         self.acc_indices = (0, 0)
@@ -88,7 +88,7 @@ where
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
     ) -> Result<(), DomainError> {
-        self.update_acc_indeces(xa, ya, x, y, xacc, yacc);
+        self.update_acc_indices(xa, ya, x, y, xacc, yacc);
         self.update_xy_grid_values(xa, ya);
         self.update_z_grid_values(za, xa.len(), ya.len())?;
         self.update_partials();
@@ -118,7 +118,7 @@ impl<T> Cache<T>
 where
     T: crate::Num,
 {
-    fn update_acc_indeces(
+    fn update_acc_indices(
         &mut self,
         xa: &[T],
         ya: &[T],
@@ -212,7 +212,7 @@ impl<T> Cache<T>
 where
     T: crate::Num,
 {
-    pub(crate) fn get_xy_indeces(&self) -> (usize, usize) {
+    pub(crate) fn get_xy_indices(&self) -> (usize, usize) {
         (self.acc_indices.0, self.acc_indices.1)
     }
 
