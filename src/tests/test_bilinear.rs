@@ -197,5 +197,6 @@ fn extra_test_bilinear() {
         test_dyy_table,
         test_dxy_table,
         interp,
+        "bilinear",
     );
 }

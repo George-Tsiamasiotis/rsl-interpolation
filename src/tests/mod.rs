@@ -12,6 +12,7 @@ use crate::Interpolation2d;
 
 mod test_accel;
 mod test_akima;
+mod test_cache_accel_sync;
 mod test_cubic;
 mod test_cubic_periodic;
 mod test_linear;
@@ -135,7 +136,7 @@ where
     }
 }
 
-/// Test function including all derivatives and iteration over all (x, y) pairs,  for use with extra 
+/// Test function including all derivatives and iteration over all (x, y) pairs,  for use with extra
 /// 2d testing.
 #[rustfmt::skip]
 pub(crate) fn test_interp2d_extra<I, T>(
@@ -147,6 +148,7 @@ pub(crate) fn test_interp2d_extra<I, T>(
     test_dyy_table: XYZTable<T>,
     test_dxy_table: XYZTable<T>,
     interp: I,
+    interp_type: &str,
 ) where
     T: crate::Num,
     I: Interpolation2d<T>,
@@ -157,7 +159,7 @@ pub(crate) fn test_interp2d_extra<I, T>(
     let mut cache = Cache::new();
 
     // Access the z values linearly instead of using idx(), to comply with gsl's test output
-    let mut index = 0; 
+    let mut index = 0;
     for x in test_e_table.x.iter() {
         for y in test_e_table.y.iter() {
             let eval =          interp.eval( data_table.x, data_table.y, data_table.z, *x, *y, &mut xacc, &mut yacc, &mut cache).unwrap();
@@ -183,5 +185,19 @@ pub(crate) fn test_interp2d_extra<I, T>(
             assert!(comp.is_close(dxy,expected_dxy));
 
         }
+    }
+
+    match interp_type {
+        "bilinear" => {
+            let total_evaluations = index * 4; // `deriv_xx` and `deriv_yy` do not use the cache
+            assert_eq!(xacc.hits + xacc.misses, total_evaluations);
+            assert_eq!(yacc.hits + yacc.misses, total_evaluations);
+        }
+        "bicubic" => {
+            let total_evaluations = index * 6;
+            assert_eq!(xacc.hits + xacc.misses, total_evaluations);
+            assert_eq!(yacc.hits + yacc.misses, total_evaluations);
+        }
+        _ => unreachable!()
     }
 }

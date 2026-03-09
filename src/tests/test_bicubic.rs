@@ -342,6 +342,7 @@ fn extra_test_bicubic() {
         test_dyy_table,
         test_dxy_table,
         interp,
+        "bicubic",
     );
 }
 

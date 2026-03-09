@@ -59,36 +59,40 @@ where
         self.acc_indices = (0, 0)
     }
 
-    pub(crate) fn is_uptodate(&mut self, xa: &[T], ya: &[T], x: T, y: T) -> bool {
-        // The first time that the Cache is being called, the values are uninitialized, but the
-        // interpolator does not know that. This forces the Cache to be updated the first time it
-        // is called after initialization.
-        //
-        // Every evaluation after that is not affected.
-        if self.uninit {
-            self.uninit = false;
-            return false;
-        }
-
-        let xi = self.acc_indices.0;
-        let yi = self.acc_indices.1;
-        let x_inbounds: bool = (x > xa[xi]) && (x < xa[xi + 1]);
-        let y_inbounds: bool = (y > ya[yi]) && (y < ya[yi + 1]);
-        x_inbounds && y_inbounds
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    pub(crate) fn update_step1(
+    pub(crate) fn is_uptodate(
         &mut self,
         xa: &[T],
         ya: &[T],
-        za: &[T],
         x: T,
         y: T,
         xacc: &mut Accelerator,
         yacc: &mut Accelerator,
-    ) -> Result<(), DomainError> {
-        self.update_acc_indices(xa, ya, x, y, xacc, yacc);
+    ) -> bool {
+        // The first time that the Cache is being called, the values are uninitialized, but the
+        // interpolator does not know that. This forces the Cache to be updated the first time it
+        // is called after initialization.
+        //
+        // It is also necessary to setup the indices and the Accelerators for the next evaluation.
+        //
+        // Every evaluation after that is not affected.
+        if self.uninit {
+            self.uninit = false;
+            self.acc_indices.0 = xacc.find(xa, x);
+            self.acc_indices.1 = yacc.find(ya, y);
+            return false;
+        }
+
+        let old_xi = self.acc_indices.0;
+        let old_yi = self.acc_indices.1;
+        // If xa landed on the same interval (cache hit), `find()` simply returns the the cached
+        // index, otherwise it recalculates it.
+        self.acc_indices.0 = xacc.find(xa, x);
+        self.acc_indices.1 = yacc.find(ya, y);
+
+        (old_xi == self.acc_indices.0) && (old_yi == self.acc_indices.1)
+    }
+
+    pub(crate) fn update_step1(&mut self, xa: &[T], ya: &[T], za: &[T]) -> Result<(), DomainError> {
         self.update_xy_grid_values(xa, ya);
         self.update_z_grid_values(za, xa.len(), ya.len())?;
         self.update_partials();
@@ -118,19 +122,6 @@ impl<T> Cache<T>
 where
     T: crate::Num,
 {
-    fn update_acc_indices(
-        &mut self,
-        xa: &[T],
-        ya: &[T],
-        x: T,
-        y: T,
-        xacc: &mut Accelerator,
-        yacc: &mut Accelerator,
-    ) {
-        self.acc_indices.0 = xacc.find(xa, x);
-        self.acc_indices.1 = yacc.find(ya, y);
-    }
-
     fn update_xy_grid_values(&mut self, xa: &[T], ya: &[T]) {
         let xi = self.acc_indices.0;
         let yi = self.acc_indices.1;

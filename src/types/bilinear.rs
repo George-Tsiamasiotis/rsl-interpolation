@@ -88,9 +88,9 @@ where
         yacc: &mut Accelerator,
         cache: &mut Cache<T>,
     ) -> Result<T, DomainError> {
-        let is_uptodate = cache.is_uptodate(xa, ya, x, y);
+        let is_uptodate = cache.is_uptodate(xa, ya, x, y, xacc, yacc);
         if !is_uptodate {
-            cache.update_step1(xa, ya, za, x, y, xacc, yacc)?;
+            cache.update_step1(xa, ya, za)?;
         }
 
         let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
@@ -126,9 +126,9 @@ where
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
 
-        let is_uptodate = cache.is_uptodate(xa, ya, x, y);
+        let is_uptodate = cache.is_uptodate(xa, ya, x, y, xacc, yacc);
         if !is_uptodate {
-            cache.update_step1(xa, ya, za, x, y, xacc, yacc)?;
+            cache.update_step1(xa, ya, za)?;
         }
 
         let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
@@ -161,9 +161,9 @@ where
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
 
-        let is_uptodate = cache.is_uptodate(xa, ya, x, y);
+        let is_uptodate = cache.is_uptodate(xa, ya, x, y, xacc, yacc);
         if !is_uptodate {
-            cache.update_step1(xa, ya, za, x, y, xacc, yacc)?;
+            cache.update_step1(xa, ya, za)?;
         }
 
         let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
@@ -232,9 +232,9 @@ where
         check_if_inbounds(xa, x)?;
         check_if_inbounds(ya, y)?;
 
-        let is_uptodate = cache.is_uptodate(xa, ya, x, y);
+        let is_uptodate = cache.is_uptodate(xa, ya, x, y, xacc, yacc);
         if !is_uptodate {
-            cache.update_step1(xa, ya, za, x, y, xacc, yacc)?;
+            cache.update_step1(xa, ya, za)?;
         }
 
         let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
