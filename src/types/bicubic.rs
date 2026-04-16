@@ -17,6 +17,7 @@ const MIN_SIZE: usize = 4;
 
 /// Bicubic Interpolation
 #[doc(alias = "gsl_interp2d_bicubic")]
+#[derive(Debug, Clone, Copy)]
 pub struct Bicubic;
 
 impl<T> Interp2dType<T> for Bicubic
@@ -131,6 +132,7 @@ where
 /// Provides all the evaluation methods.
 ///
 /// Should be constructed through the [`Bicubic`] type.
+#[derive(Debug, Clone)]
 pub struct BicubicInterp<T>
 where
     T: crate::Num + Lapack,

@@ -13,6 +13,7 @@ const MIN_SIZE: usize = 2;
 ///
 /// The simplest type of interpolation.
 #[doc(alias = "gsl_interp_linear")]
+#[derive(Debug, Clone, Copy)]
 pub struct Linear;
 
 impl<T> InterpType<T> for Linear
@@ -58,6 +59,7 @@ where
 /// Provides all the evaluation methods.
 ///
 /// Should be constructed through the [`Linear`] type.
+#[derive(Debug, Clone, Copy)]
 pub struct LinearInterp<T> {
     _variable_type: PhantomData<T>,
 }

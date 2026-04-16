@@ -15,6 +15,7 @@ const MIN_SIZE: usize = 2;
 ///
 /// The simplest type of 2d Interpolation.
 #[doc(alias = "gsl_interp2d_bilinear")]
+#[derive(Debug, Clone, Copy)]
 pub struct Bilinear;
 
 impl<T> Interp2dType<T> for Bilinear
@@ -68,6 +69,7 @@ where
 /// Provides all the evaluation methods.
 ///
 /// Should be constructed through the [`Bilinear`] type.
+#[derive(Debug, Clone, Copy)]
 pub struct BilinearInterp<T> {
     _variable_type: PhantomData<T>,
 }

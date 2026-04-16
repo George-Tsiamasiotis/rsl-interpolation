@@ -1463,7 +1463,7 @@ dependencies = [
 
 [[package]]
 name = "rsl-interpolation"
-version = "0.1.19-pre.1"
+version = "0.1.19-pre.2"
 dependencies = [
  "criterion",
  "is_close",

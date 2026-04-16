@@ -1,12 +1,12 @@
 use std::collections::VecDeque;
 
-use crate::types::utils::integ_eval;
-use crate::types::utils::{check1d_data, check_if_inbounds};
 use crate::Accelerator;
 use crate::DomainError;
 use crate::InterpType;
 use crate::Interpolation;
 use crate::InterpolationError;
+use crate::types::utils::integ_eval;
+use crate::types::utils::{check_if_inbounds, check1d_data};
 
 const MIN_SIZE: usize = 5;
 
@@ -15,6 +15,7 @@ const MIN_SIZE: usize = 5;
 /// Non-rounded Akima spline with natural boundary conditions. This method uses the non-rounded
 /// corner algorithm of Wodicka.
 #[doc(alias = "gsl_interp_akima")]
+#[derive(Debug, Clone, Copy)]
 pub struct Akima;
 
 impl<T> InterpType<T> for Akima
@@ -81,6 +82,7 @@ where
 /// Should be constructed through the [`Akima`] type.
 #[allow(dead_code)]
 #[doc(alias = "gsl_akima_interp")]
+#[derive(Debug, Clone)]
 pub struct AkimaInterp<T>
 where
     T: crate::Num,
@@ -139,6 +141,7 @@ where
 ///
 /// Non-rounded Akima spline with natural boundary conditions. This method uses the non-rounded
 /// corner algorithm of Wodicka.
+#[derive(Debug, Clone, Copy)]
 pub struct AkimaPeriodic;
 
 impl<T> InterpType<T> for AkimaPeriodic
@@ -203,6 +206,7 @@ where
 /// Should be constructed through the [`Akima`] type.
 #[allow(dead_code)]
 #[doc(alias = "gsl_interp_akima_periodic")]
+#[derive(Debug, Clone)]
 pub struct AkimaPeriodicInterp<T>
 where
     T: crate::Num,

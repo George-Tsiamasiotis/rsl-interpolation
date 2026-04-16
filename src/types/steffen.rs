@@ -14,6 +14,7 @@ const MIN_SIZE: usize = 3;
 /// can never be spurious oscillations between data points. The interpolated function is piecewise
 /// cubic in each interval. The resulting curve and its first derivative are guaranteed to be
 /// continuous, but the second derivative may be discontinuous.
+#[derive(Debug, Clone, Copy)]
 pub struct Steffen;
 
 impl<T> InterpType<T> for Steffen
@@ -124,6 +125,7 @@ where
 ///
 /// Should be constructed through the [`Steffen`] type.
 #[allow(dead_code)]
+#[derive(Debug, Clone)]
 pub struct SteffenInterp<T>
 where
     T: crate::Num,

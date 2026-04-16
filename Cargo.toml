@@ -1,7 +1,7 @@
 [package]
 name = "rsl-interpolation"
 authors = ["George Tsiamasiotis"]
-version = "0.1.19-pre.1"
+version = "0.1.19-pre.2"
 edition = "2024"
 keywords = ["math", "science", "interpolation"]
 readme = "README.md"
@@ -60,3 +60,9 @@ harness = false
 [[bin]]
 name = "cache"
 path = "src/bin/cache.rs"
+
+[workspace.lints.rust]
+missing_docs = "warn"
+missing_debug_implementations = "warn"
+nonstandard-style = "warn"
+unsafe_code = "deny"

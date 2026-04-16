@@ -23,6 +23,7 @@ const MIN_SIZE: usize = 3;
 /// Numerical Algorithms with C - Gisela Engeln-Mullges, Frank Uhlig - 1996 -
 /// Algorithm 10.1, pg 254
 #[doc(alias = "gsl_interp_cspline")]
+#[derive(Debug, Clone, Copy)]
 pub struct Cubic;
 
 impl<T> InterpType<T> for Cubic
@@ -133,6 +134,7 @@ where
 ///
 /// Should be constructed through the [`Cubic`] type.
 #[allow(dead_code)]
+#[derive(Debug, Clone)]
 pub struct CubicInterp<T>
 where
     T: crate::Num,
@@ -198,6 +200,7 @@ where
 /// Numerical Algorithms with C - Gisela Engeln-Mullges, Frank Uhlig - 1996 -
 /// Algorithm 10.2, pg 255
 #[doc(alias = "gsl_interp_cspline_periodic")]
+#[derive(Debug, Clone, Copy)]
 pub struct CubicPeriodic;
 
 impl<T> InterpType<T> for CubicPeriodic
@@ -351,6 +354,7 @@ where
 /// Should be constructed through the [`CubicPeriodic`] type.
 #[allow(dead_code)]
 #[doc(alias = "gsl_interp_cspline_periodic")]
+#[derive(Debug, Clone)]
 pub struct CubicPeriodicInterp<T>
 where
     T: crate::Num + Lapack,
