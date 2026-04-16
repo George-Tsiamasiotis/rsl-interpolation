@@ -1,20 +1,10 @@
-use crate::Akima;
-use crate::AkimaPeriodic;
-use crate::InterpType;
-use crate::tests::XYTable;
-use crate::tests::test_interp;
-use crate::tests::test_interp_extra;
+mod common;
+
+use common::*;
+use rsl_interpolation::*;
 
 #[test]
-fn test_type_fields() {
-    let _ = <Akima as InterpType<f64>>::name(&Akima);
-    let _ = <Akima as InterpType<f64>>::min_size(&Akima);
-    let _ = <AkimaPeriodic as InterpType<f64>>::name(&AkimaPeriodic);
-    let _ = <AkimaPeriodic as InterpType<f64>>::min_size(&AkimaPeriodic);
-}
-
-#[test]
-fn gsl_test_akima() {
+fn gsl_akima() {
     let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     let ya = [0.0, 1.0, 2.0, 3.0, 4.0];
 
@@ -22,8 +12,6 @@ fn gsl_test_akima() {
     let ytest = [0.0, 0.5, 1.0, 2.0];
     let dytest = [1.0, 1.0, 1.0, 1.0];
     let iytest = [0.0, 0.125, 0.5, 2.0];
-
-    let data_table = XYTable { x: &xa, y: &ya };
 
     let test_e_table = XYTable {
         x: &xtest,
@@ -40,13 +28,13 @@ fn gsl_test_akima() {
         y: &iytest,
     };
 
-    let interp = Akima.build(&xa, &ya).unwrap();
-    test_interp(data_table, test_e_table, test_d_table, test_i_table, interp);
+    let spline = Spline::build::<AkimaInterpolator>(&xa, &ya).unwrap();
+    test_spline(test_e_table, test_d_table, test_i_table, spline);
 }
 
 /// Custom against GSL, for f(x) = 1 + x^2.
 #[test]
-fn extra_test_akima() {
+fn extra_akima() {
     let xa = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0];
 
     #[rustfmt::skip]
@@ -89,8 +77,6 @@ fn extra_test_akima() {
         0.953491762647616, 1.041162462944063, 1.133498566360499, 1.230791660591922, 1.333333333333333,
     ];
 
-    let data_table = XYTable { x: &xa, y: &ya };
-
     let test_e_table = XYTable {
         x: &xtest,
         y: &ytest,
@@ -111,20 +97,19 @@ fn extra_test_akima() {
         y: &iytest,
     };
 
-    let interp = Akima.build(&xa, &ya).unwrap();
-    test_interp_extra(
-        data_table,
+    let spline = Spline::build::<AkimaInterpolator>(&xa, &ya).unwrap();
+    test_spline_extra(
         test_e_table,
         test_d_table,
         test_d2_table,
         test_i_table,
-        interp,
+        spline,
     );
 }
 
 /// Custom against GSL, for f(x) = cos(2*π*x), for x=[0,1]
 #[test]
-fn extra_test_akima_periodic() {
+fn extra_akima_periodic() {
     let xa = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0];
 
     #[rustfmt::skip]
@@ -173,8 +158,6 @@ fn extra_test_akima_periodic() {
         -0.149342034559610, -0.129141040742931, -0.095870862495778, -0.051348456805006, -0.000000000000000,
     ];
 
-    let data_table = XYTable { x: &xa, y: &ya };
-
     let test_e_table = XYTable {
         x: &xtest,
         y: &ytest,
@@ -195,13 +178,12 @@ fn extra_test_akima_periodic() {
         y: &iytest,
     };
 
-    let interp = AkimaPeriodic.build(&xa, &ya).unwrap();
-    test_interp_extra(
-        data_table,
+    let spline = Spline::build::<AkimaPeriodicInterpolator>(&xa, &ya).unwrap();
+    test_spline_extra(
         test_e_table,
         test_d_table,
         test_d2_table,
         test_i_table,
-        interp,
+        spline,
     );
 }

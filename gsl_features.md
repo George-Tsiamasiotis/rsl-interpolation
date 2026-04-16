@@ -1,4 +1,4 @@
-## Implemented GSL features
+# Implemented GSL features
 
 - [x] 1D Interpolation
 	- [x] Instantiation [`gsl_interp_alloc()`, `gsl_interp_init()`, `gsl_interp_free()`]
@@ -16,7 +16,7 @@
  		- [x] f''(x) evaluation [`gsl_interp_eval_deriv2()`]
  		- [x] Numerical Integral [`gsl_interp_integ()`]
 	- [x] Utility functions
-		- [x] Name [`gsl_interp_name()`]
+		- [ ] Name [`gsl_interp_name()`]
 		- [x] Minimum number of points [`gsl_interp_min_size()` and `gsl_interp_type_min_size()`]
 	- [x] Higher level Interface (Splines)
 
@@ -29,7 +29,7 @@
 		- [x] Bilinear [`gsl_interp2d_bilinear`]
 		- [x] Bicubic [`gsl_interp2d_bicubic`]
 	- [x] Utility functions
-		- [x] Name [`gsl_interp2d_name()`]
+		- [ ] Name [`gsl_interp2d_name()`]
 		- [x] Minimum number of points [`gsl_interp2d_min_size()` and `gsl_interp2d_type_min_size()`]
 	- [x] Evaluation [^2]
 		- [x] f(x, y) evaluation [`gsl_interp2d_eval()`]
@@ -40,7 +40,7 @@
 		- [x] fyy(x, y) evaluation [`gsl_interp2d_eval_deriv_yy()`]
 		- [x] fxy(x, y) evaluation [`gsl_interp2d_eval_deriv_xy()`]
 	- [x] Higher level Interface (Splines)
-	
+
 ---
 
 - [x] Acceleration

@@ -1,3 +1,2 @@
 /target
-/src/tests/c_gsl_tests/out
-/src/tests/c_gsl_tests/plots
+/tests/c_gsl_tests/out

@@ -1,6 +1,3 @@
-const DOMAIN_ERROR_MSG: &str =
-    "Supplied value is outside the range of the supplied xdata or ydata.";
-
 #[derive(thiserror::Error, Debug)]
 /// The error type for Interpolator creation and data checking.
 pub enum InterpolationError {
@@ -16,8 +13,8 @@ pub enum InterpolationError {
     #[error("Supplied array size is less than the interpolation type's minimum size.")]
     NotEnoughPoints,
 
-    /// Suppled z-grid dataset must be 1D with length of `xsize*ysize`.
-    #[error("Suppled z-grid dataset must be 1D with length of `xsize*ysize`.")]
+    /// Supplied z-grid dataset must be 1D with length of `xsize*ysize`.
+    #[error("Supplied z-grid dataset must be 1D with length of `xsize*ysize`.")]
     ZGridMismatch,
 
     /// BLAS error solving Tridiagonal linear system.
@@ -28,16 +25,26 @@ pub enum InterpolationError {
         source: ndarray_linalg::error::LinalgError,
     },
 
-    /// Supplied value is outside the range of the supplied xdata or ydata.
-    #[error("{DOMAIN_ERROR_MSG}")]
-    DomainError(#[from] DomainError),
+    /// Supplied value is outside the range of the supplied xdata.
+    #[error("{0}")]
+    Domain1dError(#[from] Domain1dError),
 
-    /// Invalid Interpolation Type
-    #[error("`{0}`: Invalid Interpolation Type")]
-    InvalidType(Box<str>),
+    /// Supplied value is outside the range of the supplied xdata or ydata.
+    #[error("{0}")]
+    Domain2dError(#[from] Domain2dError),
 }
 
+/// Returned when the supplied value is outside the range of the supplied xdata.
 #[derive(thiserror::Error, Debug)]
-#[error("{DOMAIN_ERROR_MSG}")]
+#[error("1D Interpolation domain error: x = {x}")]
+pub struct Domain1dError {
+    pub x: f64,
+}
+
 /// Returned  when the supplied value is outside the range of the supplied xdata or ydata.
-pub struct DomainError;
+#[derive(thiserror::Error, Debug)]
+#[error("1D Interpolation domain error: x = {x}, y = {y}")]
+pub struct Domain2dError {
+    pub x: f64,
+    pub y: f64,
+}

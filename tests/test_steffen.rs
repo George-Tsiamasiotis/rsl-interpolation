@@ -1,17 +1,10 @@
-use crate::InterpType;
-use crate::Steffen;
-use crate::tests::XYTable;
-use crate::tests::test_interp;
-use crate::tests::test_interp_extra;
+mod common;
+
+use common::*;
+use rsl_interpolation::*;
 
 #[test]
-fn test_type_fields() {
-    let _ = <Steffen as InterpType<f64>>::name(&Steffen);
-    let _ = <Steffen as InterpType<f64>>::min_size(&Steffen);
-}
-
-#[test]
-fn gsl_test_steffen1() {
+fn gsl_steffen1() {
     let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     let ya = [0.0, 1.0, 2.0, 3.0, 4.0];
 
@@ -19,8 +12,6 @@ fn gsl_test_steffen1() {
     let ytest = [0.0, 0.5, 1.0, 2.0, 2.5, 3.95];
     let dytest = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0];
     let iytest = [0.0, 0.125, 0.5, 2.0, 3.125, 7.80125];
-
-    let data_table = XYTable { x: &xa, y: &ya };
 
     let test_e_table = XYTable {
         x: &xtest,
@@ -37,12 +28,12 @@ fn gsl_test_steffen1() {
         y: &iytest,
     };
 
-    let interp = Steffen.build(&xa, &ya).unwrap();
-    test_interp(data_table, test_e_table, test_d_table, test_i_table, interp);
+    let spline = Spline::build::<SteffenInterpolator>(&xa, &ya).unwrap();
+    test_spline(test_e_table, test_d_table, test_i_table, spline);
 }
 
 #[test]
-fn gsl_test_steffen2() {
+fn gsl_steffen2() {
     #[rustfmt::skip]
     let xa = [
         4.673405471947611, 4.851675778029557, 6.185473620119991, 7.066003430727031, 7.236222118389267,
@@ -193,8 +184,6 @@ fn gsl_test_steffen2() {
         -1.1777647142370817, -1.0483932372566702, -0.32646483194908105, -0.88612247621927298,
     ];
 
-    let data_table = XYTable { x: &xa, y: &ya };
-
     let test_e_table = XYTable {
         x: &xtest,
         y: &ytest,
@@ -210,13 +199,13 @@ fn gsl_test_steffen2() {
         y: &iytest,
     };
 
-    let interp = Steffen.build(&xa, &ya).unwrap();
-    test_interp(data_table, test_e_table, test_d_table, test_i_table, interp);
+    let spline = Spline::build::<SteffenInterpolator>(&xa, &ya).unwrap();
+    test_spline(test_e_table, test_d_table, test_i_table, spline);
 }
 
 /// Custom against GSL, for f(x) = 1 + x^2.
 #[test]
-fn extra_test_steffen() {
+fn extra_steffen() {
     let xa = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0];
 
     #[rustfmt::skip]
@@ -270,8 +259,6 @@ fn extra_test_steffen() {
         1.041850083000182, 1.115446980916353, 1.192281177502731, 1.272415532927669,
     ];
 
-    let data_table = XYTable { x: &xa, y: &ya };
-
     let test_e_table = XYTable {
         x: &xtest,
         y: &ytest,
@@ -292,13 +279,12 @@ fn extra_test_steffen() {
         y: &iytest,
     };
 
-    let interp = Steffen.build(&xa, &ya).unwrap();
-    test_interp_extra(
-        data_table,
+    let spline = Spline::build::<SteffenInterpolator>(&xa, &ya).unwrap();
+    test_spline_extra(
         test_e_table,
         test_d_table,
         test_d2_table,
         test_i_table,
-        interp,
+        spline,
     );
 }

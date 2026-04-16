@@ -1,41 +1,22 @@
-//! InterpType and Interpolation definitions
+//! `Interpolation` and `BuildInterpolator` traits definition.
 
-use crate::{Accelerator, DynInterpType};
-use crate::{DomainError, InterpolationError};
+use crate::{Accelerator, Domain1dError, InterpolationError};
 
-/// Representation of an Interpolation Type.
-pub trait InterpType<T> {
-    /// The returned Interpolator, containing the calculated coefficients and providing the
-    /// evaluation methods.
-    type Interpolation: Interpolation<T> + Send + Sync;
-
-    /// Creates an Interpolator from the data arrays `xa` and `ya`.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use rsl_interpolation::*;
-    ///
-    /// # fn main() -> Result<(), InterpolationError>{
-    /// let xa = [0.0, 1.0, 2.0];
-    /// let ya = [0.0, 2.0, 4.0];
-    /// let interp = Cubic.build(&xa, &ya)?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    fn build(&self, xa: &[T], ya: &[T]) -> Result<Self::Interpolation, InterpolationError>;
-
-    /// Returns the name of the Interpolator.
-    #[doc(alias = "gsl_interp_name")]
-    fn name(&self) -> &str;
-
-    /// Returns the minimum number of points required by the Interpolator.
+/// 1D Interpolator build method.
+pub trait BuildInterpolator: Interpolation + Sized {
+    /// The minimum required number of data points.
     #[doc(alias = "gsl_interp_min_size")]
-    fn min_size(&self) -> usize;
+    const MIN_SIZE: usize;
+
+    /// Builds the Interpolator.
+    #[doc(alias = "gsl_interp_init")]
+    #[expect(clippy::missing_errors_doc, reason = "documented on the implementors")]
+    fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolationError>;
 }
 
-/// Defines the required evaluation methods.
-pub trait Interpolation<T> {
+/// Defines the available interpolation methods.
+#[expect(private_bounds, reason = "needed to make Box<dyn Interpolation> Clone")]
+pub trait Interpolation: DynInterpolationClone + Send + Sync + 'static {
     /// Returns the interpolated value `y` for a given point `x`, using the data arrays `xa` and `ya` and
     /// the [`Accelerator`] `acc`.
     ///
@@ -43,26 +24,31 @@ pub trait Interpolation<T> {
     ///
     /// ```
     /// # use rsl_interpolation::*;
-    /// #
+    /// # use approx::assert_relative_eq;
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
     /// let ya = [0.0, 2.0, 4.0];
-    /// let interp = Cubic.build(&xa, &ya)?;
+    /// let interp = CubicInterpolator::build(&xa, &ya)?;
     /// let mut acc = Accelerator::new();
     ///
     /// let y = interp.eval(&xa, &ya, 1.5, &mut acc)?;
-    ///
-    /// assert_eq!(y, 3.0);
+    /// assert_relative_eq!(y, 3.0);
     /// # Ok(())
     /// # }
     /// ```
     ///
     /// # Errors
     ///
-    /// Returns a [`DomainError`] if `x` is outside the range of `xa`.
+    /// Returns a [`Domain1dError`] if `x` is outside the range of `xa`.
     #[doc(alias = "gsl_interp_eval")]
     #[doc(alias = "gsl_interp_eval_e")]
-    fn eval(&self, xa: &[T], ya: &[T], x: T, acc: &mut Accelerator) -> Result<T, DomainError>;
+    fn eval(
+        &self,
+        xa: &[f64],
+        ya: &[f64],
+        x: f64,
+        acc: &mut Accelerator,
+    ) -> Result<f64, Domain1dError>;
 
     /// Returns the derivative `dy/dx` of an interpolated function for a given point `x`, using the
     /// data arrays `xa` and `ya` and the [`Accelerator`] `acc`.
@@ -71,27 +57,31 @@ pub trait Interpolation<T> {
     ///
     /// ```
     /// # use rsl_interpolation::*;
-    /// #
+    /// # use approx::assert_relative_eq;
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
     /// let ya = [0.0, 2.0, 4.0];
-    /// let interp = Cubic.build(&xa, &ya)?;
+    /// let interp = CubicInterpolator::build(&xa, &ya)?;
     /// let mut acc = Accelerator::new();
     ///
     /// let dydx = interp.eval_deriv(&xa, &ya, 1.5, &mut acc)?;
-    ///
-    /// assert_eq!(dydx, 2.0);
+    /// assert_relative_eq!(dydx, 2.0);
     /// # Ok(())
     /// # }
     /// ```
     ///
     /// # Errors
     ///
-    /// Returns a [`DomainError`] if `x` is outside the range of `xa`.
+    /// Returns a [`Domain1dError`] if `x` is outside the range of `xa`.
     #[doc(alias = "gsl_interp_eval_deriv")]
     #[doc(alias = "gsl_interp_eval_deriv_e")]
-    fn eval_deriv(&self, xa: &[T], ya: &[T], x: T, acc: &mut Accelerator)
-    -> Result<T, DomainError>;
+    fn eval_deriv(
+        &self,
+        xa: &[f64],
+        ya: &[f64],
+        x: f64,
+        acc: &mut Accelerator,
+    ) -> Result<f64, Domain1dError>;
 
     /// Returns the second derivative `d²y/dx²` of an interpolated function for a given point `x`, using the
     /// data arrays `xa` and `ya` and the [`Accelerator`] `acc`.
@@ -100,34 +90,32 @@ pub trait Interpolation<T> {
     ///
     /// ```
     /// # use rsl_interpolation::*;
-    /// #
+    /// # use approx::assert_relative_eq;
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
     /// let ya = [0.0, 2.0, 4.0];
-    /// let interp = Cubic.build(&xa, &ya)?;
+    /// let interp = CubicInterpolator::build(&xa, &ya)?;
     /// let mut acc = Accelerator::new();
     ///
     /// let dydx2 = interp.eval_deriv2(&xa, &ya, 1.5, &mut acc)?;
-    ///
-    /// assert_eq!(dydx2, 0.0);
+    /// assert_relative_eq!(dydx2, 0.0);
     /// # Ok(())
     /// # }
     /// ```
     ///
     /// # Errors
     ///
-    /// Returns a [`DomainError`] if `x` is outside the range of `xa`.
+    /// Returns a [`Domain1dError`] if `x` is outside the range of `xa`.
     #[doc(alias = "gsl_interp_eval_deriv2")]
     #[doc(alias = "gsl_interp_eval_deriv2_e")]
     fn eval_deriv2(
         &self,
-        xa: &[T],
-        ya: &[T],
-        x: T,
+        xa: &[f64],
+        ya: &[f64],
+        x: f64,
         acc: &mut Accelerator,
-    ) -> Result<T, DomainError>;
+    ) -> Result<f64, Domain1dError>;
 
-    #[allow(rustdoc::broken_intra_doc_links)]
     /// Returns the numerical integral of an interpolated function over the range [`a` ,`b`], using the
     /// data arrays `xa` and `ya` and the [`Accelerator`] `acc`.
     ///
@@ -135,67 +123,52 @@ pub trait Interpolation<T> {
     ///
     /// ```
     /// # use rsl_interpolation::*;
-    /// #
+    /// # use approx::assert_relative_eq;
     /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
     /// let ya = [0.0, 2.0, 4.0];
-    /// let interp = Cubic.build(&xa, &ya)?;
+    /// let interp = CubicInterpolator::build(&xa, &ya)?;
     /// let mut acc = Accelerator::new();
     ///
     /// let int = interp.eval_integ(&xa, &ya, 0.0, 2.0, &mut acc)?;
-    ///
-    /// assert_eq!(int, 4.0);
+    /// assert_relative_eq!(int, 4.0);
     /// # Ok(())
     /// # }
     /// ```
     ///
     /// # Errors
     ///
-    /// Returns a [`DomainError`] if `a` or `b` is outside the range of xa.
+    /// Returns a [`Domain1dError`] if `a` or `b` is outside the range of xa.
     #[doc(alias = "gsl_interp_eval_integ")]
     #[doc(alias = "gsl_interp_eval_integ_e")]
     fn eval_integ(
         &self,
-        xa: &[T],
-        ya: &[T],
-        a: T,
-        b: T,
+        xa: &[f64],
+        ya: &[f64],
+        a: f64,
+        b: f64,
         acc: &mut Accelerator,
-    ) -> Result<T, DomainError>;
+    ) -> Result<f64, Domain1dError>;
 }
 
-/// Creates a [`DynInterpType`] of `typ` type.
-///
-/// Useful when `typ` is not known at compile time.
-///
-/// # Example
-/// ```
-/// # use rsl_interpolation::*;
-/// #
-/// # fn main() -> Result<(), InterpolationError> {
-/// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
-/// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
-/// let typ = "cubic";
-///
-/// let interp_type = make_interp_type(typ)?;
-/// let interp = interp_type.build(&xa, &ya)?;
-/// # Ok(())
-/// # }
-/// ```
-pub fn make_interp_type<T>(typ: &str) -> Result<DynInterpType<T>, InterpolationError>
-where
-    T: crate::Num + ndarray_linalg::Lapack,
-{
-    use crate::*;
+/// HACK: to make [`Box<dyn Interpolation>`] Clone.
+/// <https://stackoverflow.com/questions/30353462/how-to-clone-a-struct-storing-a-boxed-trait-object>.
+trait DynInterpolationClone {
+    fn clone_box(&self) -> Box<dyn Interpolation>;
+}
 
-    match typ.to_lowercase().as_str() {
-        "linear" => Ok(DynInterpType::new(Linear)),
-        "cubic" => Ok(DynInterpType::new(Cubic)),
-        "cubicperiodic" | "cubic periodic" => Ok(DynInterpType::new(CubicPeriodic)),
-        "akima" => Ok(DynInterpType::new(Akima)),
-        "akimaperiodic" | "akima periodic" => Ok(DynInterpType::new(AkimaPeriodic)),
-        "steffen" => Ok(DynInterpType::new(Akima)),
-        _ => Err(InterpolationError::InvalidType(typ.into())),
+impl<T> DynInterpolationClone for T
+where
+    T: 'static + Interpolation + Clone,
+{
+    fn clone_box(&self) -> Box<dyn Interpolation> {
+        Box::new(self.clone())
+    }
+}
+
+impl Clone for Box<dyn Interpolation> {
+    fn clone(&self) -> Self {
+        self.clone_box()
     }
 }
 
@@ -205,25 +178,12 @@ mod test {
     use crate::*;
 
     #[test]
-    fn test_dyn_interp_type() {
+    fn dyn_clone() {
         let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
         let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
-        let mut acc = Accelerator::new();
 
-        let x = 0.5;
-        let interp_type = DynInterpType::new(Cubic);
-        let interp = interp_type.build(&xa, &ya).unwrap();
-        interp.eval(&xa, &ya, x, &mut acc).unwrap();
-    }
+        let interp: Box<dyn Interpolation> = Box::new(CubicInterpolator::build(&xa, &ya).unwrap());
 
-    #[test]
-    fn test_make_interp_type() {
-        make_interp_type::<f64>("linear").unwrap();
-        make_interp_type::<f64>("cubic").unwrap();
-        make_interp_type::<f64>("cubicperiodic").unwrap();
-        make_interp_type::<f64>("akima").unwrap();
-        make_interp_type::<f64>("akimaperiodic").unwrap();
-        make_interp_type::<f64>("steffen").unwrap();
-        assert!(make_interp_type::<f64>("wrong").is_err());
+        let _ = interp.clone();
     }
 }

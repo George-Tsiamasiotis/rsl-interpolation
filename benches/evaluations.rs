@@ -12,13 +12,12 @@ const YA: [f64; 10] = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0];
 const X: f64 = 3.0;
 const A: f64 = 1.5;
 const B: f64 = 6.8;
-const TYP: Cubic = Cubic;
 
 // ===============================================================================================
 
 pub fn interp_evals(c: &mut Criterion) {
     let mut acc = Accelerator::new();
-    let interp = TYP.build(&XA, &YA).unwrap();
+    let interp = CubicInterpolator::build(&XA, &YA).unwrap();
 
     let mut group = c.benchmark_group("Low-level Interpolator Evaluation Methods");
     group.warm_up_time(Duration::from_millis(WARMUP_MILLIS));

@@ -1,18 +1,12 @@
-use crate::{
-    Bilinear, Interp2dType,
-    tests::{XYZTable, test_interp2d, test_interp2d_extra},
-};
+mod common;
 
-#[test]
-fn test_type_fields() {
-    let _ = <Bilinear as Interp2dType<f64>>::name(&Bilinear);
-    let _ = <Bilinear as Interp2dType<f64>>::min_size(&Bilinear);
-}
+use common::*;
+use rsl_interpolation::*;
 
 /// Tests bilinear interpolation using a symmetric function, f(x,y)=f(y,x), and diagonal
 /// interpolation points (x,y) where x=y. If these tests don't pass, something is seriously broken.
 #[test]
-fn gsl_test_bilinear_symmetric() {
+fn gsl_bilinear_symmetric() {
     let xa = [0.0, 1.0, 2.0, 3.0];
     let ya = [0.0, 1.0, 2.0, 3.0];
     #[rustfmt::skip]
@@ -27,24 +21,18 @@ fn gsl_test_bilinear_symmetric() {
     let ytest = [0.0, 0.5, 1.0, 1.5, 2.5, 3.0];
     let ztest = [1.0, 1.1, 1.2, 1.3, 1.5, 1.6];
 
-    let data_table = XYZTable {
-        x: &xa,
-        y: &ya,
-        z: &za,
-    };
-
     let test_e_table = XYZTable {
         x: &xtest,
         y: &ytest,
         z: &ztest,
     };
 
-    let interp = Bilinear.build(&xa, &ya, &za).unwrap();
-    test_interp2d(data_table, test_e_table, interp);
+    let spline = Spline2d::build::<BilinearInterpolator>(&xa, &ya, &za).unwrap();
+    test_spline2d(test_e_table, spline);
 }
 
 #[test]
-fn gsl_test_bilinear_asymmetric_z() {
+fn gsl_bilinear_asymmetric_z() {
     let xa = [0.0, 1.0, 2.0, 3.0];
     let ya = [0.0, 1.0, 2.0, 3.0];
     #[rustfmt::skip]
@@ -69,25 +57,19 @@ fn gsl_test_bilinear_asymmetric_z() {
         1.5067237, 1.626612, 1.6146423, 1.15436761,
     ];
 
-    let data_table = XYZTable {
-        x: &xa,
-        y: &ya,
-        z: &za,
-    };
-
     let test_e_table = XYZTable {
         x: &xtest,
         y: &ytest,
         z: &ztest,
     };
 
-    let interp = Bilinear.build(&xa, &ya, &za).unwrap();
-    test_interp2d(data_table, test_e_table, interp);
+    let spline = Spline2d::build::<BilinearInterpolator>(&xa, &ya, &za).unwrap();
+    test_spline2d(test_e_table, spline);
 }
 
 /// Extra test that includes all derivatives, and iterates through all (x, y) pairs.
 #[test]
-fn extra_test_bilinear() {
+fn extra_bilinear() {
     let xa = [0.0, 1.0];
     let ya = [0.0, 1.0];
     #[rustfmt::skip]
@@ -145,12 +127,6 @@ fn extra_test_bilinear() {
     let dyytest = [0.0; 81];
     let dxytest = [-1.5; 81];
 
-    let data_table = XYZTable {
-        x: &xa,
-        y: &ya,
-        z: &za,
-    };
-
     let test_e_table = XYZTable {
         x: &xtest,
         y: &ytest,
@@ -187,16 +163,15 @@ fn extra_test_bilinear() {
         z: &dxytest,
     };
 
-    let interp = Bilinear.build(&xa, &ya, &za).unwrap();
-    test_interp2d_extra(
-        data_table,
+    let spline = Spline2d::build::<BilinearInterpolator>(&xa, &ya, &za).unwrap();
+    test_spline2d_extra(
         test_e_table,
         test_dx_table,
         test_dy_table,
         test_dxx_table,
         test_dyy_table,
         test_dxy_table,
-        interp,
+        spline,
         "bilinear",
     );
 }
