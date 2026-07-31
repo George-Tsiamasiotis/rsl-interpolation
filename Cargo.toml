@@ -11,15 +11,14 @@ repository = "https://github.com/George-Tsiamasiotis/rsl-interpolation.git"
 description = "A re-write of GSL's Interpolation Routines in Rust."
 
 [dependencies]
-is_close = "0.1.3"
 ndarray = "0.17.2"
 ndarray-linalg = "0.18.1"
-num = "0.4.3"
-num-traits = "0.2.19"
 thiserror = "2.0.18"
 
 [dev-dependencies]
+is_close = "0.1.3"
 criterion = "0.7.0"
+rand = "0.10.2"
 
 [features]
 default = []
@@ -54,12 +53,8 @@ name = "accelerator"
 harness = false
 
 [[bench]]
-name = "cache"
+name = "accelerator2d"
 harness = false
-
-[[bin]]
-name = "cache"
-path = "src/bin/cache.rs"
 
 [workspace.lints.rust]
 missing_docs = "warn"

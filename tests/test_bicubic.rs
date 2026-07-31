@@ -1,16 +1,7 @@
-use crate::Bicubic;
-use crate::Interpolation2d;
-use crate::interp2d::Interp2dType;
-use crate::tests::XYZTable;
-use crate::tests::test_interp2d;
-use crate::tests::test_interp2d_extra;
-use crate::{Accelerator, Cache};
+mod common;
 
-#[test]
-fn test_type_fields() {
-    let _ = <Bicubic as Interp2dType<f64>>::name(&Bicubic);
-    let _ = <Bicubic as Interp2dType<f64>>::min_size(&Bicubic);
-}
+use common::*;
+use rsl_interpolation::*;
 
 /// Linear case
 #[test]
@@ -41,7 +32,7 @@ fn gsl_test_bicubic1() {
         z: &ztest,
     };
 
-    let interp = Bicubic.build(&xa, &ya, &za).unwrap();
+    let interp = BicubicInterpolator::build(&xa, &ya, &za).unwrap();
     test_interp2d(data_table, test_e_table, interp);
 }
 
@@ -89,7 +80,7 @@ fn gsl_test_bicubic2() {
         z: &ztest,
     };
 
-    let interp = Bicubic.build(&xa, &ya, &za).unwrap();
+    let interp = BicubicInterpolator::build(&xa, &ya, &za).unwrap();
     test_interp2d(data_table, test_e_table, interp);
 }
 
@@ -137,7 +128,7 @@ fn gsl_test_bicubic3() {
         z: &ztest,
     };
 
-    let interp = Bicubic.build(&xa, &ya, &za).unwrap();
+    let interp = BicubicInterpolator::build(&xa, &ya, &za).unwrap();
     test_interp2d(data_table, test_e_table, interp);
 }
 
@@ -332,7 +323,7 @@ fn extra_test_bicubic() {
         z: &dxytest,
     };
 
-    let interp = Bicubic.build(&xa, &ya, &za).unwrap();
+    let interp = BicubicInterpolator::build(&xa, &ya, &za).unwrap();
     test_interp2d_extra(
         data_table,
         test_e_table,
@@ -346,12 +337,12 @@ fn extra_test_bicubic() {
     );
 }
 
-/// Fixes a bug where the uninitialized Cache appears updated the first time it is called.
+/// Fixes a bug where the uninitialized Accelerator2d appears updated the first time it is called.
 ///
-/// If x[0] <= x <= x[1] AND y[0] <= y <= y[0] on the first called, the Cache's acc indices are
+/// If x[0] <= x <= x[1] AND y[0] <= y <= y[0] on the first called, the Accelerator2d's acc indices are
 /// zero, while all the other fields where NaNs.
 ///
-/// This caused the interpolator to believe that the Cache is updated, causing NaNs to bubble up.
+/// This caused the interpolator to believe that the Accelerator2d is updated, causing NaNs to bubble up.
 #[test]
 fn test_uninit_cache_00eval() {
     let xa = [0.0, 1.0, 2.0, 3.0];
@@ -364,13 +355,9 @@ fn test_uninit_cache_00eval() {
         1.3, 1.4, 1.5, 1.6,
     ];
 
-    let interp = Bicubic.build(&xa, &ya, &za).unwrap();
-    let mut xacc = Accelerator::new();
-    let mut yacc = Accelerator::new();
-    let mut cache = Cache::new();
+    let interp = BicubicInterpolator::build(&xa, &ya, &za).unwrap();
+    let acc = &mut Accelerator2d::new();
 
-    let v: f64 = interp
-        .eval(&xa, &ya, &za, 0.5, 0.5, &mut xacc, &mut yacc, &mut cache)
-        .unwrap();
+    let v: f64 = interp.eval(&xa, &ya, &za, 0.5, 0.5, acc).unwrap();
     assert!(v.is_finite());
 }

@@ -1,64 +1,45 @@
+#![allow(dead_code)]
+
 use is_close::Comparator;
 use std::f64;
+
+use rsl_interpolation::*;
 
 // GSL uses this to compare floats
 const EPS: f64 = 1e-10;
 const ATOL: f64 = 1e-9;
 
-use crate::Accelerator;
-use crate::Cache;
-use crate::Interpolation;
-use crate::Interpolation2d;
-
-mod test_accel;
-mod test_akima;
-mod test_cache_accel_sync;
-mod test_cubic;
-mod test_cubic_periodic;
-mod test_linear;
-mod test_steffen;
-
-mod test_bicubic;
-mod test_bilinear;
-
 /// Custom Comparator with pre-set tolerances, to be used across all tests, instead of invoking the
 /// macro every time.
-pub(crate) fn build_comparator<'a, T>() -> Comparator<'a, T>
-where
-    T: crate::Num + 'a,
-{
-    let mut builder = is_close::default::<T>();
-    builder
-        .rel_tol(T::from(EPS).unwrap())
-        .abs_tol(T::from(ATOL).unwrap())
-        .method(is_close::AVERAGE);
+pub(crate) fn build_comparator<'a>() -> Comparator<'a, f64> {
+    let mut builder = is_close::default();
+    builder.rel_tol(EPS).abs_tol(ATOL).method(is_close::AVERAGE);
 
     builder.compile()
 }
 
 /// A Primitive 2D table for holding the x and y values. Don't bother with num::Float here
-pub(crate) struct XYTable<'a, T>
-where
-    T: crate::Num,
-{
-    x: &'a [T],
-    y: &'a [T],
+pub(crate) struct XYTable<'a> {
+    pub x: &'a [f64],
+    pub y: &'a [f64],
 }
 
 /// Test function for eval(), eval_deriv() and eval_integ() for 1d interpolation. Corresponds to
 /// the transferred GSL tests.
 #[rustfmt::skip]
-pub(crate) fn test_interp<I, T>(
-    data_table: XYTable<T>,
-    test_e_table: XYTable<T>,
-    test_d_table: XYTable<T>,
-    test_i_table: XYTable<T>,
+pub(crate) fn test_interp<I>(
+    data_table: XYTable,
+    test_e_table: XYTable,
+    test_d_table: XYTable,
+    test_i_table: XYTable,
     interp: I,
 ) where
-    T: crate::Num,
-    I: Interpolation<T>,
+    I: Interpolation+Interpolator,
 {
-    let comp = build_comparator::<T>();
+    interp.name();
+    interp.min_size();
+
+    let comp = build_comparator();
     let mut acc = Accelerator::new();
 
     for (i, x) in test_e_table.x.iter().enumerate() {
@@ -75,18 +56,17 @@ pub(crate) fn test_interp<I, T>(
 
 /// Test function for extra tests with GSL data. Includes eval_deriv2() testing.
 #[rustfmt::skip]
-pub(crate) fn test_interp_extra<I, T>(
-    data_table: XYTable<T>,
-    test_e_table: XYTable<T>,
-    test_d_table: XYTable<T>,
-    test_d2_table: XYTable<T>,
-    test_i_table: XYTable<T>,
+pub(crate) fn test_interp_extra<I>(
+    data_table: XYTable,
+    test_e_table: XYTable,
+    test_d_table: XYTable,
+    test_d2_table: XYTable,
+    test_i_table: XYTable,
     interp: I,
 ) where
-    T: crate::Num,
-    I: Interpolation<T>,
+    I: Interpolation,
 {
-    let comp = build_comparator::<T>();
+    let comp = build_comparator();
     let mut acc = Accelerator::new();
 
     for (i, x) in test_e_table.x.iter().enumerate() {
@@ -108,27 +88,25 @@ pub(crate) fn test_interp_extra<I, T>(
 // ================================================================================================
 
 /// A Primitive 2D table for holding the x and y values. Don't bother with num::Float here
-pub(crate) struct XYZTable<'a, T> {
-    x: &'a [T],
-    y: &'a [T],
-    z: &'a [T],
+pub(crate) struct XYZTable<'a> {
+    pub x: &'a [f64],
+    pub y: &'a [f64],
+    pub z: &'a [f64],
 }
 
 /// Test function for eval(), for 2d interpolation. Corresponds to the transferred GSL tests.
-#[rustfmt::skip]
-pub(crate) fn test_interp2d<I, T>(data_table: XYZTable<T>, test_e_table: XYZTable<T>, interp: I)
+pub(crate) fn test_interp2d<I>(data_table: XYZTable, test_e_table: XYZTable, interp: I)
 where
-    T: crate::Num,
-    I: Interpolation2d<T>,
+    I: Interpolation2d,
 {
-    let comp = build_comparator::<T>();
-    let mut xacc = Accelerator::new();
-    let mut yacc = Accelerator::new();
-    let mut cache = Cache::new();
+    let comp = build_comparator();
+    let acc = &mut Accelerator2d::new();
 
     for (i, x) in test_e_table.x.iter().enumerate() {
         let y = test_e_table.y[i];
-        let s1 = interp.eval(data_table.x, data_table.y, data_table.z, *x, y, &mut xacc, &mut yacc, &mut cache).unwrap();
+        let s1 = interp
+            .eval(data_table.x, data_table.y, data_table.z, *x, y, acc)
+            .unwrap();
 
         // No deriv tests apparently
         let expected = test_e_table.z[i];
@@ -139,35 +117,32 @@ where
 /// Test function including all derivatives and iteration over all (x, y) pairs,  for use with extra
 /// 2d testing.
 #[rustfmt::skip]
-pub(crate) fn test_interp2d_extra<I, T>(
-    data_table: XYZTable<T>,
-    test_e_table: XYZTable<T>,
-    test_dx_table: XYZTable<T>,
-    test_dy_table: XYZTable<T>,
-    test_dxx_table: XYZTable<T>,
-    test_dyy_table: XYZTable<T>,
-    test_dxy_table: XYZTable<T>,
+pub(crate) fn test_interp2d_extra<I>(
+    data_table: XYZTable,
+    test_e_table: XYZTable,
+    test_dx_table: XYZTable,
+    test_dy_table: XYZTable,
+    test_dxx_table: XYZTable,
+    test_dyy_table: XYZTable,
+    test_dxy_table: XYZTable,
     interp: I,
     interp_type: &str,
 ) where
-    T: crate::Num,
-    I: Interpolation2d<T>,
+    I: Interpolation2d,
 {
-    let comp = build_comparator::<T>();
-    let mut xacc = Accelerator::new();
-    let mut yacc = Accelerator::new();
-    let mut cache = Cache::new();
+    let comp = build_comparator();
+    let acc = &mut Accelerator2d::new();
 
     // Access the z values linearly instead of using idx(), to comply with gsl's test output
     let mut index = 0;
     for x in test_e_table.x.iter() {
         for y in test_e_table.y.iter() {
-            let eval =          interp.eval( data_table.x, data_table.y, data_table.z, *x, *y, &mut xacc, &mut yacc, &mut cache).unwrap();
-            let dx   =  interp.eval_deriv_x( data_table.x, data_table.y, data_table.z, *x, *y, &mut xacc, &mut yacc, &mut cache).unwrap();
-            let dy   =  interp.eval_deriv_y( data_table.x, data_table.y, data_table.z, *x, *y, &mut xacc, &mut yacc, &mut cache).unwrap();
-            let dxx  = interp.eval_deriv_xx( data_table.x, data_table.y, data_table.z, *x, *y, &mut xacc, &mut yacc, &mut cache).unwrap();
-            let dyy  = interp.eval_deriv_yy( data_table.x, data_table.y, data_table.z, *x, *y, &mut xacc, &mut yacc, &mut cache).unwrap();
-            let dxy  = interp.eval_deriv_xy( data_table.x, data_table.y, data_table.z, *x, *y, &mut xacc, &mut yacc, &mut cache).unwrap();
+            let eval =          interp.eval( data_table.x, data_table.y, data_table.z, *x, *y, acc).unwrap();
+            let dx   =  interp.eval_deriv_x( data_table.x, data_table.y, data_table.z, *x, *y, acc).unwrap();
+            let dy   =  interp.eval_deriv_y( data_table.x, data_table.y, data_table.z, *x, *y, acc).unwrap();
+            let dxx  = interp.eval_deriv_xx( data_table.x, data_table.y, data_table.z, *x, *y, acc).unwrap();
+            let dyy  = interp.eval_deriv_yy( data_table.x, data_table.y, data_table.z, *x, *y, acc).unwrap();
+            let dxy  = interp.eval_deriv_xy( data_table.x, data_table.y, data_table.z, *x, *y, acc).unwrap();
 
             let expected_eval = test_e_table.z[index];
             let expected_dx= test_dx_table.z[index];
@@ -190,13 +165,13 @@ pub(crate) fn test_interp2d_extra<I, T>(
     match interp_type {
         "bilinear" => {
             let total_evaluations = index * 4; // `deriv_xx` and `deriv_yy` do not use the cache
-            assert_eq!(xacc.hits + xacc.misses, total_evaluations);
-            assert_eq!(yacc.hits + yacc.misses, total_evaluations);
+            assert_eq!(acc.xacc().hits() + acc.xacc().misses(), total_evaluations);
+            assert_eq!(acc.yacc().hits() + acc.yacc().misses(), total_evaluations);
         }
         "bicubic" => {
             let total_evaluations = index * 6;
-            assert_eq!(xacc.hits + xacc.misses, total_evaluations);
-            assert_eq!(yacc.hits + yacc.misses, total_evaluations);
+            assert_eq!(acc.xacc().hits() + acc.xacc().misses(), total_evaluations);
+            assert_eq!(acc.yacc().hits() + acc.yacc().misses(), total_evaluations);
         }
         _ => unreachable!()
     }

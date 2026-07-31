@@ -1,14 +1,7 @@
-use crate::InterpType;
-use crate::Steffen;
-use crate::tests::XYTable;
-use crate::tests::test_interp;
-use crate::tests::test_interp_extra;
+mod common;
 
-#[test]
-fn test_type_fields() {
-    let _ = <Steffen as InterpType<f64>>::name(&Steffen);
-    let _ = <Steffen as InterpType<f64>>::min_size(&Steffen);
-}
+use common::*;
+use rsl_interpolation::*;
 
 #[test]
 fn gsl_test_steffen1() {
@@ -37,7 +30,7 @@ fn gsl_test_steffen1() {
         y: &iytest,
     };
 
-    let interp = Steffen.build(&xa, &ya).unwrap();
+    let interp = SteffenInterpolator::build(&xa, &ya).unwrap();
     test_interp(data_table, test_e_table, test_d_table, test_i_table, interp);
 }
 
@@ -210,7 +203,7 @@ fn gsl_test_steffen2() {
         y: &iytest,
     };
 
-    let interp = Steffen.build(&xa, &ya).unwrap();
+    let interp = SteffenInterpolator::build(&xa, &ya).unwrap();
     test_interp(data_table, test_e_table, test_d_table, test_i_table, interp);
 }
 
@@ -292,7 +285,7 @@ fn extra_test_steffen() {
         y: &iytest,
     };
 
-    let interp = Steffen.build(&xa, &ya).unwrap();
+    let interp = SteffenInterpolator::build(&xa, &ya).unwrap();
     test_interp_extra(
         data_table,
         test_e_table,

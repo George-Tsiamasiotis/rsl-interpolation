@@ -1,37 +1,28 @@
-use std::marker::PhantomData;
+//! Definition of Bilinear Interpolator.
 
-use crate::Accelerator;
-use crate::Cache;
-use crate::DomainError;
-use crate::Interp2dType;
-use crate::Interpolation2d;
-use crate::InterpolationError;
-use crate::types::utils::check_if_inbounds;
-use crate::types::utils::check2d_data;
+use crate::Accelerator2d;
+use crate::{Domain2dError, InterpolatorError};
+use crate::{Interpolation2d, Interpolator2d};
+use crate::{check_if_inbounds2d, check2d_data};
 
 const MIN_SIZE: usize = 2;
 
-/// Bilinear Interpolation type.
+/// Bilinear Interpolator.
 ///
-/// The simplest type of 2d Interpolation.
+/// This interpolation method does not require any additional memory.
 #[doc(alias = "gsl_interp2d_bilinear")]
-#[derive(Debug, Clone, Copy)]
-pub struct Bilinear;
+#[derive(Debug, Clone)]
+#[non_exhaustive]
+pub struct BilinearInterpolator;
 
-impl<T> Interp2dType<T> for Bilinear
-where
-    T: crate::Num,
-{
-    type Interpolation2d = BilinearInterp<T>;
-
+impl Interpolator2d for BilinearInterpolator {
     /// Constructs a Bilinear Interpolator.
     ///
     /// # Example
-    ///
     /// ```
     /// # use rsl_interpolation::*;
     /// #
-    /// # fn main() -> Result<(), InterpolationError>{
+    /// # fn main() -> Result<(), InterpolatorError>{
     /// let xa = [0.0, 1.0, 2.0];
     /// let ya = [0.0, 2.0, 4.0];
     /// // z = x + y, in column-major order
@@ -41,16 +32,19 @@ where
     ///     4.0, 5.0, 6.0,
     /// ];
     ///
-    /// let interp = Bilinear.build(&xa, &ya, &za)?;
+    /// let interp = BilinearInterpolator::build(&xa, &ya, &za)?;
     /// # Ok(())
     /// # }
     /// ```
-    fn build(&self, xa: &[T], ya: &[T], za: &[T]) -> Result<BilinearInterp<T>, InterpolationError> {
+    ///
+    /// # Errors
+    ///
+    /// - [`InterpolatorError::UnsortedDataset`]: `xa` or `ya` are not monotonically increasing.
+    /// - [`InterpolatorError::NotEnoughPoints`]: length of `xa` or `ya` is less that 2.
+    /// - [`InterpolatorError::ZGridMismatch`]: `xa.len()*ya.len() != za.len()`.
+    fn build(xa: &[f64], ya: &[f64], za: &[f64]) -> Result<Self, InterpolatorError> {
         check2d_data(xa, ya, za, MIN_SIZE)?;
-
-        Ok(BilinearInterp {
-            _variable_type: PhantomData,
-        })
+        Ok(Self)
     }
 
     fn name(&self) -> &str {
@@ -64,188 +58,146 @@ where
 
 // ===============================================================================================
 
-/// Bilinear Interpolator.
-///
-/// Provides all the evaluation methods.
-///
-/// Should be constructed through the [`Bilinear`] type.
-#[derive(Debug, Clone, Copy)]
-pub struct BilinearInterp<T> {
-    _variable_type: PhantomData<T>,
-}
-
-impl<T> Interpolation2d<T> for BilinearInterp<T>
-where
-    T: crate::Num,
-{
-    #[allow(unused_variables)]
+impl Interpolation2d for BilinearInterpolator {
     fn eval_extrap(
         &self,
-        xa: &[T],
-        ya: &[T],
-        za: &[T],
-        x: T,
-        y: T,
-        xacc: &mut Accelerator,
-        yacc: &mut Accelerator,
-        cache: &mut Cache<T>,
-    ) -> Result<T, DomainError> {
-        let is_uptodate = cache.is_uptodate(xa, ya, x, y, xacc, yacc);
+        xa: &[f64],
+        ya: &[f64],
+        za: &[f64],
+        x: f64,
+        y: f64,
+        acc: &mut Accelerator2d,
+    ) -> Result<f64, Domain2dError> {
+        let is_uptodate = acc.is_uptodate(xa, ya, x, y);
         if !is_uptodate {
-            cache.update_step1(xa, ya, za)?;
+            acc.update_step1(xa, ya, za);
         }
 
-        let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
-        let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
-        let (dx, dy) = cache.get_partials();
+        let (xlo, _, ylo, _) = acc.get_xy_grid_values();
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = acc.get_z_grid_values();
+        let (dx, dy) = acc.get_partials();
 
-        debug_assert!(dx > T::zero());
-        debug_assert!(dy > T::zero());
+        debug_assert!(dx > 0.0);
+        debug_assert!(dy > 0.0);
 
         let t = (x - xlo) / dx;
         let u = (y - ylo) / dy;
 
-        let one = T::one();
-        let result = (one - t) * (one - u) * zminmin
-            + t * (one - u) * zmaxmin
-            + (one - t) * u * zminmax
+        let result = (1.0 - t) * (1.0 - u) * zminmin
+            + t * (1.0 - u) * zmaxmin
+            + (1.0 - t) * u * zminmax
             + t * u * zmaxmax;
         Ok(result)
     }
 
-    #[allow(unused_variables)]
     fn eval_deriv_x(
         &self,
-        xa: &[T],
-        ya: &[T],
-        za: &[T],
-        x: T,
-        y: T,
-        xacc: &mut Accelerator,
-        yacc: &mut Accelerator,
-        cache: &mut Cache<T>,
-    ) -> Result<T, DomainError> {
-        check_if_inbounds(xa, x)?;
-        check_if_inbounds(ya, y)?;
+        xa: &[f64],
+        ya: &[f64],
+        za: &[f64],
+        x: f64,
+        y: f64,
+        acc: &mut Accelerator2d,
+    ) -> Result<f64, Domain2dError> {
+        check_if_inbounds2d(xa, ya, x, y)?;
 
-        let is_uptodate = cache.is_uptodate(xa, ya, x, y, xacc, yacc);
+        let is_uptodate = acc.is_uptodate(xa, ya, x, y);
         if !is_uptodate {
-            cache.update_step1(xa, ya, za)?;
+            acc.update_step1(xa, ya, za);
         }
 
-        let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
-        let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
-        let (dx, dy) = cache.get_partials();
+        let (_, _, ylo, _) = acc.get_xy_grid_values();
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = acc.get_z_grid_values();
+        let (dx, dy) = acc.get_partials();
 
-        debug_assert!(dx > T::zero());
-        debug_assert!(dy > T::zero());
+        debug_assert!(dx > 0.0);
+        debug_assert!(dy > 0.0);
 
-        let one = T::one();
-        let dt = one / dx;
+        let dt = 1.0 / dx;
         let u = (y - ylo) / dy;
 
-        let result = dt * (-(one - u) * zminmin + (one - u) * zmaxmin - u * zminmax + u * zmaxmax);
+        let result = dt * (-(1.0 - u) * zminmin + (1.0 - u) * zmaxmin - u * zminmax + u * zmaxmax);
         Ok(result)
     }
 
-    #[allow(unused_variables)]
     fn eval_deriv_y(
         &self,
-        xa: &[T],
-        ya: &[T],
-        za: &[T],
-        x: T,
-        y: T,
-        xacc: &mut Accelerator,
-        yacc: &mut Accelerator,
-        cache: &mut Cache<T>,
-    ) -> Result<T, DomainError> {
-        check_if_inbounds(xa, x)?;
-        check_if_inbounds(ya, y)?;
+        xa: &[f64],
+        ya: &[f64],
+        za: &[f64],
+        x: f64,
+        y: f64,
+        acc: &mut Accelerator2d,
+    ) -> Result<f64, Domain2dError> {
+        check_if_inbounds2d(xa, ya, x, y)?;
 
-        let is_uptodate = cache.is_uptodate(xa, ya, x, y, xacc, yacc);
+        let is_uptodate = acc.is_uptodate(xa, ya, x, y);
         if !is_uptodate {
-            cache.update_step1(xa, ya, za)?;
+            acc.update_step1(xa, ya, za);
         }
 
-        let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
-        let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
-        let (dx, dy) = cache.get_partials();
+        let (xlo, _, _, _) = acc.get_xy_grid_values();
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = acc.get_z_grid_values();
+        let (dx, dy) = acc.get_partials();
 
-        debug_assert!(dx > T::zero());
-        debug_assert!(dy > T::zero());
+        debug_assert!(dx > 0.0);
+        debug_assert!(dy > 0.0);
 
-        let one = T::one();
         let t = (x - xlo) / dx;
-        let du = one / dy;
+        let du = 1.0 / dy;
 
-        let result = du * (-(one - t) * zminmin - t * zmaxmin + (one - t) * zminmax + t * zmaxmax);
+        let result = du * (-(1.0 - t) * zminmin - t * zmaxmin + (1.0 - t) * zminmax + t * zmaxmax);
         Ok(result)
     }
 
-    #[allow(unused_variables)]
     fn eval_deriv_xx(
         &self,
-        xa: &[T],
-        ya: &[T],
-        za: &[T],
-        x: T,
-        y: T,
-        xacc: &mut Accelerator,
-        yacc: &mut Accelerator,
-        cache: &mut Cache<T>,
-    ) -> Result<T, DomainError> {
-        check_if_inbounds(xa, x)?;
-        check_if_inbounds(ya, y)?;
-
-        Ok(T::zero())
+        xa: &[f64],
+        ya: &[f64],
+        _: &[f64],
+        x: f64,
+        y: f64,
+        _: &mut Accelerator2d,
+    ) -> Result<f64, Domain2dError> {
+        check_if_inbounds2d(xa, ya, x, y)?;
+        Ok(0.0)
     }
 
-    #[allow(unused_variables)]
     fn eval_deriv_yy(
         &self,
-        xa: &[T],
-        ya: &[T],
-        za: &[T],
-        x: T,
-        y: T,
-        xacc: &mut Accelerator,
-        yacc: &mut Accelerator,
-        cache: &mut Cache<T>,
-    ) -> Result<T, DomainError> {
-        check_if_inbounds(xa, x)?;
-        check_if_inbounds(ya, y)?;
+        xa: &[f64],
+        ya: &[f64],
+        _: &[f64],
+        x: f64,
+        y: f64,
+        _: &mut Accelerator2d,
+    ) -> Result<f64, Domain2dError> {
+        check_if_inbounds2d(xa, ya, x, y)?;
 
-        Ok(T::zero())
+        Ok(0.0)
     }
 
-    #[allow(unused_variables)]
     fn eval_deriv_xy(
         &self,
-        xa: &[T],
-        ya: &[T],
-        za: &[T],
-        x: T,
-        y: T,
-        xacc: &mut Accelerator,
-        yacc: &mut Accelerator,
-        cache: &mut Cache<T>,
-    ) -> Result<T, DomainError> {
-        check_if_inbounds(xa, x)?;
-        check_if_inbounds(ya, y)?;
+        xa: &[f64],
+        ya: &[f64],
+        za: &[f64],
+        x: f64,
+        y: f64,
+        acc: &mut Accelerator2d,
+    ) -> Result<f64, Domain2dError> {
+        check_if_inbounds2d(xa, ya, x, y)?;
 
-        let is_uptodate = cache.is_uptodate(xa, ya, x, y, xacc, yacc);
+        let is_uptodate = acc.is_uptodate(xa, ya, x, y);
         if !is_uptodate {
-            cache.update_step1(xa, ya, za)?;
+            acc.update_step1(xa, ya, za);
         }
 
-        let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
-        let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
-        let (dx, dy) = cache.get_partials();
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = acc.get_z_grid_values();
+        let (dx, dy) = acc.get_partials();
 
-        let one = T::one();
-        let dt = one / dx;
-        let du = one / dy;
+        let dt = 1.0 / dx;
+        let du = 1.0 / dy;
 
         let result = dt * du * (zminmin - zmaxmin - zminmax + zmaxmax);
         Ok(result)

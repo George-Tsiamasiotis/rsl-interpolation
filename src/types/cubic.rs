@@ -1,18 +1,16 @@
+//! Definition of Cubic and CubicPeriodic Interpolator.
+
 use ndarray::Array1;
-use ndarray_linalg::{Lapack, MatrixLayout, SolveTridiagonal, Tridiagonal};
-use num::One;
+use ndarray_linalg::{MatrixLayout, SolveTridiagonal, Tridiagonal};
 
 use crate::Accelerator;
-use crate::DomainError;
-use crate::InterpType;
-use crate::Interpolation;
-use crate::InterpolationError;
-use crate::types::utils::integ_eval;
-use crate::types::utils::{check_if_inbounds, check1d_data, diff};
+use crate::{Domain1dError, InterpolatorError};
+use crate::{Interpolation, Interpolator};
+use crate::{check_if_inbounds, check1d_data, diff, integ_eval};
 
 const MIN_SIZE: usize = 3;
 
-/// Cubic Interpolation type.
+/// Cubic Interpolator.
 ///
 /// Cubic Interpolation with natural boundary conditions. The resulting curve is piecewise cubic on each
 /// interval, with matching first and second derivatives at the supplied data-points. The second
@@ -23,15 +21,13 @@ const MIN_SIZE: usize = 3;
 /// Numerical Algorithms with C - Gisela Engeln-Mullges, Frank Uhlig - 1996 -
 /// Algorithm 10.1, pg 254
 #[doc(alias = "gsl_interp_cspline")]
-#[derive(Debug, Clone, Copy)]
-pub struct Cubic;
+#[derive(Debug, Clone)]
+#[non_exhaustive]
+pub struct CubicInterpolator {
+    c: Box<[f64]>,
+}
 
-impl<T> InterpType<T> for Cubic
-where
-    T: crate::Num + Lapack,
-{
-    type Interpolation = CubicInterp<T>;
-
+impl Interpolator for CubicInterpolator {
     /// Constructs a Cubic Interpolator.
     ///
     /// # Example
@@ -39,14 +35,21 @@ where
     /// ```
     /// # use rsl_interpolation::*;
     /// #
-    /// # fn main() -> Result<(), InterpolationError>{
+    /// # fn main() -> Result<(), InterpolatorError>{
     /// let xa = [0.0, 1.0, 2.0];
     /// let ya = [0.0, 2.0, 4.0];
-    /// let interp = Cubic.build(&xa, &ya)?;
+    /// let interp = CubicInterpolator::build(&xa, &ya)?;
     /// # Ok(())
     /// # }
     /// ```
-    fn build(&self, xa: &[T], ya: &[T]) -> Result<CubicInterp<T>, InterpolationError> {
+    ///
+    /// # Errors
+    ///
+    /// - [`InterpolatorError::UnsortedDataset`]: `xa` is not monotonically increasing.
+    /// - [`InterpolatorError::DatasetMismatch`]: `xa` and `ya` do not have the same length.
+    /// - [`InterpolatorError::NotEnoughPoints`]: length of `xa` is less that 3.
+    /// - [`InterpolatorError::BLASTridiagError`]: Error when solving the tridiagonal system.
+    fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolatorError> {
         check1d_data(xa, ya, MIN_SIZE)?;
 
         // Engeln-Mullges G. - Uhlig F.: Algorithm 10.1, pg 254
@@ -55,20 +58,17 @@ where
         let h = diff(xa);
         debug_assert_eq!(h.len(), xa.len() - 1);
 
-        let two = T::from(2).unwrap();
-        let three = T::from(3).unwrap();
-
         // Ac=g setup
-        let mut g = Vec::<T>::with_capacity(sys_size);
-        let mut diag = Vec::<T>::with_capacity(sys_size);
-        let mut offdiag = Vec::<T>::with_capacity(sys_size);
+        let mut g = Vec::with_capacity(sys_size);
+        let mut diag = Vec::with_capacity(sys_size);
+        let mut offdiag = Vec::with_capacity(sys_size);
         for i in 0..sys_size {
-            g.push(if h[i].is_zero() {
-                T::zero()
+            g.push(if h[i] == 0.0 {
+                0.0
             } else {
-                three * (ya[i + 2] - ya[i + 1]) / h[i + 1] - three * (ya[i + 1] - ya[i]) / h[i]
+                3.0 * (ya[i + 2] - ya[i + 1]) / h[i + 1] - 3.0 * (ya[i + 1] - ya[i]) / h[i]
             });
-            diag.push(two * (h[i] + h[i + 1]));
+            diag.push(2.0 * (h[i] + h[i + 1]));
             offdiag.push(h[i + 1]);
         }
         // The last element of offdiag is not actually valid, by definition. Popping it is not
@@ -88,15 +88,15 @@ where
         };
 
         // Ac=g solving
-        let mut c = Vec::<T>::with_capacity(xa.len());
-        c.push(T::zero());
-        if sys_size.is_one() {
+        let mut c = Vec::with_capacity(xa.len());
+        c.push(0.0);
+        if sys_size == 1 {
             c.push(g[0] / diag[0]);
         } else {
             let coeffs = match matrix.solve_tridiagonal(&Array1::from_vec(g.clone())) {
                 Ok(coeffs) => coeffs,
                 Err(err) => {
-                    return Err(InterpolationError::BLASTridiagError {
+                    return Err(InterpolatorError::BLASTridiagError {
                         which_interp: "Cubic".into(),
                         source: err,
                     });
@@ -104,17 +104,12 @@ where
             };
             c = [c, coeffs.to_vec()].concat();
         }
-        c.push(T::zero());
+        c.push(0.0);
 
-        // g, diag, and offdiag are only needed for the calculation of c and are not used anywhere
-        // else from this point, but lets keep them.
-        let state = CubicInterp {
-            c,
-            g,
-            diag,
-            offdiag,
-        };
-        Ok(state)
+        // g, diag, and offdiag are only needed for the calculation of c and are not used again
+        Ok(CubicInterpolator {
+            c: c.into_boxed_slice(),
+        })
     }
 
     fn name(&self) -> &str {
@@ -128,87 +123,66 @@ where
 
 // ===============================================================================================
 
-/// Cubic Interpolator.
-///
-/// Provides all the evaluation methods.
-///
-/// Should be constructed through the [`Cubic`] type.
-#[allow(dead_code)]
-#[derive(Debug, Clone)]
-pub struct CubicInterp<T>
-where
-    T: crate::Num,
-{
-    c: Vec<T>,
-    g: Vec<T>,
-    diag: Vec<T>,
-    offdiag: Vec<T>,
-}
-
-impl<T> Interpolation<T> for CubicInterp<T>
-where
-    T: crate::Num + Lapack,
-{
-    fn eval(&self, xa: &[T], ya: &[T], x: T, acc: &mut Accelerator) -> Result<T, DomainError> {
+impl Interpolation for CubicInterpolator {
+    fn eval(
+        &self,
+        xa: &[f64],
+        ya: &[f64],
+        x: f64,
+        acc: &mut Accelerator,
+    ) -> Result<f64, Domain1dError> {
         cubic_eval(xa, ya, &self.c, x, acc)
     }
 
     fn eval_deriv(
         &self,
-        xa: &[T],
-        ya: &[T],
-        x: T,
+        xa: &[f64],
+        ya: &[f64],
+        x: f64,
         acc: &mut Accelerator,
-    ) -> Result<T, DomainError> {
+    ) -> Result<f64, Domain1dError> {
         cubic_eval_deriv(xa, ya, &self.c, x, acc)
     }
 
     fn eval_deriv2(
         &self,
-        xa: &[T],
-        ya: &[T],
-        x: T,
+        xa: &[f64],
+        ya: &[f64],
+        x: f64,
         acc: &mut Accelerator,
-    ) -> Result<T, DomainError> {
+    ) -> Result<f64, Domain1dError> {
         cubic_eval_deriv2(xa, ya, &self.c, x, acc)
     }
 
     fn eval_integ(
         &self,
-        xa: &[T],
-        ya: &[T],
-        a: T,
-        b: T,
+        xa: &[f64],
+        ya: &[f64],
+        a: f64,
+        b: f64,
         acc: &mut Accelerator,
-    ) -> Result<T, DomainError> {
+    ) -> Result<f64, Domain1dError> {
         cubic_eval_integ(xa, ya, &self.c, a, b, acc)
     }
 }
 
 //=================================================================================================
 
-/// Cubic Periodic Interpolation type.
+/// Cubic Periodic interpolator.
 ///
 /// Cubic Spline with periodic boundary conditions. The resulting curve is piecewise cubic on each
 /// interval, with matching first and second derivatives at the supplied data-points. The
 /// derivatives at the first and last points are also matched. Note that the last point in the data
 /// must have the same y-value as the first point, otherwise the resulting periodic interpolation
 /// will have a discontinuity at the boundary.
-///
-/// ## Reference
-///
-/// Numerical Algorithms with C - Gisela Engeln-Mullges, Frank Uhlig - 1996 -
-/// Algorithm 10.2, pg 255
 #[doc(alias = "gsl_interp_cspline_periodic")]
-#[derive(Debug, Clone, Copy)]
-pub struct CubicPeriodic;
+#[derive(Debug, Clone)]
+#[non_exhaustive]
+pub struct CubicPeriodicInterpolator {
+    c: Box<[f64]>,
+}
 
-impl<T> InterpType<T> for CubicPeriodic
-where
-    T: crate::Num + Lapack,
-{
-    type Interpolation = CubicPeriodicInterp<T>;
-
+impl Interpolator for CubicPeriodicInterpolator {
     /// Constructs a Cubic Periodic Interpolator.
     ///
     /// # Example
@@ -216,15 +190,21 @@ where
     /// ```
     /// # use rsl_interpolation::*;
     /// #
-    /// # fn main() -> Result<(), InterpolationError>{
+    /// # fn main() -> Result<(), InterpolatorError>{
     /// let xa = [0.0, 1.0, 2.0];
     /// let ya = [0.0, 2.0, 4.0];
-    /// let interp = CubicPeriodic.build(&xa, &ya)?;
+    /// let interp = CubicPeriodicInterpolator::build(&xa, &ya)?;
     /// # Ok(())
     /// # }
     /// ```
     ///
-    fn build(&self, xa: &[T], ya: &[T]) -> Result<CubicPeriodicInterp<T>, InterpolationError> {
+    /// # Errors
+    ///
+    /// - [`InterpolatorError::UnsortedDataset`]: `xa` is not monotonically increasing.
+    /// - [`InterpolatorError::DatasetMismatch`]: `xa` and `ya` do not have the same length.
+    /// - [`InterpolatorError::NotEnoughPoints`]: length of `xa` is less that 3.
+    /// - [`InterpolatorError::BLASTridiagError`]: Error when solving the tridiagonal system.
+    fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolatorError> {
         check1d_data(xa, ya, MIN_SIZE)?;
 
         // Engeln-Mullges G. - Uhlig F.: Algorithm 10.2, pg 255
@@ -233,38 +213,35 @@ where
         let h = diff(xa);
         debug_assert!(h.len() == xa.len() - 1);
 
-        let two = T::from(2).unwrap();
-        let three = T::from(3).unwrap();
-
         // Ac=g setup
-        let mut c = Vec::<T>::with_capacity(xa.len());
-        let mut g = Vec::<T>::with_capacity(sys_size);
-        let mut diag = Vec::<T>::with_capacity(sys_size);
-        let mut offdiag = Vec::<T>::with_capacity(sys_size);
+        let mut c = Vec::with_capacity(xa.len());
+        let mut g = Vec::with_capacity(sys_size);
+        let mut diag = Vec::with_capacity(sys_size);
+        let mut offdiag = Vec::with_capacity(sys_size);
 
         if sys_size == 2 {
             let h0 = xa[1] - xa[0];
             let h1 = xa[2] - xa[1];
 
-            let a = two * (h0 + h1);
+            let a = 2.0 * (h0 + h1);
             let b = h0 + h1;
 
-            g.push(three * ((ya[2] - ya[1]) / h1 - (ya[1] - ya[0]) / h0));
-            g.push(three * ((ya[1] - ya[2]) / h0 - (ya[2] - ya[1]) / h1));
+            g.push(3.0 * ((ya[2] - ya[1]) / h1 - (ya[1] - ya[0]) / h0));
+            g.push(3.0 * ((ya[1] - ya[2]) / h0 - (ya[2] - ya[1]) / h1));
 
-            let det = three * (h0 + h1) * (h0 + h1);
+            let det = 3.0 * (h0 + h1) * (h0 + h1);
             c.push((-b * g[0] + a * g[1]) / det);
             c.push((a * g[0] - b * g[1]) / det);
             c.push(c[0]);
         } else {
             // Same as in Cubic case
             for i in 0..sys_size - 1 {
-                g.push(if h[i].is_zero() {
-                    T::zero()
+                g.push(if h[i] == 0.0 {
+                    0.0
                 } else {
-                    three * (ya[i + 2] - ya[i + 1]) / h[i + 1] - three * (ya[i + 1] - ya[i]) / h[i]
+                    3.0 * (ya[i + 2] - ya[i + 1]) / h[i + 1] - 3.0 * (ya[i + 1] - ya[i]) / h[i]
                 });
-                diag.push(two * (h[i] + h[i + 1]));
+                diag.push(2.0 * (h[i] + h[i + 1]));
                 offdiag.push(h[i + 1]);
             }
 
@@ -274,19 +251,15 @@ where
             let hiplus1 = xa[1] - xa[0];
             let ydiffi = ya[i + 1] - ya[i];
             let ydiffplus1 = ya[1] - ya[0];
-            let gi = if !hi.is_zero() {
-                T::one() / hi
+            let gi = if !(hi == 0.0) { 1.0 / hi } else { 0.0 };
+            let giplus1 = if !(hiplus1 == 0.0) {
+                1.0 / hiplus1
             } else {
-                T::zero()
-            };
-            let giplus1 = if !hiplus1.is_zero() {
-                T::one() / hiplus1
-            } else {
-                T::zero()
+                0.0
             };
             offdiag.push(hiplus1);
-            diag.push(two * (hiplus1 + hi));
-            g.push(three * (ydiffplus1 * giplus1 - ydiffi * gi));
+            diag.push(2.0 * (hiplus1 + hi));
+            g.push(3.0 * (ydiffplus1 * giplus1 - ydiffi * gi));
             // offdiag's last element represents the cyclical term
             debug_assert_eq!(diag.len(), offdiag.len());
 
@@ -301,8 +274,8 @@ where
             };
 
             // Ac=g solving
-            c.push(T::zero());
-            if sys_size.is_one() {
+            c.push(0.0);
+            if sys_size == 1 {
                 c.push(g[0] / diag[0]);
             } else {
                 // This must solve a cyclically tridiagonal matrix, but its not implemented yet :(
@@ -310,7 +283,7 @@ where
                 let coeffs = match matrix.solve_tridiagonal(&Array1::from_vec(g.clone())) {
                     Ok(coeffs) => coeffs,
                     Err(err) => {
-                        return Err(InterpolationError::BLASTridiagError {
+                        return Err(InterpolatorError::BLASTridiagError {
                             which_interp: "Cubic Periodic".into(),
                             source: err,
                         });
@@ -325,15 +298,10 @@ where
             )
         }
 
-        // g, diag, and offdiag are only needed for the calculation of c and are not used anywhere
-        // else from this point, but lets keep them.
-        let state = CubicPeriodicInterp {
-            c,
-            g,
-            diag,
-            offdiag,
-        };
-        Ok(state)
+        // g, diag, and offdiag are only needed for the calculation of c and are not used again
+        Ok(CubicPeriodicInterpolator {
+            c: c.into_boxed_slice(),
+        })
     }
 
     fn name(&self) -> &str {
@@ -347,71 +315,58 @@ where
 
 // ===============================================================================================
 
-/// Cubic Periodic interpolator.
-///
-/// Provides all the evaluation methods.
-///
-/// Should be constructed through the [`CubicPeriodic`] type.
-#[allow(dead_code)]
-#[doc(alias = "gsl_interp_cspline_periodic")]
-#[derive(Debug, Clone)]
-pub struct CubicPeriodicInterp<T>
-where
-    T: crate::Num + Lapack,
-{
-    c: Vec<T>,
-    g: Vec<T>,
-    diag: Vec<T>,
-    offdiag: Vec<T>,
-}
-
-impl<T> Interpolation<T> for CubicPeriodicInterp<T>
-where
-    T: crate::Num + Lapack,
-{
-    fn eval(&self, xa: &[T], ya: &[T], x: T, acc: &mut Accelerator) -> Result<T, DomainError> {
+impl Interpolation for CubicPeriodicInterpolator {
+    fn eval(
+        &self,
+        xa: &[f64],
+        ya: &[f64],
+        x: f64,
+        acc: &mut Accelerator,
+    ) -> Result<f64, Domain1dError> {
         cubic_eval(xa, ya, &self.c, x, acc)
     }
 
     fn eval_deriv(
         &self,
-        xa: &[T],
-        ya: &[T],
-        x: T,
+        xa: &[f64],
+        ya: &[f64],
+        x: f64,
         acc: &mut Accelerator,
-    ) -> Result<T, DomainError> {
+    ) -> Result<f64, Domain1dError> {
         cubic_eval_deriv(xa, ya, &self.c, x, acc)
     }
 
     fn eval_deriv2(
         &self,
-        xa: &[T],
-        ya: &[T],
-        x: T,
+        xa: &[f64],
+        ya: &[f64],
+        x: f64,
         acc: &mut Accelerator,
-    ) -> Result<T, DomainError> {
+    ) -> Result<f64, Domain1dError> {
         cubic_eval_deriv2(xa, ya, &self.c, x, acc)
     }
 
     fn eval_integ(
         &self,
-        xa: &[T],
-        ya: &[T],
-        a: T,
-        b: T,
+        xa: &[f64],
+        ya: &[f64],
+        a: f64,
+        b: f64,
         acc: &mut Accelerator,
-    ) -> Result<T, DomainError> {
+    ) -> Result<f64, Domain1dError> {
         cubic_eval_integ(xa, ya, &self.c, a, b, acc)
     }
 }
 
 //=================================================================================================
 
-#[inline(always)]
-fn cubic_eval<T>(xa: &[T], ya: &[T], c: &[T], x: T, acc: &mut Accelerator) -> Result<T, DomainError>
-where
-    T: crate::Num + Lapack,
-{
+fn cubic_eval(
+    xa: &[f64],
+    ya: &[f64],
+    c: &[f64],
+    x: f64,
+    acc: &mut Accelerator,
+) -> Result<f64, Domain1dError> {
     check_if_inbounds(xa, x)?;
     let index = acc.find(xa, x);
 
@@ -426,20 +381,17 @@ where
     let delx = x - xlo;
     let (b, c, d) = coeff_calc(c, dx, dy, index);
 
-    debug_assert!(dx > T::zero());
+    debug_assert!(dx > 0.0);
     Ok(ylo + delx * (b + delx * (c + delx * d)))
 }
 
-fn cubic_eval_deriv<T>(
-    xa: &[T],
-    ya: &[T],
-    c: &[T],
-    x: T,
+fn cubic_eval_deriv(
+    xa: &[f64],
+    ya: &[f64],
+    c: &[f64],
+    x: f64,
     acc: &mut Accelerator,
-) -> Result<T, DomainError>
-where
-    T: crate::Num + Lapack,
-{
+) -> Result<f64, Domain1dError> {
     check_if_inbounds(xa, x)?;
     let index = acc.find(xa, x);
 
@@ -454,24 +406,17 @@ where
     let delx = x - xlo;
     let (b, c, d) = coeff_calc(c, dx, dy, index);
 
-    let two = T::from(2).unwrap();
-    let three = T::from(3).unwrap();
-
-    debug_assert!(dx > T::zero());
-    Ok(b + delx * (two * c + three * d * delx))
+    debug_assert!(dx > 0.0);
+    Ok(b + delx * (2.0 * c + 3.0 * d * delx))
 }
 
-#[inline(always)]
-fn cubic_eval_deriv2<T>(
-    xa: &[T],
-    ya: &[T],
-    c: &[T],
-    x: T,
+fn cubic_eval_deriv2(
+    xa: &[f64],
+    ya: &[f64],
+    c: &[f64],
+    x: f64,
     acc: &mut Accelerator,
-) -> Result<T, DomainError>
-where
-    T: crate::Num + Lapack,
-{
+) -> Result<f64, Domain1dError> {
     check_if_inbounds(xa, x)?;
     let index = acc.find(xa, x);
 
@@ -486,35 +431,24 @@ where
     let delx = x - xlo;
     let (_, c, d) = coeff_calc(c, dx, dy, index);
 
-    let two = T::from(2).unwrap();
-    let six = T::from(6).unwrap();
-
-    debug_assert!(dx > T::zero());
-    Ok(two * c + six * delx * d)
+    debug_assert!(dx > 0.0);
+    Ok(2.0 * c + 6.0 * delx * d)
 }
 
-#[inline(always)]
-fn cubic_eval_integ<T>(
-    xa: &[T],
-    ya: &[T],
-    c: &[T],
-    a: T,
-    b: T,
+fn cubic_eval_integ(
+    xa: &[f64],
+    ya: &[f64],
+    c: &[f64],
+    a: f64,
+    b: f64,
     acc: &mut Accelerator,
-) -> Result<T, DomainError>
-where
-    T: crate::Num + Lapack,
-{
+) -> Result<f64, Domain1dError> {
     check_if_inbounds(xa, a)?;
     check_if_inbounds(xa, b)?;
     let index_a = acc.find(xa, a);
     let index_b = acc.find(xa, b);
 
-    let quarter = T::from(0.25).unwrap();
-    let half = T::from(0.5).unwrap();
-    let third = T::from(1.0 / 3.0).unwrap();
-
-    let mut result = T::zero();
+    let mut result = 0.0;
 
     for i in index_a..=index_b {
         let xlo = xa[i];
@@ -526,7 +460,7 @@ where
         let dy = yhi - ylo;
 
         // If two x points are the same
-        if dx.is_zero() {
+        if dx == 0.0 {
             continue;
         }
 
@@ -537,23 +471,17 @@ where
             let x2 = if i == index_b { b } else { xhi };
             result += integ_eval(ylo, bi, ci, di, xlo, x1, x2);
         } else {
-            result += dx * (ylo + dx * (half * bi + dx * (third * ci + quarter * di * dx)))
+            result += dx * (ylo + dx * (0.5 * bi + dx * ((1.0 / 3.0) * ci + 0.25 * di * dx)))
         }
     }
     Ok(result)
 }
-/// Function for common coefficient determination. No inline.
-fn coeff_calc<T>(carray: &[T], dx: T, dy: T, index: usize) -> (T, T, T)
-where
-    T: crate::Num + Lapack,
-{
-    let two = T::from(2).unwrap();
-    let three = T::from(3).unwrap();
-
+/// Common coefficient determination
+fn coeff_calc(carray: &[f64], dx: f64, dy: f64, index: usize) -> (f64, f64, f64) {
     let c = carray[index];
     let cplus1 = carray[index + 1];
 
-    let b = (dy / dx) - dx * (cplus1 + two * c) / three;
-    let d = (cplus1 - c) / (three * dx);
+    let b = (dy / dx) - dx * (cplus1 + 2.0 * c) / 3.0;
+    let d = (cplus1 - c) / (3.0 * dx);
     (b, c, d)
 }

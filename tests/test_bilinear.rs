@@ -1,13 +1,7 @@
-use crate::{
-    Bilinear, Interp2dType,
-    tests::{XYZTable, test_interp2d, test_interp2d_extra},
-};
+mod common;
 
-#[test]
-fn test_type_fields() {
-    let _ = <Bilinear as Interp2dType<f64>>::name(&Bilinear);
-    let _ = <Bilinear as Interp2dType<f64>>::min_size(&Bilinear);
-}
+use common::*;
+use rsl_interpolation::*;
 
 /// Tests bilinear interpolation using a symmetric function, f(x,y)=f(y,x), and diagonal
 /// interpolation points (x,y) where x=y. If these tests don't pass, something is seriously broken.
@@ -39,7 +33,7 @@ fn gsl_test_bilinear_symmetric() {
         z: &ztest,
     };
 
-    let interp = Bilinear.build(&xa, &ya, &za).unwrap();
+    let interp = BilinearInterpolator::build(&xa, &ya, &za).unwrap();
     test_interp2d(data_table, test_e_table, interp);
 }
 
@@ -81,7 +75,7 @@ fn gsl_test_bilinear_asymmetric_z() {
         z: &ztest,
     };
 
-    let interp = Bilinear.build(&xa, &ya, &za).unwrap();
+    let interp = BilinearInterpolator::build(&xa, &ya, &za).unwrap();
     test_interp2d(data_table, test_e_table, interp);
 }
 
@@ -187,7 +181,7 @@ fn extra_test_bilinear() {
         z: &dxytest,
     };
 
-    let interp = Bilinear.build(&xa, &ya, &za).unwrap();
+    let interp = BilinearInterpolator::build(&xa, &ya, &za).unwrap();
     test_interp2d_extra(
         data_table,
         test_e_table,

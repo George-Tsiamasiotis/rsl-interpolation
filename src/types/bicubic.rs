@@ -1,31 +1,24 @@
-use ndarray_linalg::Lapack;
+//! Definition of Bicubic Interpolator.
 
-use crate::Accelerator;
-use crate::Cache;
-use crate::Cubic;
-use crate::DomainError;
-use crate::Interp2dType;
-use crate::InterpType;
-use crate::Interpolation;
-use crate::Interpolation2d;
-use crate::InterpolationError;
-use crate::types::utils::check_if_inbounds;
-use crate::types::utils::check2d_data;
-use crate::z_idx;
+use crate::{Accelerator, Accelerator2d};
+use crate::{CubicInterpolator, Interpolation, Interpolator};
+use crate::{Domain2dError, InterpolatorError};
+use crate::{Interpolation2d, Interpolator2d};
+use crate::{check_if_inbounds2d, check2d_data, z_idx};
 
 const MIN_SIZE: usize = 4;
 
-/// Bicubic Interpolation
+/// Bicubic Interpolator.
 #[doc(alias = "gsl_interp2d_bicubic")]
-#[derive(Debug, Clone, Copy)]
-pub struct Bicubic;
+#[derive(Debug, Clone)]
+#[non_exhaustive]
+pub struct BicubicInterpolator {
+    pub(crate) zx: Box<[f64]>,
+    pub(crate) zy: Box<[f64]>,
+    pub(crate) zxy: Box<[f64]>,
+}
 
-impl<T> Interp2dType<T> for Bicubic
-where
-    T: crate::Num + Lapack,
-{
-    type Interpolation2d = BicubicInterp<T>;
-
+impl Interpolator2d for BicubicInterpolator {
     /// Constructs a Bicubic Interpolator.
     ///
     /// # Example
@@ -33,7 +26,7 @@ where
     /// ```
     /// # use rsl_interpolation::*;
     /// #
-    /// # fn main() -> Result<(), InterpolationError>{
+    /// # fn main() -> Result<(), InterpolatorError>{
     /// let xa = [0.0, 1.0, 2.0, 3.0];
     /// let ya = [0.0, 2.0, 4.0, 6.0];
     /// // z = x + y, in column-major order
@@ -44,11 +37,18 @@ where
     ///     6.0, 7.0, 8.0, 9.0,
     /// ];
     ///
-    /// let interp = Bicubic.build(&xa, &ya, &za)?;
+    /// let interp = BicubicInterpolator::build(&xa, &ya, &za)?;
     /// # Ok(())
     /// # }
     /// ```
-    fn build(&self, xa: &[T], ya: &[T], za: &[T]) -> Result<BicubicInterp<T>, InterpolationError> {
+    ///
+    /// # Errors
+    ///
+    /// - [`InterpolatorError::UnsortedDataset`]: `xa` or `ya` are not monotonically increasing.
+    /// - [`InterpolatorError::NotEnoughPoints`]: length of `xa` or `ya` is less that 4.
+    /// - [`InterpolatorError::BLASTridiagError`]: Error when solving the tridiagonal system.
+    /// - [`InterpolatorError::ZGridMismatch`]: `xa.len()*ya.len() != za.len()`.
+    fn build(xa: &[f64], ya: &[f64], za: &[f64]) -> Result<Self, InterpolatorError> {
         check2d_data(xa, ya, za, MIN_SIZE)?;
 
         let xsize = xa.len();
@@ -56,64 +56,72 @@ where
 
         // NaN-fill the vecs since their elements are not added in a linear order. NaN ensures that
         // ultimately all coefficients are calculated correctly
-        let mut zx: Vec<T> = vec![T::nan(); xsize * ysize];
-        let mut zy: Vec<T> = vec![T::nan(); xsize * ysize];
-        let mut zxy: Vec<T> = vec![T::nan(); xsize * ysize];
+        let mut zx = vec![f64::NAN; xsize * ysize];
+        let mut zy = vec![f64::NAN; xsize * ysize];
+        let mut zxy = vec![f64::NAN; xsize * ysize];
 
         let mut acc = Accelerator::new();
-        let mut x: Vec<T> = vec![T::nan(); xsize];
-        let mut y: Vec<T> = vec![T::nan(); xsize];
+        let mut x = vec![f64::NAN; xsize];
+        let mut y = vec![f64::NAN; xsize];
 
         #[allow(clippy::needless_range_loop)] // Much cleaner this way
         for j in 0..ysize {
             for i in 0..xsize {
                 x[i] = xa[i];
-                y[i] = za[z_idx(i, j, xsize, ysize)?];
+                y[i] = za[z_idx(i, j, xsize, ysize)];
             }
-            let interp = Cubic.build(&x, &y)?;
+            let interp = CubicInterpolator::build(&x, &y)?;
             for i in 0..xsize {
-                let index = z_idx(i, j, xsize, ysize)?;
-                zx[index] = interp.eval_deriv(&x, &y, xa[i], &mut acc)?;
+                let index = z_idx(i, j, xsize, ysize);
+                zx[index] = interp
+                    .eval_deriv(&x, &y, xa[i], &mut acc)
+                    .expect("data is checked");
             }
         }
-        acc.reset(); // Is this necessary?
 
-        let mut x: Vec<T> = vec![T::nan(); ysize];
-        let mut y: Vec<T> = vec![T::nan(); ysize];
+        acc.reset();
+        let mut x = vec![f64::NAN; ysize];
+        let mut y = vec![f64::NAN; ysize];
 
         #[allow(clippy::needless_range_loop)] // Much cleaner this way
         for i in 0..xsize {
             for j in 0..ysize {
                 x[j] = ya[j];
-                y[j] = za[z_idx(i, j, xsize, ysize)?];
+                y[j] = za[z_idx(i, j, xsize, ysize)];
             }
-            let interp = Cubic.build(&x, &y)?;
+            let interp = CubicInterpolator::build(&x, &y)?;
             for j in 0..ysize {
-                let index = z_idx(i, j, xsize, ysize)?;
-                zy[index] = interp.eval_deriv(&x, &y, ya[j], &mut acc)?;
+                let index = z_idx(i, j, xsize, ysize);
+                zy[index] = interp
+                    .eval_deriv(&x, &y, ya[j], &mut acc)
+                    .expect("data is checked");
             }
         }
-        acc.reset();
 
-        let mut x: Vec<T> = vec![T::nan(); xsize];
-        let mut y: Vec<T> = vec![T::nan(); xsize];
+        acc.reset();
+        let mut x = vec![f64::NAN; xsize];
+        let mut y = vec![f64::NAN; xsize];
 
         #[allow(clippy::needless_range_loop)] // Much cleaner this way
         for j in 0..ysize {
             for i in 0..xsize {
                 x[i] = xa[i];
-                y[i] = zy[z_idx(i, j, xsize, ysize)?];
+                y[i] = zy[z_idx(i, j, xsize, ysize)];
             }
-            let interp = Cubic.build(&x, &y)?;
+            let interp = CubicInterpolator::build(&x, &y)?;
             for i in 0..xsize {
-                let index = z_idx(i, j, xsize, ysize)?;
-                zxy[index] = interp.eval_deriv(&x, &y, xa[i], &mut acc)?;
+                let index = z_idx(i, j, xsize, ysize);
+                zxy[index] = interp
+                    .eval_deriv(&x, &y, xa[i], &mut acc)
+                    .expect("data is checked");
             }
         }
 
-        let state = BicubicInterp { zx, zy, zxy };
-
-        Ok(state)
+        Ok(BicubicInterpolator {
+            zx: zx.into_boxed_slice(),
+            zy: zy.into_boxed_slice(),
+            zxy: zxy.into_boxed_slice(),
+        })
     }
 
     fn name(&self) -> &str {
@@ -127,554 +135,472 @@ where
 
 // ===============================================================================================
 
-/// Bicubic Interpolator.
-///
-/// Provides all the evaluation methods.
-///
-/// Should be constructed through the [`Bicubic`] type.
-#[derive(Debug, Clone)]
-pub struct BicubicInterp<T>
-where
-    T: crate::Num + Lapack,
-{
-    pub(crate) zx: Vec<T>,
-    pub(crate) zy: Vec<T>,
-    pub(crate) zxy: Vec<T>,
-}
-
-impl<T> Interpolation2d<T> for BicubicInterp<T>
-where
-    T: crate::Num + Lapack,
-{
+impl Interpolation2d for BicubicInterpolator {
     fn eval_extrap(
         &self,
-        xa: &[T],
-        ya: &[T],
-        za: &[T],
-        x: T,
-        y: T,
-        xacc: &mut Accelerator,
-        yacc: &mut Accelerator,
-        cache: &mut Cache<T>,
-    ) -> Result<T, DomainError> {
-        let is_uptodate = cache.is_uptodate(xa, ya, x, y, xacc, yacc);
+        xa: &[f64],
+        ya: &[f64],
+        za: &[f64],
+        x: f64,
+        y: f64,
+        acc: &mut Accelerator2d,
+    ) -> Result<f64, Domain2dError> {
+        let is_uptodate = acc.is_uptodate(xa, ya, x, y);
         if !is_uptodate {
-            cache.update_step1(xa, ya, za)?;
+            acc.update_step1(xa, ya, za);
         }
 
-        let (_xi, _yi) = cache.get_xy_indices();
-        let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
-        let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
-        let (dx, dy) = cache.get_partials();
+        let (xlo, _, ylo, _) = acc.get_xy_grid_values();
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = acc.get_z_grid_values();
+        let (dx, dy) = acc.get_partials();
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
         if !is_uptodate {
-            cache.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du)?;
+            acc.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du);
         };
 
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = cache.get_zxminmaxxing();
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = cache.get_zyminmaxxing();
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = cache.get_zxyminmaxxing();
+        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = acc.get_zxminmaxxing();
+        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = acc.get_zyminmaxxing();
+        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = acc.get_zxyminmaxxing();
 
         let t2 = t * t;
-        let (t0, t1, t2, t3) = (T::one(), t, t2, t * t2);
+        let (t0, t1, t2, t3) = (1.0, t, t2, t * t2);
 
         let u2 = u * u;
-        let (u0, u1, u2, u3) = (T::one(), u, u2, u * u2);
+        let (u0, u1, u2, u3) = (1.0, u, u2, u * u2);
 
-        let two = T::from(2).unwrap();
-        let three = T::from(3).unwrap();
-        let four = T::from(4).unwrap();
-        let six = T::from(6).unwrap();
-        let nine = T::from(9).unwrap();
-
-        let mut z = T::zero(); // Result
+        let mut z = 0.0; // Result
 
         let v = zminmin;
         z += v * t0 * u0;
         let v = zyminmin;
         z += v * t0 * u1;
-        let v = -three * zminmin + three * zminmax - two * zyminmin - zyminmax;
+        let v = -3.0 * zminmin + 3.0 * zminmax - 2.0 * zyminmin - zyminmax;
         z += v * t0 * u2;
-        let v = two * zminmin - two * zminmax + zyminmin + zyminmax;
+        let v = 2.0 * zminmin - 2.0 * zminmax + zyminmin + zyminmax;
         z += v * t0 * u3;
         let v = zxminmin;
         z += v * t1 * u0;
         let v = zxyminmin;
         z += v * t1 * u1;
-        let v = -three * zxminmin + three * zxminmax - two * zxyminmin - zxyminmax;
+        let v = -3.0 * zxminmin + 3.0 * zxminmax - 2.0 * zxyminmin - zxyminmax;
         z += v * t1 * u2;
-        let v = two * zxminmin - two * zxminmax + zxyminmin + zxyminmax;
+        let v = 2.0 * zxminmin - 2.0 * zxminmax + zxyminmin + zxyminmax;
         z += v * t1 * u3;
-        let v = -three * zminmin + three * zmaxmin - two * zxminmin - zxmaxmin;
+        let v = -3.0 * zminmin + 3.0 * zmaxmin - 2.0 * zxminmin - zxmaxmin;
         z += v * t2 * u0;
-        let v = -three * zyminmin + three * zymaxmin - two * zxyminmin - zxymaxmin;
+        let v = -3.0 * zyminmin + 3.0 * zymaxmin - 2.0 * zxyminmin - zxymaxmin;
         z += v * t2 * u1;
         #[rustfmt::skip]
-        let v = nine * zminmin - nine * zmaxmin + nine * zmaxmax - nine * zminmax
-            + six * zxminmin + three * zxmaxmin - three * zxmaxmax - six * zxminmax
-            + six * zyminmin - six * zymaxmin - three * zymaxmax + three * zyminmax
-            + four * zxyminmin + two * zxymaxmin + zxymaxmax + two * zxyminmax;
+        let v = 9.0 * zminmin - 9.0 * zmaxmin + 9.0 * zmaxmax - 9.0 * zminmax
+            + 6.0 * zxminmin + 3.0 * zxmaxmin - 3.0 * zxmaxmax - 6.0 * zxminmax
+            + 6.0 * zyminmin - 6.0 * zymaxmin - 3.0 * zymaxmax + 3.0 * zyminmax
+            + 4.0 * zxyminmin + 2.0 * zxymaxmin + zxymaxmax + 2.0 * zxyminmax;
         z += v * t2 * u2;
         #[rustfmt::skip]
-        let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - four * zxminmin - two * zxmaxmin + two * zxmaxmax + four * zxminmax
-            - three * zyminmin + three * zymaxmin + three * zymaxmax - three * zyminmax
-            - two * zxyminmin - zxymaxmin - zxymaxmax - two * zxyminmax;
+        let v = -6.0 * zminmin + 6.0 * zmaxmin - 6.0 * zmaxmax + 6.0 * zminmax
+            - 4.0 * zxminmin - 2.0 * zxmaxmin + 2.0 * zxmaxmax + 4.0 * zxminmax
+            - 3.0 * zyminmin + 3.0 * zymaxmin + 3.0 * zymaxmax - 3.0 * zyminmax
+            - 2.0 * zxyminmin - zxymaxmin - zxymaxmax - 2.0 * zxyminmax;
         z += v * t2 * u3;
-        let v = two * zminmin - two * zmaxmin + zxminmin + zxmaxmin;
+        let v = 2.0 * zminmin - 2.0 * zmaxmin + zxminmin + zxmaxmin;
         z += v * t3 * u0;
-        let v = two * zyminmin - two * zymaxmin + zxyminmin + zxymaxmin;
+        let v = 2.0 * zyminmin - 2.0 * zymaxmin + zxyminmin + zxymaxmin;
         z += v * t3 * u1;
         #[rustfmt::skip]
-        let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - three * zxminmin - three * zxmaxmin + three * zxmaxmax + three * zxminmax
-            - four * zyminmin + four * zymaxmin + two * zymaxmax - two * zyminmax
-            - two * zxyminmin - two * zxymaxmin - zxymaxmax - zxyminmax;
+        let v = -6.0 * zminmin + 6.0 * zmaxmin - 6.0 * zmaxmax + 6.0 * zminmax
+            - 3.0 * zxminmin - 3.0 * zxmaxmin + 3.0 * zxmaxmax + 3.0 * zxminmax
+            - 4.0 * zyminmin + 4.0 * zymaxmin + 2.0 * zymaxmax - 2.0 * zyminmax
+            - 2.0 * zxyminmin - 2.0 * zxymaxmin - zxymaxmax - zxyminmax;
         z += v * t3 * u2;
         #[rustfmt::skip]
-        let v = four * zminmin - four * zmaxmin + four * zmaxmax - four * zminmax
-            + two * zxminmin + two * zxmaxmin - two * zxmaxmax - two * zxminmax
-            + two * zyminmin - two * zymaxmin - two * zymaxmax + two * zyminmax
+        let v = 4.0 * zminmin - 4.0 * zmaxmin + 4.0 * zmaxmax - 4.0 * zminmax
+            + 2.0 * zxminmin + 2.0 * zxmaxmin - 2.0 * zxmaxmax - 2.0 * zxminmax
+            + 2.0 * zyminmin - 2.0 * zymaxmin - 2.0 * zymaxmax + 2.0 * zyminmax
             + zxyminmin + zxymaxmin + zxymaxmax + zxyminmax;
         z += v * t3 * u3;
 
         Ok(z)
     }
 
-    #[allow(unused_variables)]
     fn eval_deriv_x(
         &self,
-        xa: &[T],
-        ya: &[T],
-        za: &[T],
-        x: T,
-        y: T,
-        xacc: &mut Accelerator,
-        yacc: &mut Accelerator,
-        cache: &mut Cache<T>,
-    ) -> Result<T, DomainError> {
-        check_if_inbounds(xa, x)?;
-        check_if_inbounds(ya, y)?;
-        let is_uptodate = cache.is_uptodate(xa, ya, x, y, xacc, yacc);
+        xa: &[f64],
+        ya: &[f64],
+        za: &[f64],
+        x: f64,
+        y: f64,
+        acc: &mut Accelerator2d,
+    ) -> Result<f64, Domain2dError> {
+        check_if_inbounds2d(xa, ya, x, y)?;
+        let is_uptodate = acc.is_uptodate(xa, ya, x, y);
         if !is_uptodate {
-            cache.update_step1(xa, ya, za)?;
+            acc.update_step1(xa, ya, za);
         }
 
-        let (_xi, _yi) = cache.get_xy_indices();
-        let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
-        let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
-        let (dx, dy) = cache.get_partials();
+        let (xlo, _, ylo, _) = acc.get_xy_grid_values();
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = acc.get_z_grid_values();
+        let (dx, dy) = acc.get_partials();
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
         if !is_uptodate {
-            cache.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du)?;
+            acc.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du);
         };
 
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = cache.get_zxminmaxxing();
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = cache.get_zyminmaxxing();
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = cache.get_zxyminmaxxing();
+        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = acc.get_zxminmaxxing();
+        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = acc.get_zyminmaxxing();
+        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = acc.get_zxyminmaxxing();
 
-        let (t0, t1, t2) = (T::one(), t, t * t);
+        let (t0, t1, t2) = (1.0, t, t * t);
 
         let u2 = u * u;
-        let (u0, u1, u2, u3) = (T::one(), u, u2, u * u2);
+        let (u0, u1, u2, u3) = (1.0, u, u2, u * u2);
 
-        let two = T::from(2).unwrap();
-        let three = T::from(3).unwrap();
-        let four = T::from(4).unwrap();
-        let six = T::from(6).unwrap();
-        let nine = T::from(9).unwrap();
-
-        let mut d = T::zero(); // Result
+        let mut d = 0.0; // Result
 
         let v = zxminmin;
         d += v * t0 * u0;
         let v = zxyminmin;
         d += v * t0 * u1;
-        let v = -three * zxminmin + three * zxminmax - two * zxyminmin - zxyminmax;
+        let v = -3.0 * zxminmin + 3.0 * zxminmax - 2.0 * zxyminmin - zxyminmax;
         d += v * t0 * u2;
-        let v = two * zxminmin - two * zxminmax + zxyminmin + zxyminmax;
+        let v = 2.0 * zxminmin - 2.0 * zxminmax + zxyminmin + zxyminmax;
         d += v * t0 * u3;
-        let v = -three * zminmin + three * zmaxmin - two * zxminmin - zxmaxmin;
-        d += two * v * t1 * u0;
-        let v = -three * zyminmin + three * zymaxmin - two * zxyminmin - zxymaxmin;
-        d += two * v * t1 * u1;
+        let v = -3.0 * zminmin + 3.0 * zmaxmin - 2.0 * zxminmin - zxmaxmin;
+        d += 2.0 * v * t1 * u0;
+        let v = -3.0 * zyminmin + 3.0 * zymaxmin - 2.0 * zxyminmin - zxymaxmin;
+        d += 2.0 * v * t1 * u1;
         #[rustfmt::skip]
-        let v = nine * zminmin - nine * zmaxmin + nine * zmaxmax - nine * zminmax
-            + six * zxminmin + three * zxmaxmin - three * zxmaxmax - six * zxminmax
-            + six * zyminmin - six * zymaxmin - three * zymaxmax + three * zyminmax
-            + four * zxyminmin + two * zxymaxmin + zxymaxmax + two * zxyminmax;
-        d += two * v * t1 * u2;
+        let v = 9.0 * zminmin - 9.0 * zmaxmin + 9.0 * zmaxmax - 9.0 * zminmax
+            + 6.0 * zxminmin + 3.0 * zxmaxmin - 3.0 * zxmaxmax - 6.0 * zxminmax
+            + 6.0 * zyminmin - 6.0 * zymaxmin - 3.0 * zymaxmax + 3.0 * zyminmax
+            + 4.0 * zxyminmin + 2.0 * zxymaxmin + zxymaxmax + 2.0 * zxyminmax;
+        d += 2.0 * v * t1 * u2;
         #[rustfmt::skip]
-        let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - four * zxminmin - two * zxmaxmin + two * zxmaxmax + four * zxminmax
-            - three * zyminmin + three * zymaxmin + three * zymaxmax - three * zyminmax
-            - two * zxyminmin - zxymaxmin - zxymaxmax - two * zxyminmax;
-        d += two * v * t1 * u3;
-        let v = two * zminmin - two * zmaxmin + zxminmin + zxmaxmin;
-        d += three * v * t2 * u0;
-        let v = two * zyminmin - two * zymaxmin + zxyminmin + zxymaxmin;
-        d += three * v * t2 * u1;
+        let v = -6.0 * zminmin + 6.0 * zmaxmin - 6.0 * zmaxmax + 6.0 * zminmax
+            - 4.0 * zxminmin - 2.0 * zxmaxmin + 2.0 * zxmaxmax + 4.0 * zxminmax
+            - 3.0 * zyminmin + 3.0 * zymaxmin + 3.0 * zymaxmax - 3.0 * zyminmax
+            - 2.0 * zxyminmin - zxymaxmin - zxymaxmax - 2.0 * zxyminmax;
+        d += 2.0 * v * t1 * u3;
+        let v = 2.0 * zminmin - 2.0 * zmaxmin + zxminmin + zxmaxmin;
+        d += 3.0 * v * t2 * u0;
+        let v = 2.0 * zyminmin - 2.0 * zymaxmin + zxyminmin + zxymaxmin;
+        d += 3.0 * v * t2 * u1;
         #[rustfmt::skip]
-        let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - three * zxminmin - three * zxmaxmin + three * zxmaxmax + three * zxminmax
-            - four * zyminmin + four * zymaxmin + two * zymaxmax - two * zyminmax
-            - two * zxyminmin - two * zxymaxmin - zxymaxmax - zxyminmax;
-        d += three * v * t2 * u2;
+        let v = -6.0 * zminmin + 6.0 * zmaxmin - 6.0 * zmaxmax + 6.0 * zminmax
+            - 3.0 * zxminmin - 3.0 * zxmaxmin + 3.0 * zxmaxmax + 3.0 * zxminmax
+            - 4.0 * zyminmin + 4.0 * zymaxmin + 2.0 * zymaxmax - 2.0 * zyminmax
+            - 2.0 * zxyminmin - 2.0 * zxymaxmin - zxymaxmax - zxyminmax;
+        d += 3.0 * v * t2 * u2;
         #[rustfmt::skip]
-        let v = four * zminmin - four * zmaxmin + four * zmaxmax - four * zminmax
-            + two * zxminmin + two * zxmaxmin - two * zxmaxmax - two * zxminmax
-            + two * zyminmin - two * zymaxmin - two * zymaxmax + two * zyminmax
+        let v = 4.0 * zminmin - 4.0 * zmaxmin + 4.0 * zmaxmax - 4.0 * zminmax
+            + 2.0 * zxminmin + 2.0 * zxmaxmin - 2.0 * zxmaxmax - 2.0 * zxminmax
+            + 2.0 * zyminmin - 2.0 * zymaxmin - 2.0 * zymaxmax + 2.0 * zyminmax
             + zxyminmin + zxymaxmin + zxymaxmax + zxyminmax;
-        d += three * v * t2 * u3;
+        d += 3.0 * v * t2 * u3;
         d *= dt;
 
         Ok(d)
     }
 
-    #[allow(unused_variables)]
     fn eval_deriv_y(
         &self,
-        xa: &[T],
-        ya: &[T],
-        za: &[T],
-        x: T,
-        y: T,
-        xacc: &mut Accelerator,
-        yacc: &mut Accelerator,
-        cache: &mut Cache<T>,
-    ) -> Result<T, DomainError> {
-        check_if_inbounds(xa, x)?;
-        check_if_inbounds(ya, y)?;
-        let is_uptodate = cache.is_uptodate(xa, ya, x, y, xacc, yacc);
+        xa: &[f64],
+        ya: &[f64],
+        za: &[f64],
+        x: f64,
+        y: f64,
+        acc: &mut Accelerator2d,
+    ) -> Result<f64, Domain2dError> {
+        check_if_inbounds2d(xa, ya, x, y)?;
+        let is_uptodate = acc.is_uptodate(xa, ya, x, y);
         if !is_uptodate {
-            cache.update_step1(xa, ya, za)?;
+            acc.update_step1(xa, ya, za);
         }
 
-        let (_xi, _yi) = cache.get_xy_indices();
-        let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
-        let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
-        let (dx, dy) = cache.get_partials();
+        let (xlo, _, ylo, _) = acc.get_xy_grid_values();
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = acc.get_z_grid_values();
+        let (dx, dy) = acc.get_partials();
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
         if !is_uptodate {
-            cache.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du)?;
+            acc.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du);
         };
 
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = cache.get_zxminmaxxing();
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = cache.get_zyminmaxxing();
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = cache.get_zxyminmaxxing();
+        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = acc.get_zxminmaxxing();
+        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = acc.get_zyminmaxxing();
+        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = acc.get_zxyminmaxxing();
 
         let t2 = t * t;
-        let (t0, t1, t2, t3) = (T::one(), t, t2, t * t2);
+        let (t0, t1, t2, t3) = (1.0, t, t2, t * t2);
 
-        let (u0, u1, u2) = (T::one(), u, u * u);
+        let (u0, u1, u2) = (1.0, u, u * u);
 
-        let two = T::from(2).unwrap();
-        let three = T::from(3).unwrap();
-        let four = T::from(4).unwrap();
-        let six = T::from(6).unwrap();
-        let nine = T::from(9).unwrap();
-
-        let mut d = T::zero(); // Result
+        let mut d = 0.0; // Result
 
         let v = zyminmin;
         d += v * t0 * u0;
-        let v = -three * zminmin + three * zminmax - two * zyminmin - zyminmax;
-        d += two * v * t0 * u1;
-        let v = two * zminmin - two * zminmax + zyminmin + zyminmax;
-        d += three * v * t0 * u2;
+        let v = -3.0 * zminmin + 3.0 * zminmax - 2.0 * zyminmin - zyminmax;
+        d += 2.0 * v * t0 * u1;
+        let v = 2.0 * zminmin - 2.0 * zminmax + zyminmin + zyminmax;
+        d += 3.0 * v * t0 * u2;
         let v = zxyminmin;
         d += v * t1 * u0;
-        let v = -three * zxminmin + three * zxminmax - two * zxyminmin - zxyminmax;
-        d += two * v * t1 * u1;
-        let v = two * zxminmin - two * zxminmax + zxyminmin + zxyminmax;
-        d += three * v * t1 * u2;
-        let v = -three * zyminmin + three * zymaxmin - two * zxyminmin - zxymaxmin;
+        let v = -3.0 * zxminmin + 3.0 * zxminmax - 2.0 * zxyminmin - zxyminmax;
+        d += 2.0 * v * t1 * u1;
+        let v = 2.0 * zxminmin - 2.0 * zxminmax + zxyminmin + zxyminmax;
+        d += 3.0 * v * t1 * u2;
+        let v = -3.0 * zyminmin + 3.0 * zymaxmin - 2.0 * zxyminmin - zxymaxmin;
         d += v * t2 * u0;
         #[rustfmt::skip]
-        let v = nine * zminmin - nine * zmaxmin + nine * zmaxmax - nine * zminmax
-            + six * zxminmin + three * zxmaxmin - three * zxmaxmax - six * zxminmax
-            + six * zyminmin - six * zymaxmin - three * zymaxmax + three * zyminmax
-            + four * zxyminmin + two * zxymaxmin + zxymaxmax + two * zxyminmax;
-        d += two * v * t2 * u1;
+        let v = 9.0 * zminmin - 9.0 * zmaxmin + 9.0 * zmaxmax - 9.0 * zminmax
+            + 6.0 * zxminmin + 3.0 * zxmaxmin - 3.0 * zxmaxmax - 6.0 * zxminmax
+            + 6.0 * zyminmin - 6.0 * zymaxmin - 3.0 * zymaxmax + 3.0 * zyminmax
+            + 4.0 * zxyminmin + 2.0 * zxymaxmin + zxymaxmax + 2.0 * zxyminmax;
+        d += 2.0 * v * t2 * u1;
         #[rustfmt::skip]
-        let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - four * zxminmin - two * zxmaxmin + two * zxmaxmax + four * zxminmax
-            - three * zyminmin + three * zymaxmin + three * zymaxmax - three * zyminmax
-            - two * zxyminmin - zxymaxmin - zxymaxmax - two * zxyminmax;
-        d += three * v * t2 * u2;
-        let v = two * zyminmin - two * zymaxmin + zxyminmin + zxymaxmin;
+        let v = -6.0 * zminmin + 6.0 * zmaxmin - 6.0 * zmaxmax + 6.0 * zminmax
+            - 4.0 * zxminmin - 2.0 * zxmaxmin + 2.0 * zxmaxmax + 4.0 * zxminmax
+            - 3.0 * zyminmin + 3.0 * zymaxmin + 3.0 * zymaxmax - 3.0 * zyminmax
+            - 2.0 * zxyminmin - zxymaxmin - zxymaxmax - 2.0 * zxyminmax;
+        d += 3.0 * v * t2 * u2;
+        let v = 2.0 * zyminmin - 2.0 * zymaxmin + zxyminmin + zxymaxmin;
         d += v * t3 * u0;
         #[rustfmt::skip]
-        let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - three * zxminmin - three * zxmaxmin + three * zxmaxmax + three * zxminmax
-            - four * zyminmin + four * zymaxmin + two * zymaxmax - two * zyminmax
-            - two * zxyminmin - two * zxymaxmin - zxymaxmax - zxyminmax;
-        d += two * v * t3 * u1;
+        let v = -6.0 * zminmin + 6.0 * zmaxmin - 6.0 * zmaxmax + 6.0 * zminmax
+            - 3.0 * zxminmin - 3.0 * zxmaxmin + 3.0 * zxmaxmax + 3.0 * zxminmax
+            - 4.0 * zyminmin + 4.0 * zymaxmin + 2.0 * zymaxmax - 2.0 * zyminmax
+            - 2.0 * zxyminmin - 2.0 * zxymaxmin - zxymaxmax - zxyminmax;
+        d += 2.0 * v * t3 * u1;
         #[rustfmt::skip]
-        let v = four * zminmin - four * zmaxmin + four * zmaxmax - four * zminmax
-            + two * zxminmin + two * zxmaxmin - two * zxmaxmax - two * zxminmax
-            + two * zyminmin - two * zymaxmin - two * zymaxmax + two * zyminmax
+        let v = 4.0 * zminmin - 4.0 * zmaxmin + 4.0 * zmaxmax - 4.0 * zminmax
+            + 2.0 * zxminmin + 2.0 * zxmaxmin - 2.0 * zxmaxmax - 2.0 * zxminmax
+            + 2.0 * zyminmin - 2.0 * zymaxmin - 2.0 * zymaxmax + 2.0 * zyminmax
             + zxyminmin + zxymaxmin + zxymaxmax + zxyminmax;
-        d += three * v * t3 * u2;
+        d += 3.0 * v * t3 * u2;
         d *= du;
 
         Ok(d)
     }
 
-    #[allow(unused_variables)]
     fn eval_deriv_xx(
         &self,
-        xa: &[T],
-        ya: &[T],
-        za: &[T],
-        x: T,
-        y: T,
-        xacc: &mut Accelerator,
-        yacc: &mut Accelerator,
-        cache: &mut Cache<T>,
-    ) -> Result<T, DomainError> {
-        check_if_inbounds(xa, x)?;
-        check_if_inbounds(ya, y)?;
-        let is_uptodate = cache.is_uptodate(xa, ya, x, y, xacc, yacc);
+        xa: &[f64],
+        ya: &[f64],
+        za: &[f64],
+        x: f64,
+        y: f64,
+        acc: &mut Accelerator2d,
+    ) -> Result<f64, Domain2dError> {
+        check_if_inbounds2d(xa, ya, x, y)?;
+        let is_uptodate = acc.is_uptodate(xa, ya, x, y);
         if !is_uptodate {
-            cache.update_step1(xa, ya, za)?;
+            acc.update_step1(xa, ya, za);
         }
 
-        let (_xi, _yi) = cache.get_xy_indices();
-        let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
-        let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
-        let (dx, dy) = cache.get_partials();
+        let (xlo, _, ylo, _) = acc.get_xy_grid_values();
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = acc.get_z_grid_values();
+        let (dx, dy) = acc.get_partials();
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
         if !is_uptodate {
-            cache.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du)?;
+            acc.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du);
         };
 
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = cache.get_zxminmaxxing();
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = cache.get_zyminmaxxing();
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = cache.get_zxyminmaxxing();
+        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = acc.get_zxminmaxxing();
+        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = acc.get_zyminmaxxing();
+        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = acc.get_zxyminmaxxing();
 
-        let (t0, t1) = (T::one(), t);
+        let (t0, t1) = (1.0, t);
 
         let u2 = u * u;
-        let (u0, u1, u2, u3) = (T::one(), u, u2, u * u2);
+        let (u0, u1, u2, u3) = (1.0, u, u2, u * u2);
 
-        let two = T::from(2).unwrap();
-        let three = T::from(3).unwrap();
-        let four = T::from(4).unwrap();
-        let six = T::from(6).unwrap();
-        let nine = T::from(9).unwrap();
+        let mut dd = 0.0; // Result
 
-        let mut dd = T::zero(); // Result
-
-        let v = -three * zminmin + three * zmaxmin - two * zxminmin - zxmaxmin;
-        dd += two * v * t0 * u0;
-        let v = -three * zyminmin + three * zymaxmin - two * zxyminmin - zxymaxmin;
-        dd += two * v * t0 * u1;
+        let v = -3.0 * zminmin + 3.0 * zmaxmin - 2.0 * zxminmin - zxmaxmin;
+        dd += 2.0 * v * t0 * u0;
+        let v = -3.0 * zyminmin + 3.0 * zymaxmin - 2.0 * zxyminmin - zxymaxmin;
+        dd += 2.0 * v * t0 * u1;
         #[rustfmt::skip]
-        let v = nine * zminmin - nine * zmaxmin + nine * zmaxmax - nine * zminmax
-            + six * zxminmin + three * zxmaxmin - three * zxmaxmax - six * zxminmax
-            + six * zyminmin - six * zymaxmin - three * zymaxmax + three * zyminmax
-            + four * zxyminmin + two * zxymaxmin + zxymaxmax + two * zxyminmax;
-        dd += two * v * t0 * u2;
+        let v = 9.0 * zminmin - 9.0 * zmaxmin + 9.0 * zmaxmax - 9.0 * zminmax
+            + 6.0 * zxminmin + 3.0 * zxmaxmin - 3.0 * zxmaxmax - 6.0 * zxminmax
+            + 6.0 * zyminmin - 6.0 * zymaxmin - 3.0 * zymaxmax + 3.0 * zyminmax
+            + 4.0 * zxyminmin + 2.0 * zxymaxmin + zxymaxmax + 2.0 * zxyminmax;
+        dd += 2.0 * v * t0 * u2;
         #[rustfmt::skip]
-        let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - four * zxminmin - two * zxmaxmin + two * zxmaxmax + four * zxminmax
-            - three * zyminmin + three * zymaxmin + three * zymaxmax - three * zyminmax
-            - two * zxyminmin - zxymaxmin - zxymaxmax - two * zxyminmax;
-        dd += two * v * t0 * u3;
-        let v = two * zminmin - two * zmaxmin + zxminmin + zxmaxmin;
-        dd += six * v * t1 * u0;
-        let v = two * zyminmin - two * zymaxmin + zxyminmin + zxymaxmin;
-        dd += six * v * t1 * u1;
+        let v = -6.0 * zminmin + 6.0 * zmaxmin - 6.0 * zmaxmax + 6.0 * zminmax
+            - 4.0 * zxminmin - 2.0 * zxmaxmin + 2.0 * zxmaxmax + 4.0 * zxminmax
+            - 3.0 * zyminmin + 3.0 * zymaxmin + 3.0 * zymaxmax - 3.0 * zyminmax
+            - 2.0 * zxyminmin - zxymaxmin - zxymaxmax - 2.0 * zxyminmax;
+        dd += 2.0 * v * t0 * u3;
+        let v = 2.0 * zminmin - 2.0 * zmaxmin + zxminmin + zxmaxmin;
+        dd += 6.0 * v * t1 * u0;
+        let v = 2.0 * zyminmin - 2.0 * zymaxmin + zxyminmin + zxymaxmin;
+        dd += 6.0 * v * t1 * u1;
         #[rustfmt::skip]
-        let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - three * zxminmin - three * zxmaxmin + three * zxmaxmax + three * zxminmax
-            - four * zyminmin + four * zymaxmin + two * zymaxmax - two * zyminmax
-            - two * zxyminmin - two * zxymaxmin - zxymaxmax - zxyminmax;
-        dd += six * v * t1 * u2;
+        let v = -6.0 * zminmin + 6.0 * zmaxmin - 6.0 * zmaxmax + 6.0 * zminmax
+            - 3.0 * zxminmin - 3.0 * zxmaxmin + 3.0 * zxmaxmax + 3.0 * zxminmax
+            - 4.0 * zyminmin + 4.0 * zymaxmin + 2.0 * zymaxmax - 2.0 * zyminmax
+            - 2.0 * zxyminmin - 2.0 * zxymaxmin - zxymaxmax - zxyminmax;
+        dd += 6.0 * v * t1 * u2;
         #[rustfmt::skip]
-        let v = four * zminmin - four * zmaxmin + four * zmaxmax - four * zminmax
-            + two * zxminmin + two * zxmaxmin - two * zxmaxmax - two * zxminmax
-            + two * zyminmin - two * zymaxmin - two * zymaxmax + two * zyminmax
+        let v = 4.0 * zminmin - 4.0 * zmaxmin + 4.0 * zmaxmax - 4.0 * zminmax
+            + 2.0 * zxminmin + 2.0 * zxmaxmin - 2.0 * zxmaxmax - 2.0 * zxminmax
+            + 2.0 * zyminmin - 2.0 * zymaxmin - 2.0 * zymaxmax + 2.0 * zyminmax
             + zxyminmin + zxymaxmin + zxymaxmax + zxyminmax;
-        dd += six * v * t1 * u3;
+        dd += 6.0 * v * t1 * u3;
         dd = dd * dt * dt;
 
         Ok(dd)
     }
 
-    #[allow(unused_variables)]
     fn eval_deriv_yy(
         &self,
-        xa: &[T],
-        ya: &[T],
-        za: &[T],
-        x: T,
-        y: T,
-        xacc: &mut Accelerator,
-        yacc: &mut Accelerator,
-        cache: &mut Cache<T>,
-    ) -> Result<T, DomainError> {
-        check_if_inbounds(xa, x)?;
-        check_if_inbounds(ya, y)?;
-        let is_uptodate = cache.is_uptodate(xa, ya, x, y, xacc, yacc);
+        xa: &[f64],
+        ya: &[f64],
+        za: &[f64],
+        x: f64,
+        y: f64,
+        acc: &mut Accelerator2d,
+    ) -> Result<f64, Domain2dError> {
+        check_if_inbounds2d(xa, ya, x, y)?;
+        let is_uptodate = acc.is_uptodate(xa, ya, x, y);
         if !is_uptodate {
-            cache.update_step1(xa, ya, za)?;
+            acc.update_step1(xa, ya, za);
         }
 
-        let (_xi, _yi) = cache.get_xy_indices();
-        let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
-        let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
-        let (dx, dy) = cache.get_partials();
+        let (xlo, _, ylo, _) = acc.get_xy_grid_values();
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = acc.get_z_grid_values();
+        let (dx, dy) = acc.get_partials();
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
         if !is_uptodate {
-            cache.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du)?;
+            acc.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du);
         };
 
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = cache.get_zxminmaxxing();
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = cache.get_zyminmaxxing();
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = cache.get_zxyminmaxxing();
+        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = acc.get_zxminmaxxing();
+        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = acc.get_zyminmaxxing();
+        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = acc.get_zxyminmaxxing();
 
         let t2 = t * t;
-        let (t0, t1, t2, t3) = (T::one(), t, t2, t * t2);
+        let (t0, t1, t2, t3) = (1.0, t, t2, t * t2);
 
-        let (u0, u1) = (T::one(), u);
+        let (u0, u1) = (1.0, u);
 
-        let two = T::from(2).unwrap();
-        let three = T::from(3).unwrap();
-        let four = T::from(4).unwrap();
-        let six = T::from(6).unwrap();
-        let nine = T::from(9).unwrap();
+        let mut dd = 0.0; // Result
 
-        let mut dd = T::zero(); // Result
-
-        let v = -three * zminmin + three * zminmax - two * zyminmin - zyminmax;
-        dd += two * v * t0 * u0;
-        let v = two * zminmin - two * zminmax + zyminmin + zyminmax;
-        dd += six * v * t0 * u1;
-        let v = -three * zxminmin + three * zxminmax - two * zxyminmin - zxyminmax;
-        dd += two * v * t1 * u0;
-        let v = two * zxminmin - two * zxminmax + zxyminmin + zxyminmax;
-        dd += six * v * t1 * u1;
+        let v = -3.0 * zminmin + 3.0 * zminmax - 2.0 * zyminmin - zyminmax;
+        dd += 2.0 * v * t0 * u0;
+        let v = 2.0 * zminmin - 2.0 * zminmax + zyminmin + zyminmax;
+        dd += 6.0 * v * t0 * u1;
+        let v = -3.0 * zxminmin + 3.0 * zxminmax - 2.0 * zxyminmin - zxyminmax;
+        dd += 2.0 * v * t1 * u0;
+        let v = 2.0 * zxminmin - 2.0 * zxminmax + zxyminmin + zxyminmax;
+        dd += 6.0 * v * t1 * u1;
         #[rustfmt::skip]
-        let v = nine * zminmin - nine * zmaxmin + nine * zmaxmax - nine * zminmax
-            + six * zxminmin + three * zxmaxmin - three * zxmaxmax - six * zxminmax
-            + six * zyminmin - six * zymaxmin - three * zymaxmax + three * zyminmax
-            + four * zxyminmin + two * zxymaxmin + zxymaxmax + two * zxyminmax;
-        dd += two * v * t2 * u0;
+        let v = 9.0 * zminmin - 9.0 * zmaxmin + 9.0 * zmaxmax - 9.0 * zminmax
+            + 6.0 * zxminmin + 3.0 * zxmaxmin - 3.0 * zxmaxmax - 6.0 * zxminmax
+            + 6.0 * zyminmin - 6.0 * zymaxmin - 3.0 * zymaxmax + 3.0 * zyminmax
+            + 4.0 * zxyminmin + 2.0 * zxymaxmin + zxymaxmax + 2.0 * zxyminmax;
+        dd += 2.0 * v * t2 * u0;
         #[rustfmt::skip]
-        let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - four * zxminmin - two * zxmaxmin + two * zxmaxmax + four * zxminmax
-            - three * zyminmin + three * zymaxmin + three * zymaxmax - three * zyminmax
-            - two * zxyminmin - zxymaxmin - zxymaxmax - two * zxyminmax;
-        dd += six * v * t2 * u1;
+        let v = -6.0 * zminmin + 6.0 * zmaxmin - 6.0 * zmaxmax + 6.0 * zminmax
+            - 4.0 * zxminmin - 2.0 * zxmaxmin + 2.0 * zxmaxmax + 4.0 * zxminmax
+            - 3.0 * zyminmin + 3.0 * zymaxmin + 3.0 * zymaxmax - 3.0 * zyminmax
+            - 2.0 * zxyminmin - zxymaxmin - zxymaxmax - 2.0 * zxyminmax;
+        dd += 6.0 * v * t2 * u1;
         #[rustfmt::skip]
-        let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - three * zxminmin - three * zxmaxmin + three * zxmaxmax + three * zxminmax
-            - four * zyminmin + four * zymaxmin + two * zymaxmax - two * zyminmax
-            - two * zxyminmin - two * zxymaxmin - zxymaxmax - zxyminmax;
-        dd += two * v * t3 * u0;
+        let v = -6.0 * zminmin + 6.0 * zmaxmin - 6.0 * zmaxmax + 6.0 * zminmax
+            - 3.0 * zxminmin - 3.0 * zxmaxmin + 3.0 * zxmaxmax + 3.0 * zxminmax
+            - 4.0 * zyminmin + 4.0 * zymaxmin + 2.0 * zymaxmax - 2.0 * zyminmax
+            - 2.0 * zxyminmin - 2.0 * zxymaxmin - zxymaxmax - zxyminmax;
+        dd += 2.0 * v * t3 * u0;
         #[rustfmt::skip]
-        let v = four * zminmin - four * zmaxmin + four * zmaxmax - four * zminmax
-            + two * zxminmin + two * zxmaxmin - two * zxmaxmax - two * zxminmax
-            + two * zyminmin - two * zymaxmin - two * zymaxmax + two * zyminmax
+        let v = 4.0 * zminmin - 4.0 * zmaxmin + 4.0 * zmaxmax - 4.0 * zminmax
+            + 2.0 * zxminmin + 2.0 * zxmaxmin - 2.0 * zxmaxmax - 2.0 * zxminmax
+            + 2.0 * zyminmin - 2.0 * zymaxmin - 2.0 * zymaxmax + 2.0 * zyminmax
             + zxyminmin + zxymaxmin + zxymaxmax + zxyminmax;
-        dd += six * v * t3 * u1;
+        dd += 6.0 * v * t3 * u1;
         dd = dd * du * du;
 
         Ok(dd)
     }
 
-    #[allow(unused_variables)]
     fn eval_deriv_xy(
         &self,
-        xa: &[T],
-        ya: &[T],
-        za: &[T],
-        x: T,
-        y: T,
-        xacc: &mut Accelerator,
-        yacc: &mut Accelerator,
-        cache: &mut Cache<T>,
-    ) -> Result<T, DomainError> {
-        check_if_inbounds(xa, x)?;
-        check_if_inbounds(ya, y)?;
-        let is_uptodate = cache.is_uptodate(xa, ya, x, y, xacc, yacc);
+        xa: &[f64],
+        ya: &[f64],
+        za: &[f64],
+        x: f64,
+        y: f64,
+        acc: &mut Accelerator2d,
+    ) -> Result<f64, Domain2dError> {
+        check_if_inbounds2d(xa, ya, x, y)?;
+        let is_uptodate = acc.is_uptodate(xa, ya, x, y);
         if !is_uptodate {
-            cache.update_step1(xa, ya, za)?;
+            acc.update_step1(xa, ya, za);
         }
 
-        let (_xi, _yi) = cache.get_xy_indices();
-        let (xlo, _xhi, ylo, _yhi) = cache.get_xy_grid_values();
-        let (zminmin, zminmax, zmaxmin, zmaxmax) = cache.get_z_grid_values();
-        let (dx, dy) = cache.get_partials();
+        let (xlo, _, ylo, _) = acc.get_xy_grid_values();
+        let (zminmin, zminmax, zmaxmin, zmaxmax) = acc.get_z_grid_values();
+        let (dx, dy) = acc.get_partials();
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
         if !is_uptodate {
-            cache.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du)?;
+            acc.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du);
         };
 
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = cache.get_zxminmaxxing();
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = cache.get_zyminmaxxing();
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = cache.get_zxyminmaxxing();
+        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = acc.get_zxminmaxxing();
+        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = acc.get_zyminmaxxing();
+        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = acc.get_zxyminmaxxing();
 
-        let (t0, t1, t2) = (T::one(), t, t * t);
+        let (t0, t1, t2) = (1.0, t, t * t);
 
-        let (u0, u1, u2) = (T::one(), u, u * u);
+        let (u0, u1, u2) = (1.0, u, u * u);
 
-        let two = T::from(2).unwrap();
-        let three = T::from(3).unwrap();
-        let four = T::from(4).unwrap();
-        let six = T::from(6).unwrap();
-        let nine = T::from(9).unwrap();
-
-        let mut dd = T::zero(); // Result
+        let mut dd = 0.0; // Result
 
         let v = zxyminmin;
         dd += v * t0 * u0;
-        let v = -three * zxminmin + three * zxminmax - two * zxyminmin - zxyminmax;
-        dd += two * v * t0 * u1;
-        let v = two * zxminmin - two * zxminmax + zxyminmin + zxyminmax;
-        dd += three * v * t0 * u2;
-        let v = -three * zyminmin + three * zymaxmin - two * zxyminmin - zxymaxmin;
-        dd += two * v * t1 * u0;
+        let v = -3.0 * zxminmin + 3.0 * zxminmax - 2.0 * zxyminmin - zxyminmax;
+        dd += 2.0 * v * t0 * u1;
+        let v = 2.0 * zxminmin - 2.0 * zxminmax + zxyminmin + zxyminmax;
+        dd += 3.0 * v * t0 * u2;
+        let v = -3.0 * zyminmin + 3.0 * zymaxmin - 2.0 * zxyminmin - zxymaxmin;
+        dd += 2.0 * v * t1 * u0;
         #[rustfmt::skip]
-        let v = nine * zminmin - nine * zmaxmin + nine * zmaxmax - nine * zminmax
-            + six * zxminmin + three * zxmaxmin - three * zxmaxmax - six * zxminmax
-            + six * zyminmin - six * zymaxmin - three * zymaxmax + three * zyminmax
-            + four * zxyminmin + two * zxymaxmin + zxymaxmax + two * zxyminmax;
-        dd += four * v * t1 * u1;
+        let v = 9.0 * zminmin - 9.0 * zmaxmin + 9.0 * zmaxmax - 9.0 * zminmax
+            + 6.0 * zxminmin + 3.0 * zxmaxmin - 3.0 * zxmaxmax - 6.0 * zxminmax
+            + 6.0 * zyminmin - 6.0 * zymaxmin - 3.0 * zymaxmax + 3.0 * zyminmax
+            + 4.0 * zxyminmin + 2.0 * zxymaxmin + zxymaxmax + 2.0 * zxyminmax;
+        dd += 4.0 * v * t1 * u1;
         #[rustfmt::skip]
-        let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - four * zxminmin - two * zxmaxmin + two * zxmaxmax + four * zxminmax
-            - three * zyminmin + three * zymaxmin + three * zymaxmax - three * zyminmax
-            - two * zxyminmin - zxymaxmin - zxymaxmax - two * zxyminmax;
-        dd += six * v * t1 * u2;
-        let v = two * zyminmin - two * zymaxmin + zxyminmin + zxymaxmin;
-        dd += three * v * t2 * u0;
+        let v = -6.0 * zminmin + 6.0 * zmaxmin - 6.0 * zmaxmax + 6.0 * zminmax
+            - 4.0 * zxminmin - 2.0 * zxmaxmin + 2.0 * zxmaxmax + 4.0 * zxminmax
+            - 3.0 * zyminmin + 3.0 * zymaxmin + 3.0 * zymaxmax - 3.0 * zyminmax
+            - 2.0 * zxyminmin - zxymaxmin - zxymaxmax - 2.0 * zxyminmax;
+        dd += 6.0 * v * t1 * u2;
+        let v = 2.0 * zyminmin - 2.0 * zymaxmin + zxyminmin + zxymaxmin;
+        dd += 3.0 * v * t2 * u0;
         #[rustfmt::skip]
-        let v = -six * zminmin + six * zmaxmin - six * zmaxmax + six * zminmax
-            - three * zxminmin - three * zxmaxmin + three * zxmaxmax + three * zxminmax
-            - four * zyminmin + four * zymaxmin + two * zymaxmax - two * zyminmax
-            - two * zxyminmin - two * zxymaxmin - zxymaxmax - zxyminmax;
-        dd += six * v * t2 * u1;
+        let v = -6.0 * zminmin + 6.0 * zmaxmin - 6.0 * zmaxmax + 6.0 * zminmax
+            - 3.0 * zxminmin - 3.0 * zxmaxmin + 3.0 * zxmaxmax + 3.0 * zxminmax
+            - 4.0 * zyminmin + 4.0 * zymaxmin + 2.0 * zymaxmax - 2.0 * zyminmax
+            - 2.0 * zxyminmin - 2.0 * zxymaxmin - zxymaxmax - zxyminmax;
+        dd += 6.0 * v * t2 * u1;
         #[rustfmt::skip]
-        let v = four * zminmin - four * zmaxmin + four * zmaxmax - four * zminmax
-            + two * zxminmin + two * zxmaxmin - two * zxmaxmax - two * zxminmax
-            + two * zyminmin - two * zymaxmin - two * zymaxmax + two * zyminmax
+        let v = 4.0 * zminmin - 4.0 * zmaxmin + 4.0 * zmaxmax - 4.0 * zminmax
+            + 2.0 * zxminmin + 2.0 * zxmaxmin - 2.0 * zxmaxmax - 2.0 * zxminmax
+            + 2.0 * zyminmin - 2.0 * zymaxmin - 2.0 * zymaxmax + 2.0 * zyminmax
             + zxyminmin + zxymaxmin + zxymaxmax + zxyminmax;
-        dd += nine * v * t2 * u2;
+        dd += 9.0 * v * t2 * u2;
         dd = dd * dt * du;
 
         Ok(dd)
@@ -682,11 +608,7 @@ where
 }
 
 /// Common calculation
-#[inline(always)]
-fn tu_cubic_values<T>(x: T, y: T, xlo: T, ylo: T, dx: T, dy: T) -> (T, T, T, T)
-where
-    T: crate::Num + Lapack,
-{
+fn tu_cubic_values(x: f64, y: f64, xlo: f64, ylo: f64, dx: f64, dy: f64) -> (f64, f64, f64, f64) {
     let t = (x - xlo) / dx;
     let u = (y - ylo) / dy;
     let dt = dx.recip();

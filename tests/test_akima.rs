@@ -1,17 +1,7 @@
-use crate::Akima;
-use crate::AkimaPeriodic;
-use crate::InterpType;
-use crate::tests::XYTable;
-use crate::tests::test_interp;
-use crate::tests::test_interp_extra;
+mod common;
 
-#[test]
-fn test_type_fields() {
-    let _ = <Akima as InterpType<f64>>::name(&Akima);
-    let _ = <Akima as InterpType<f64>>::min_size(&Akima);
-    let _ = <AkimaPeriodic as InterpType<f64>>::name(&AkimaPeriodic);
-    let _ = <AkimaPeriodic as InterpType<f64>>::min_size(&AkimaPeriodic);
-}
+use common::*;
+use rsl_interpolation::*;
 
 #[test]
 fn gsl_test_akima() {
@@ -40,7 +30,7 @@ fn gsl_test_akima() {
         y: &iytest,
     };
 
-    let interp = Akima.build(&xa, &ya).unwrap();
+    let interp = AkimaInterpolator::build(&xa, &ya).unwrap();
     test_interp(data_table, test_e_table, test_d_table, test_i_table, interp);
 }
 
@@ -111,7 +101,7 @@ fn extra_test_akima() {
         y: &iytest,
     };
 
-    let interp = Akima.build(&xa, &ya).unwrap();
+    let interp = AkimaInterpolator::build(&xa, &ya).unwrap();
     test_interp_extra(
         data_table,
         test_e_table,
@@ -195,7 +185,7 @@ fn extra_test_akima_periodic() {
         y: &iytest,
     };
 
-    let interp = AkimaPeriodic.build(&xa, &ya).unwrap();
+    let interp = AkimaPeriodicInterpolator::build(&xa, &ya).unwrap();
     test_interp_extra(
         data_table,
         test_e_table,

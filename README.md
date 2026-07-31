@@ -28,7 +28,8 @@ For the plots to work, `gnuplot` must be installed.
 
 Example
 ```bash
-make -C src/tests/c_gsl_tests                # Run tests and create plots
-open src/tests/c_gsl_tests/plots/akima.png   # Open the graph image
-make -C src/tests/c_gsl_tests clean          # Cleanup
+make -C tests/c_gsl_tests akima          # Compile and run akima test. Data is stored in ./tests/c_gsl_tests/out/akima.dat
+make -C tests/c_gsl_tests akima_plot     # Create akima.png graph, stored in ./tests/c_gsl_tests/out/akima.png
+open tests/c_gsl_tests/out/akima.png   # Open the graph image
+make -C tests/c_gsl_tests clean			 # Clean C tests output
 ```

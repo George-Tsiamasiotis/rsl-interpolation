@@ -1,19 +1,14 @@
-use crate::tests::XYTable;
-use crate::tests::test_interp;
-use crate::{Accelerator, InterpType, Interpolation, Linear};
+mod common;
 
-#[test]
-fn test_type_fields() {
-    let _ = <Linear as InterpType<f64>>::name(&Linear);
-    let _ = <Linear as InterpType<f64>>::min_size(&Linear);
-}
+use common::*;
+use rsl_interpolation::*;
 
 #[test]
 fn gsl_test_linear() {
     let xa = [0.0, 1.0, 2.0, 3.0];
     let ya = [0.0, 1.0, 2.0, 3.0];
 
-    let interp = Linear.build(&xa, &ya).unwrap();
+    let interp = LinearInterpolator::build(&xa, &ya).unwrap();
 
     let xtest = [0.0, 0.5, 1.0, 1.5, 2.5, 3.0];
     let ytest = [0.0, 0.5, 1.0, 1.5, 2.5, 3.0];

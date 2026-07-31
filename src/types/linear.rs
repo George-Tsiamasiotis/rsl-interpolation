@@ -1,27 +1,22 @@
-use std::marker::PhantomData;
+//! Definition of Linear Interpolator.
 
 use crate::Accelerator;
-use crate::InterpType;
-use crate::Interpolation;
-use crate::{DomainError, InterpolationError};
+use crate::{Domain1dError, InterpolatorError};
+use crate::{Interpolation, Interpolator};
 
 use crate::{check_if_inbounds, check1d_data};
 
 const MIN_SIZE: usize = 2;
 
-/// Linear Interpolation type.
+/// Linear Interpolator.
 ///
-/// The simplest type of interpolation.
+/// This interpolation method does not require any additional memory.
 #[doc(alias = "gsl_interp_linear")]
-#[derive(Debug, Clone, Copy)]
-pub struct Linear;
+#[derive(Debug, Clone)]
+#[non_exhaustive]
+pub struct LinearInterpolator;
 
-impl<T> InterpType<T> for Linear
-where
-    T: crate::Num,
-{
-    type Interpolation = LinearInterp<T>;
-
+impl Interpolator for LinearInterpolator {
     /// Constructs a Linear Interpolator.
     ///
     /// # Example
@@ -29,18 +24,22 @@ where
     /// ```
     /// # use rsl_interpolation::*;
     /// #
-    /// # fn main() -> Result<(), InterpolationError>{
+    /// # fn main() -> Result<(), InterpolatorError>{
     /// let xa = [0.0, 1.0, 2.0];
     /// let ya = [0.0, 2.0, 4.0];
-    /// let interp = Linear.build(&xa, &ya)?;
+    /// let interp = LinearInterpolator::build(&xa, &ya)?;
     /// # Ok(())
     /// # }
     /// ```
-    fn build(&self, xa: &[T], ya: &[T]) -> Result<LinearInterp<T>, InterpolationError> {
+    ///
+    /// # Errors
+    ///
+    /// - [`InterpolatorError::UnsortedDataset`]: `xa` is not monotonically increasing.
+    /// - [`InterpolatorError::DatasetMismatch`]: `xa` and `ya` do not have the same length.
+    /// - [`InterpolatorError::NotEnoughPoints`]: length of `xa` is less that 2.
+    fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolatorError> {
         check1d_data(xa, ya, MIN_SIZE)?;
-        Ok(LinearInterp {
-            _variable_type: PhantomData,
-        })
+        Ok(Self)
     }
 
     fn name(&self) -> &str {
@@ -52,23 +51,14 @@ where
     }
 }
 
-// ===============================================================================================
-
-/// Linear Interpolator.
-///
-/// Provides all the evaluation methods.
-///
-/// Should be constructed through the [`Linear`] type.
-#[derive(Debug, Clone, Copy)]
-pub struct LinearInterp<T> {
-    _variable_type: PhantomData<T>,
-}
-
-impl<T> Interpolation<T> for LinearInterp<T>
-where
-    T: crate::Num,
-{
-    fn eval(&self, xa: &[T], ya: &[T], x: T, acc: &mut Accelerator) -> Result<T, DomainError> {
+impl Interpolation for LinearInterpolator {
+    fn eval(
+        &self,
+        xa: &[f64],
+        ya: &[f64],
+        x: f64,
+        acc: &mut Accelerator,
+    ) -> Result<f64, Domain1dError> {
         check_if_inbounds(xa, x)?;
         let index = acc.find(xa, x);
 
@@ -79,17 +69,17 @@ where
 
         let dx = xhi - xlo;
 
-        debug_assert!(dx > T::zero());
+        debug_assert!(dx > 0.0);
         Ok(ylo + (x - xlo) / dx * (yhi - ylo))
     }
 
     fn eval_deriv(
         &self,
-        xa: &[T],
-        ya: &[T],
-        x: T,
+        xa: &[f64],
+        ya: &[f64],
+        x: f64,
         acc: &mut Accelerator,
-    ) -> Result<T, DomainError> {
+    ) -> Result<f64, Domain1dError> {
         check_if_inbounds(xa, x)?;
         let index = acc.find(xa, x);
 
@@ -101,37 +91,36 @@ where
         let dx = xhi - xlo;
         let dy = yhi - ylo;
 
-        debug_assert!(dx > T::zero());
+        debug_assert!(dx > 0.0);
         Ok(dy / dx)
     }
 
     /// Always returns `0`.
-    #[allow(unused_variables)]
     fn eval_deriv2(
         &self,
-        xa: &[T],
-        ya: &[T],
-        x: T,
-        acc: &mut Accelerator,
-    ) -> Result<T, DomainError> {
+        xa: &[f64],
+        _: &[f64],
+        x: f64,
+        _: &mut Accelerator,
+    ) -> Result<f64, Domain1dError> {
         check_if_inbounds(xa, x)?;
-        Ok(T::zero())
+        Ok(0.0)
     }
 
     fn eval_integ(
         &self,
-        xa: &[T],
-        ya: &[T],
-        a: T,
-        b: T,
+        xa: &[f64],
+        ya: &[f64],
+        a: f64,
+        b: f64,
         acc: &mut Accelerator,
-    ) -> Result<T, DomainError> {
+    ) -> Result<f64, Domain1dError> {
         check_if_inbounds(xa, a)?;
         check_if_inbounds(xa, b)?;
         let index_a = acc.find(xa, a);
         let index_b = acc.find(xa, b);
 
-        let mut result = T::zero();
+        let mut result = 0.0;
 
         for i in index_a..=index_b {
             let xlo = xa[i];
@@ -141,18 +130,17 @@ where
 
             let dx = xhi - xlo;
             let d = (yhi - ylo) / dx;
-            let half = T::from(0.5).unwrap();
 
-            if dx.is_zero() {
+            if dx == 0.0 {
                 continue;
             }
 
             if (i == index_a) | (i == index_b) {
                 let x1 = if i == index_a { a } else { xlo };
                 let x2 = if i == index_b { b } else { xhi };
-                result += (x2 - x1) * (ylo + half * d * ((x2 - xlo) + (x1 - xlo)));
+                result += (x2 - x1) * (ylo + 0.5 * d * ((x2 - xlo) + (x1 - xlo)));
             } else {
-                result += half * dx * (ylo + yhi);
+                result += 0.5 * dx * (ylo + yhi);
             }
         }
         Ok(result)

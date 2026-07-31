@@ -1,13 +1,7 @@
-use crate::Cubic;
-use crate::InterpType;
-use crate::tests::XYTable;
-use crate::tests::test_interp;
+mod common;
 
-#[test]
-fn test_type_fields() {
-    let _ = <Cubic as InterpType<f64>>::name(&Cubic);
-    let _ = <Cubic as InterpType<f64>>::min_size(&Cubic);
-}
+use common::*;
+use rsl_interpolation::*;
 
 #[test]
 fn gsl_test_cubic1() {
@@ -36,7 +30,7 @@ fn gsl_test_cubic1() {
         y: &iytest,
     };
 
-    let interp = Cubic.build(&xa, &ya).unwrap();
+    let interp = CubicInterpolator::build(&xa, &ya).unwrap();
     test_interp(data_table, test_e_table, test_d_table, test_i_table, interp);
 }
 
@@ -119,7 +113,7 @@ fn gsl_test_cubic2() {
         y: &iytest,
     };
 
-    let interp = Cubic.build(&xa, &ya).unwrap();
+    let interp = CubicInterpolator::build(&xa, &ya).unwrap();
     test_interp(data_table, test_e_table, test_d_table, test_i_table, interp);
 }
 
@@ -190,6 +184,6 @@ fn gsl_test_cubic3() {
         y: &iytest,
     };
 
-    let interp = Cubic.build(&xa, &ya).unwrap();
+    let interp = CubicInterpolator::build(&xa, &ya).unwrap();
     test_interp(data_table, test_e_table, test_d_table, test_i_table, interp);
 }
