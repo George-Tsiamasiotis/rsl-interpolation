@@ -1,13 +1,9 @@
-//! Definition Steffen Interpolator.
+//! Definition of `Steffen` Interpolator.
 
-use crate::Accelerator;
-use crate::{Domain1dError, InterpolatorError};
-use crate::{Interpolation, Interpolator};
+use crate::{Accelerator, Domain1dError, Interpolation, InterpolationError};
 use crate::{check_if_inbounds, check1d_data};
 
-const MIN_SIZE: usize = 3;
-
-/// Steffen Interpolator
+/// Steffen Interpolator.
 ///
 /// Steffen’s method guarantees the monotonicity of the interpolating function between the given
 /// data points. Therefore, minima and maxima can only occur exactly at the data points, and there
@@ -16,7 +12,6 @@ const MIN_SIZE: usize = 3;
 /// continuous, but the second derivative may be discontinuous.
 #[doc(alias = "gsl_steffen_interp")]
 #[derive(Debug, Clone)]
-#[non_exhaustive]
 pub struct SteffenInterpolator {
     a: Box<[f64]>,
     b: Box<[f64]>,
@@ -24,15 +19,18 @@ pub struct SteffenInterpolator {
     d: Box<[f64]>,
 }
 
-impl Interpolator for SteffenInterpolator {
+impl SteffenInterpolator {
+    /// The minimum required number of points.
+    #[doc(alias = "gsl_interp_min_size")]
+    const MIN_SIZE: usize = 3;
+
     /// Constructs a Cubic Interpolator.
     ///
     /// ## Example
     ///
     /// ```
     /// # use rsl_interpolation::*;
-    /// #
-    /// # fn main() -> Result<(), InterpolatorError>{
+    /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
     /// let ya = [0.0, 2.0, 4.0];
     /// let interp = SteffenInterpolator::build(&xa, &ya)?;
@@ -42,11 +40,12 @@ impl Interpolator for SteffenInterpolator {
     ///
     /// # Errors
     ///
-    /// - [`InterpolatorError::UnsortedDataset`]: `xa` is not monotonically increasing.
-    /// - [`InterpolatorError::DatasetMismatch`]: `xa` and `ya` do not have the same length.
-    /// - [`InterpolatorError::NotEnoughPoints`]: length of `xa` is less that 3.
-    fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolatorError> {
-        check1d_data(xa, ya, MIN_SIZE)?;
+    /// - [`InterpolationError::UnsortedDataset`]: `xa` is not monotonically increasing.
+    /// - [`InterpolationError::DatasetMismatch`]: `xa` and `ya` do not have the same length.
+    /// - [`InterpolationError::NotEnoughPoints`]: length of `xa` is less that 3.
+    #[doc(alias = "gsl_interp_init")]
+    pub fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolationError> {
+        check1d_data(xa, ya, Self::MIN_SIZE)?;
         let size = xa.len();
 
         // First assign the interval and slopes for the left boundary. We use the "simplest
@@ -106,14 +105,6 @@ impl Interpolator for SteffenInterpolator {
             c: c.into_boxed_slice(),
             d: d.into_boxed_slice(),
         })
-    }
-
-    fn name(&self) -> &str {
-        "Steffen"
-    }
-
-    fn min_size(&self) -> usize {
-        MIN_SIZE
     }
 }
 

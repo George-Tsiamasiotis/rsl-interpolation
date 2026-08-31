@@ -1,14 +1,10 @@
-//! Definition of Cubic and CubicPeriodic Interpolator.
+//! Definitions of `Cubic` and `CubicPeriodic` Interpolators.
 
 use ndarray::Array1;
 use ndarray_linalg::{MatrixLayout, SolveTridiagonal, Tridiagonal};
 
-use crate::Accelerator;
-use crate::{Domain1dError, InterpolatorError};
-use crate::{Interpolation, Interpolator};
+use crate::{Accelerator, Domain1dError, Interpolation, InterpolationError};
 use crate::{check_if_inbounds, check1d_data, diff, integ_eval};
-
-const MIN_SIZE: usize = 3;
 
 /// Cubic Interpolator.
 ///
@@ -19,23 +15,25 @@ const MIN_SIZE: usize = 3;
 /// ## Reference
 ///
 /// Numerical Algorithms with C - Gisela Engeln-Mullges, Frank Uhlig - 1996 -
-/// Algorithm 10.1, pg 254
+/// Algorithm 10.1, pg 254.
 #[doc(alias = "gsl_interp_cspline")]
 #[derive(Debug, Clone)]
-#[non_exhaustive]
 pub struct CubicInterpolator {
     c: Box<[f64]>,
 }
 
-impl Interpolator for CubicInterpolator {
+impl CubicInterpolator {
+    /// The minimum required number of points.
+    #[doc(alias = "gsl_interp_min_size")]
+    pub const MIN_SIZE: usize = 3;
+
     /// Constructs a Cubic Interpolator.
     ///
     /// # Example
     ///
     /// ```
     /// # use rsl_interpolation::*;
-    /// #
-    /// # fn main() -> Result<(), InterpolatorError>{
+    /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
     /// let ya = [0.0, 2.0, 4.0];
     /// let interp = CubicInterpolator::build(&xa, &ya)?;
@@ -45,12 +43,13 @@ impl Interpolator for CubicInterpolator {
     ///
     /// # Errors
     ///
-    /// - [`InterpolatorError::UnsortedDataset`]: `xa` is not monotonically increasing.
-    /// - [`InterpolatorError::DatasetMismatch`]: `xa` and `ya` do not have the same length.
-    /// - [`InterpolatorError::NotEnoughPoints`]: length of `xa` is less that 3.
-    /// - [`InterpolatorError::BLASTridiagError`]: Error when solving the tridiagonal system.
-    fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolatorError> {
-        check1d_data(xa, ya, MIN_SIZE)?;
+    /// - [`InterpolationError::UnsortedDataset`]: `xa` is not monotonically increasing.
+    /// - [`InterpolationError::DatasetMismatch`]: `xa` and `ya` do not have the same length.
+    /// - [`InterpolationError::NotEnoughPoints`]: length of `xa` is less that 3.
+    /// - [`InterpolationError::BLASTridiagError`]: Error when solving the tridiagonal system.
+    #[doc(alias = "gsl_interp_init")]
+    pub fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolationError> {
+        check1d_data(xa, ya, Self::MIN_SIZE)?;
 
         // Engeln-Mullges G. - Uhlig F.: Algorithm 10.1, pg 254
         let sys_size = xa.len() - 2;
@@ -96,7 +95,7 @@ impl Interpolator for CubicInterpolator {
             let coeffs = match matrix.solve_tridiagonal(&Array1::from_vec(g.clone())) {
                 Ok(coeffs) => coeffs,
                 Err(err) => {
-                    return Err(InterpolatorError::BLASTridiagError {
+                    return Err(InterpolationError::BLASTridiagError {
                         which_interp: "Cubic".into(),
                         source: err,
                     });
@@ -110,14 +109,6 @@ impl Interpolator for CubicInterpolator {
         Ok(CubicInterpolator {
             c: c.into_boxed_slice(),
         })
-    }
-
-    fn name(&self) -> &str {
-        "Cubic"
-    }
-
-    fn min_size(&self) -> usize {
-        MIN_SIZE
     }
 }
 
@@ -177,20 +168,22 @@ impl Interpolation for CubicInterpolator {
 /// will have a discontinuity at the boundary.
 #[doc(alias = "gsl_interp_cspline_periodic")]
 #[derive(Debug, Clone)]
-#[non_exhaustive]
 pub struct CubicPeriodicInterpolator {
     c: Box<[f64]>,
 }
 
-impl Interpolator for CubicPeriodicInterpolator {
+impl CubicPeriodicInterpolator {
+    /// The minimum required number of points.
+    #[doc(alias = "gsl_interp_min_size")]
+    pub const MIN_SIZE: usize = 3;
+
     /// Constructs a Cubic Periodic Interpolator.
     ///
     /// # Example
     ///
     /// ```
     /// # use rsl_interpolation::*;
-    /// #
-    /// # fn main() -> Result<(), InterpolatorError>{
+    /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
     /// let ya = [0.0, 2.0, 4.0];
     /// let interp = CubicPeriodicInterpolator::build(&xa, &ya)?;
@@ -198,14 +191,22 @@ impl Interpolator for CubicPeriodicInterpolator {
     /// # }
     /// ```
     ///
+    /// # Panics
+    ///
+    /// This type currently panics if built with more than 3 points, since it requires a
+    /// cyclically tridiagonal matrix solver which is currently not implemented by
+    /// `ndarray_linalg`.
+    ///
     /// # Errors
     ///
-    /// - [`InterpolatorError::UnsortedDataset`]: `xa` is not monotonically increasing.
-    /// - [`InterpolatorError::DatasetMismatch`]: `xa` and `ya` do not have the same length.
-    /// - [`InterpolatorError::NotEnoughPoints`]: length of `xa` is less that 3.
-    /// - [`InterpolatorError::BLASTridiagError`]: Error when solving the tridiagonal system.
-    fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolatorError> {
-        check1d_data(xa, ya, MIN_SIZE)?;
+    /// - [`InterpolationError::UnsortedDataset`]: `xa` is not monotonically increasing.
+    /// - [`InterpolationError::DatasetMismatch`]: `xa` and `ya` do not have the same length.
+    /// - [`InterpolationError::NotEnoughPoints`]: length of `xa` is less that 3.
+    /// - [`InterpolationError::BLASTridiagError`]: Error when solving the tridiagonal system.
+    #[expect(clippy::panic_in_result_fn, reason = "unimplemented solver")]
+    #[doc(alias = "gsl_interp_init")]
+    pub fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolationError> {
+        check1d_data(xa, ya, Self::MIN_SIZE)?;
 
         // Engeln-Mullges G. - Uhlig F.: Algorithm 10.2, pg 255
         let sys_size = xa.len() - 1;
@@ -283,7 +284,7 @@ impl Interpolator for CubicPeriodicInterpolator {
                 let coeffs = match matrix.solve_tridiagonal(&Array1::from_vec(g.clone())) {
                     Ok(coeffs) => coeffs,
                     Err(err) => {
-                        return Err(InterpolatorError::BLASTridiagError {
+                        return Err(InterpolationError::BLASTridiagError {
                             which_interp: "Cubic Periodic".into(),
                             source: err,
                         });
@@ -302,14 +303,6 @@ impl Interpolator for CubicPeriodicInterpolator {
         Ok(CubicPeriodicInterpolator {
             c: c.into_boxed_slice(),
         })
-    }
-
-    fn name(&self) -> &str {
-        "Cubic Periodic"
-    }
-
-    fn min_size(&self) -> usize {
-        MIN_SIZE
     }
 }
 
@@ -476,7 +469,7 @@ fn cubic_eval_integ(
     }
     Ok(result)
 }
-/// Common coefficient determination
+/// Common coefficient determination.
 fn coeff_calc(carray: &[f64], dx: f64, dy: f64, index: usize) -> (f64, f64, f64) {
     let c = carray[index];
     let cplus1 = carray[index + 1];

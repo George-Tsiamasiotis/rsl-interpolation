@@ -1,28 +1,26 @@
-//! Definition of Bilinear Interpolator.
+//! Definition of `Bilinear` Interpolator.
 
-use crate::Accelerator2d;
-use crate::{Domain2dError, InterpolatorError};
-use crate::{Interpolation2d, Interpolator2d};
+use crate::{Accelerator2d, Domain2dError, Interpolation2d, InterpolationError};
 use crate::{check_if_inbounds2d, check2d_data};
-
-const MIN_SIZE: usize = 2;
 
 /// Bilinear Interpolator.
 ///
 /// This interpolation method does not require any additional memory.
 #[doc(alias = "gsl_interp2d_bilinear")]
 #[derive(Debug, Clone)]
-#[non_exhaustive]
 pub struct BilinearInterpolator;
 
-impl Interpolator2d for BilinearInterpolator {
+impl BilinearInterpolator {
+    /// The minimum required number of points.
+    #[doc(alias = "gsl_interp2d_min_size")]
+    const MIN_SIZE: usize = 2;
+
     /// Constructs a Bilinear Interpolator.
     ///
     /// # Example
     /// ```
     /// # use rsl_interpolation::*;
-    /// #
-    /// # fn main() -> Result<(), InterpolatorError>{
+    /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
     /// let ya = [0.0, 2.0, 4.0];
     /// // z = x + y, in column-major order
@@ -39,20 +37,13 @@ impl Interpolator2d for BilinearInterpolator {
     ///
     /// # Errors
     ///
-    /// - [`InterpolatorError::UnsortedDataset`]: `xa` or `ya` are not monotonically increasing.
-    /// - [`InterpolatorError::NotEnoughPoints`]: length of `xa` or `ya` is less that 2.
-    /// - [`InterpolatorError::ZGridMismatch`]: `xa.len()*ya.len() != za.len()`.
-    fn build(xa: &[f64], ya: &[f64], za: &[f64]) -> Result<Self, InterpolatorError> {
-        check2d_data(xa, ya, za, MIN_SIZE)?;
+    /// - [`InterpolationError::UnsortedDataset`]: `xa` or `ya` are not monotonically increasing.
+    /// - [`InterpolationError::NotEnoughPoints`]: length of `xa` or `ya` is less that 2.
+    /// - [`InterpolationError::ZGridMismatch`]: `xa.len()*ya.len() != za.len()`.
+    #[doc(alias = "gsl_interp2d_init")]
+    pub fn build(xa: &[f64], ya: &[f64], za: &[f64]) -> Result<Self, InterpolationError> {
+        check2d_data(xa, ya, za, Self::MIN_SIZE)?;
         Ok(Self)
-    }
-
-    fn name(&self) -> &str {
-        "Bilinear"
-    }
-
-    fn min_size(&self) -> usize {
-        MIN_SIZE
     }
 }
 
@@ -67,7 +58,7 @@ impl Interpolation2d for BilinearInterpolator {
         x: f64,
         y: f64,
         acc: &mut Accelerator2d,
-    ) -> Result<f64, Domain2dError> {
+    ) -> f64 {
         let is_uptodate = acc.is_uptodate(xa, ya, x, y);
         if !is_uptodate {
             acc.update_step1(xa, ya, za);
@@ -83,11 +74,10 @@ impl Interpolation2d for BilinearInterpolator {
         let t = (x - xlo) / dx;
         let u = (y - ylo) / dy;
 
-        let result = (1.0 - t) * (1.0 - u) * zminmin
+        (1.0 - t) * (1.0 - u) * zminmin
             + t * (1.0 - u) * zmaxmin
             + (1.0 - t) * u * zminmax
-            + t * u * zmaxmax;
-        Ok(result)
+            + t * u * zmaxmax
     }
 
     fn eval_deriv_x(

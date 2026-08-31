@@ -3,10 +3,16 @@ mod common;
 use common::*;
 use rsl_interpolation::*;
 
+#[test]
+fn send_sync() {
+    fn assert_send_sync<T: Send + Sync + Clone>() {}
+    assert_send_sync::<BilinearInterpolator>();
+}
+
 /// Tests bilinear interpolation using a symmetric function, f(x,y)=f(y,x), and diagonal
 /// interpolation points (x,y) where x=y. If these tests don't pass, something is seriously broken.
 #[test]
-fn gsl_test_bilinear_symmetric() {
+fn gsl_bilinear_symmetric() {
     let xa = [0.0, 1.0, 2.0, 3.0];
     let ya = [0.0, 1.0, 2.0, 3.0];
     #[rustfmt::skip]
@@ -21,12 +27,6 @@ fn gsl_test_bilinear_symmetric() {
     let ytest = [0.0, 0.5, 1.0, 1.5, 2.5, 3.0];
     let ztest = [1.0, 1.1, 1.2, 1.3, 1.5, 1.6];
 
-    let data_table = XYZTable {
-        x: &xa,
-        y: &ya,
-        z: &za,
-    };
-
     let test_e_table = XYZTable {
         x: &xtest,
         y: &ytest,
@@ -34,11 +34,11 @@ fn gsl_test_bilinear_symmetric() {
     };
 
     let interp = BilinearInterpolator::build(&xa, &ya, &za).unwrap();
-    test_interp2d(data_table, test_e_table, interp);
+    test_interp2d(test_e_table, Spline2d::new(Box::new(interp), &xa, &ya, &za));
 }
 
 #[test]
-fn gsl_test_bilinear_asymmetric_z() {
+fn gsl_bilinear_asymmetric_z() {
     let xa = [0.0, 1.0, 2.0, 3.0];
     let ya = [0.0, 1.0, 2.0, 3.0];
     #[rustfmt::skip]
@@ -63,12 +63,6 @@ fn gsl_test_bilinear_asymmetric_z() {
         1.5067237, 1.626612, 1.6146423, 1.15436761,
     ];
 
-    let data_table = XYZTable {
-        x: &xa,
-        y: &ya,
-        z: &za,
-    };
-
     let test_e_table = XYZTable {
         x: &xtest,
         y: &ytest,
@@ -76,12 +70,12 @@ fn gsl_test_bilinear_asymmetric_z() {
     };
 
     let interp = BilinearInterpolator::build(&xa, &ya, &za).unwrap();
-    test_interp2d(data_table, test_e_table, interp);
+    test_interp2d(test_e_table, Spline2d::new(Box::new(interp), &xa, &ya, &za));
 }
 
 /// Extra test that includes all derivatives, and iterates through all (x, y) pairs.
 #[test]
-fn extra_test_bilinear() {
+fn extra_bilinear() {
     let xa = [0.0, 1.0];
     let ya = [0.0, 1.0];
     #[rustfmt::skip]
@@ -139,12 +133,6 @@ fn extra_test_bilinear() {
     let dyytest = [0.0; 81];
     let dxytest = [-1.5; 81];
 
-    let data_table = XYZTable {
-        x: &xa,
-        y: &ya,
-        z: &za,
-    };
-
     let test_e_table = XYZTable {
         x: &xtest,
         y: &ytest,
@@ -183,14 +171,13 @@ fn extra_test_bilinear() {
 
     let interp = BilinearInterpolator::build(&xa, &ya, &za).unwrap();
     test_interp2d_extra(
-        data_table,
         test_e_table,
         test_dx_table,
         test_dy_table,
         test_dxx_table,
         test_dyy_table,
         test_dxy_table,
-        interp,
+        Spline2d::new(Box::new(interp), &xa, &ya, &za),
         "bilinear",
     );
 }

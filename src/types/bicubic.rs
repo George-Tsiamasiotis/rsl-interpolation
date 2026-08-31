@@ -1,32 +1,32 @@
-//! Definition of Bicubic Interpolator.
+//! Definition of `Bicubic` Interpolator.
 
-use crate::{Accelerator, Accelerator2d};
-use crate::{CubicInterpolator, Interpolation, Interpolator};
-use crate::{Domain2dError, InterpolatorError};
-use crate::{Interpolation2d, Interpolator2d};
+use crate::{
+    Accelerator, Accelerator2d, CubicInterpolator, Domain2dError, Interpolation, Interpolation2d,
+    InterpolationError,
+};
 use crate::{check_if_inbounds2d, check2d_data, z_idx};
-
-const MIN_SIZE: usize = 4;
 
 /// Bicubic Interpolator.
 #[doc(alias = "gsl_interp2d_bicubic")]
 #[derive(Debug, Clone)]
-#[non_exhaustive]
 pub struct BicubicInterpolator {
     pub(crate) zx: Box<[f64]>,
     pub(crate) zy: Box<[f64]>,
     pub(crate) zxy: Box<[f64]>,
 }
 
-impl Interpolator2d for BicubicInterpolator {
+impl BicubicInterpolator {
+    /// The minimum required number of points.
+    #[doc(alias = "gsl_interp2d_min_size")]
+    const MIN_SIZE: usize = 4;
+
     /// Constructs a Bicubic Interpolator.
     ///
     /// # Example
     ///
     /// ```
     /// # use rsl_interpolation::*;
-    /// #
-    /// # fn main() -> Result<(), InterpolatorError>{
+    /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0, 3.0];
     /// let ya = [0.0, 2.0, 4.0, 6.0];
     /// // z = x + y, in column-major order
@@ -44,12 +44,16 @@ impl Interpolator2d for BicubicInterpolator {
     ///
     /// # Errors
     ///
-    /// - [`InterpolatorError::UnsortedDataset`]: `xa` or `ya` are not monotonically increasing.
-    /// - [`InterpolatorError::NotEnoughPoints`]: length of `xa` or `ya` is less that 4.
-    /// - [`InterpolatorError::BLASTridiagError`]: Error when solving the tridiagonal system.
-    /// - [`InterpolatorError::ZGridMismatch`]: `xa.len()*ya.len() != za.len()`.
-    fn build(xa: &[f64], ya: &[f64], za: &[f64]) -> Result<Self, InterpolatorError> {
-        check2d_data(xa, ya, za, MIN_SIZE)?;
+    /// - [`InterpolationError::UnsortedDataset`]: `xa` or `ya` are not monotonically increasing.
+    /// - [`InterpolationError::NotEnoughPoints`]: length of `xa` or `ya` is less that 4.
+    /// - [`InterpolationError::BLASTridiagError`]: Error when solving the tridiagonal system.
+    /// - [`InterpolationError::ZGridMismatch`]: `xa.len()*ya.len() != za.len()`.
+    #[expect(clippy::needless_range_loop, reason = "Much cleaner this way")]
+    #[expect(clippy::missing_panics_doc, reason = "`xa` and `ya` are checked")]
+    #[expect(clippy::unwrap_in_result, reason = "`xa` and `ya` are checked")]
+    #[doc(alias = "gsl_interp2d_init")]
+    pub fn build(xa: &[f64], ya: &[f64], za: &[f64]) -> Result<Self, InterpolationError> {
+        check2d_data(xa, ya, za, Self::MIN_SIZE)?;
 
         let xsize = xa.len();
         let ysize = ya.len();
@@ -64,18 +68,15 @@ impl Interpolator2d for BicubicInterpolator {
         let mut x = vec![f64::NAN; xsize];
         let mut y = vec![f64::NAN; xsize];
 
-        #[allow(clippy::needless_range_loop)] // Much cleaner this way
         for j in 0..ysize {
             for i in 0..xsize {
                 x[i] = xa[i];
                 y[i] = za[z_idx(i, j, xsize, ysize)];
             }
-            let interp = CubicInterpolator::build(&x, &y)?;
+            let interp = CubicInterpolator::build(&x, &y).expect("checked");
             for i in 0..xsize {
                 let index = z_idx(i, j, xsize, ysize);
-                zx[index] = interp
-                    .eval_deriv(&x, &y, xa[i], &mut acc)
-                    .expect("data is checked");
+                zx[index] = interp.eval_deriv(&x, &y, xa[i], &mut acc).expect("checked");
             }
         }
 
@@ -83,18 +84,15 @@ impl Interpolator2d for BicubicInterpolator {
         let mut x = vec![f64::NAN; ysize];
         let mut y = vec![f64::NAN; ysize];
 
-        #[allow(clippy::needless_range_loop)] // Much cleaner this way
         for i in 0..xsize {
             for j in 0..ysize {
                 x[j] = ya[j];
                 y[j] = za[z_idx(i, j, xsize, ysize)];
             }
-            let interp = CubicInterpolator::build(&x, &y)?;
+            let interp = CubicInterpolator::build(&x, &y).expect("checked");
             for j in 0..ysize {
                 let index = z_idx(i, j, xsize, ysize);
-                zy[index] = interp
-                    .eval_deriv(&x, &y, ya[j], &mut acc)
-                    .expect("data is checked");
+                zy[index] = interp.eval_deriv(&x, &y, ya[j], &mut acc).expect("checked");
             }
         }
 
@@ -102,18 +100,15 @@ impl Interpolator2d for BicubicInterpolator {
         let mut x = vec![f64::NAN; xsize];
         let mut y = vec![f64::NAN; xsize];
 
-        #[allow(clippy::needless_range_loop)] // Much cleaner this way
         for j in 0..ysize {
             for i in 0..xsize {
                 x[i] = xa[i];
                 y[i] = zy[z_idx(i, j, xsize, ysize)];
             }
-            let interp = CubicInterpolator::build(&x, &y)?;
+            let interp = CubicInterpolator::build(&x, &y).expect("checked");
             for i in 0..xsize {
                 let index = z_idx(i, j, xsize, ysize);
-                zxy[index] = interp
-                    .eval_deriv(&x, &y, xa[i], &mut acc)
-                    .expect("data is checked");
+                zxy[index] = interp.eval_deriv(&x, &y, xa[i], &mut acc).expect("checked");
             }
         }
 
@@ -122,14 +117,6 @@ impl Interpolator2d for BicubicInterpolator {
             zy: zy.into_boxed_slice(),
             zxy: zxy.into_boxed_slice(),
         })
-    }
-
-    fn name(&self) -> &str {
-        "Bicubic"
-    }
-
-    fn min_size(&self) -> usize {
-        MIN_SIZE
     }
 }
 
@@ -144,7 +131,7 @@ impl Interpolation2d for BicubicInterpolator {
         x: f64,
         y: f64,
         acc: &mut Accelerator2d,
-    ) -> Result<f64, Domain2dError> {
+    ) -> f64 {
         let is_uptodate = acc.is_uptodate(xa, ya, x, y);
         if !is_uptodate {
             acc.update_step1(xa, ya, za);
@@ -221,7 +208,7 @@ impl Interpolation2d for BicubicInterpolator {
             + zxyminmin + zxymaxmin + zxymaxmax + zxyminmax;
         z += v * t3 * u3;
 
-        Ok(z)
+        z
     }
 
     fn eval_deriv_x(
@@ -607,7 +594,7 @@ impl Interpolation2d for BicubicInterpolator {
     }
 }
 
-/// Common calculation
+/// Common calculation.
 fn tu_cubic_values(x: f64, y: f64, xlo: f64, ylo: f64, dx: f64, dy: f64) -> (f64, f64, f64, f64) {
     let t = (x - xlo) / dx;
     let u = (y - ylo) / dy;

@@ -1,13 +1,9 @@
-//! Definition of Akima and AkimaPeriodic Interpolator.
+//! Definitions of `Akima` and `AkimaPeriodic` Interpolators.
 
 use std::collections::VecDeque;
 
-use crate::Accelerator;
-use crate::{Domain1dError, InterpolatorError};
-use crate::{Interpolation, Interpolator};
+use crate::{Accelerator, Domain1dError, Interpolation, InterpolationError};
 use crate::{check_if_inbounds, check1d_data, integ_eval};
-
-const MIN_SIZE: usize = 5;
 
 /// Akima Interpolator.
 ///
@@ -15,22 +11,24 @@ const MIN_SIZE: usize = 5;
 /// corner algorithm of Wodicka.
 #[doc(alias = "gsl_akima_interp")]
 #[derive(Debug, Clone)]
-#[non_exhaustive]
 pub struct AkimaInterpolator {
     b: Box<[f64]>,
     c: Box<[f64]>,
     d: Box<[f64]>,
 }
 
-impl Interpolator for AkimaInterpolator {
+impl AkimaInterpolator {
+    /// The minimum required number of points.
+    #[doc(alias = "gsl_interp_min_size")]
+    const MIN_SIZE: usize = 5;
+
     /// Constructs an Akima Interpolator.
     ///
     /// ## Example
     ///
     /// ```
     /// # use rsl_interpolation::*;
-    /// #
-    /// # fn main() -> Result<(), InterpolatorError>{
+    /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
     /// let interp = AkimaInterpolator::build(&xa, &ya)?;
@@ -40,11 +38,12 @@ impl Interpolator for AkimaInterpolator {
     ///
     /// # Errors
     ///
-    /// - [`InterpolatorError::UnsortedDataset`]: `xa` is not monotonically increasing.
-    /// - [`InterpolatorError::DatasetMismatch`]: `xa` and `ya` do not have the same length.
-    /// - [`InterpolatorError::NotEnoughPoints`]: length of `xa` is less that 5.
-    fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolatorError> {
-        check1d_data(xa, ya, MIN_SIZE)?;
+    /// - [`InterpolationError::UnsortedDataset`]: `xa` is not monotonically increasing.
+    /// - [`InterpolationError::DatasetMismatch`]: `xa` and `ya` do not have the same length.
+    /// - [`InterpolationError::NotEnoughPoints`]: length of `xa` is less that 5.
+    #[doc(alias = "gsl_interp_init")]
+    pub fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolationError> {
+        check1d_data(xa, ya, Self::MIN_SIZE)?;
 
         let size = xa.len();
 
@@ -61,17 +60,9 @@ impl Interpolator for AkimaInterpolator {
         m.push_back(3.0 * m[size] - 2.0 * m[size - 1]);
         let m = m.make_contiguous();
 
-        let (b, c, d) = akima_calc(xa, &m);
+        let (b, c, d) = akima_calc(xa, m);
 
         Ok(AkimaInterpolator { b, c, d })
-    }
-
-    fn name(&self) -> &str {
-        "Akima"
-    }
-
-    fn min_size(&self) -> usize {
-        MIN_SIZE
     }
 }
 
@@ -128,22 +119,24 @@ impl Interpolation for AkimaInterpolator {
 /// corner algorithm of Wodicka.
 #[doc(alias = "gsl_interp_akima_periodic")]
 #[derive(Debug, Clone)]
-#[non_exhaustive]
 pub struct AkimaPeriodicInterpolator {
     c: Box<[f64]>,
     b: Box<[f64]>,
     d: Box<[f64]>,
 }
 
-impl Interpolator for AkimaPeriodicInterpolator {
+impl AkimaPeriodicInterpolator {
+    /// The minimum required number of points.
+    #[doc(alias = "gsl_interp_min_size")]
+    const MIN_SIZE: usize = 5;
+
     /// Constructs an Akima Periodic Interpolator.
     ///
     /// ## Example
     ///
     /// ```
     /// # use rsl_interpolation::*;
-    /// #
-    /// # fn main() -> Result<(), InterpolatorError>{
+    /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
     /// let interp = AkimaPeriodicInterpolator::build(&xa, &ya)?;
@@ -153,11 +146,12 @@ impl Interpolator for AkimaPeriodicInterpolator {
     ///
     /// # Errors
     ///
-    /// - [`InterpolatorError::UnsortedDataset`]: `xa` is not monotonically increasing.
-    /// - [`InterpolatorError::DatasetMismatch`]: `xa` and `ya` do not have the same length.
-    /// - [`InterpolatorError::NotEnoughPoints`]: length of `xa` is less that 5.
-    fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolatorError> {
-        check1d_data(xa, ya, MIN_SIZE)?;
+    /// - [`InterpolationError::UnsortedDataset`]: `xa` is not monotonically increasing.
+    /// - [`InterpolationError::DatasetMismatch`]: `xa` and `ya` do not have the same length.
+    /// - [`InterpolationError::NotEnoughPoints`]: length of `xa` is less that 5.
+    #[doc(alias = "gsl_interp_init")]
+    pub fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolationError> {
+        check1d_data(xa, ya, Self::MIN_SIZE)?;
 
         let size = xa.len();
 
@@ -174,17 +168,9 @@ impl Interpolator for AkimaPeriodicInterpolator {
         m.push_back(m[3]);
         let m = m.make_contiguous();
 
-        let (b, c, d) = akima_calc(xa, &m);
+        let (b, c, d) = akima_calc(xa, m);
 
         Ok(AkimaPeriodicInterpolator { b, c, d })
-    }
-
-    fn name(&self) -> &str {
-        "Akima Periodic"
-    }
-
-    fn min_size(&self) -> usize {
-        MIN_SIZE
     }
 }
 
@@ -333,7 +319,8 @@ fn akima_eval_integ(
     Ok(result)
 }
 
-/// Common Calculation
+/// Common Calculation.
+#[expect(clippy::type_complexity, reason = "only used here")]
 fn akima_calc(xa: &[f64], m: &[f64]) -> (Box<[f64]>, Box<[f64]>, Box<[f64]>) {
     let size = xa.len();
     let mut b = Vec::with_capacity(size - 1);
@@ -351,13 +338,12 @@ fn akima_calc(xa: &[f64], m: &[f64]) -> (Box<[f64]>, Box<[f64]>, Box<[f64]>) {
             let nenext = (m[i + 4] - m[i + 3]).abs() + (m[i + 2] - m[i + 1]).abs();
             let ai = (m[i + 1] - m[i]).abs() / ne;
             let ai_plus1: f64;
-            let tli_plus1: f64;
-            if nenext == 0.0 {
-                tli_plus1 = m[i + 2];
+            let tli_plus1 = if nenext == 0.0 {
+                m[i + 2]
             } else {
                 ai_plus1 = (m[i + 2] - m[i + 1]).abs() / nenext;
-                tli_plus1 = (1.0 - ai_plus1) * m[i + 2] + ai_plus1 * m[i + 3];
-            }
+                (1.0 - ai_plus1) * m[i + 2] + ai_plus1 * m[i + 3]
+            };
             b.push((1.0 - ai) * m[i + 1] + ai * m[i + 2]);
             c.push((3.0 * m[i + 2] - 2.0 * b[i] - tli_plus1) / hi);
             d.push((b[i] + tli_plus1 - 2.0 * m[i + 2]) / hi.powi(2));

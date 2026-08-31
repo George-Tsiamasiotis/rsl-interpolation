@@ -4,7 +4,13 @@ use common::*;
 use rsl_interpolation::*;
 
 #[test]
-fn gsl_test_linear() {
+fn send_sync() {
+    fn assert_send_sync<T: Send + Sync + Clone>() {}
+    assert_send_sync::<LinearInterpolator>();
+}
+
+#[test]
+fn gsl_linear() {
     let xa = [0.0, 1.0, 2.0, 3.0];
     let ya = [0.0, 1.0, 2.0, 3.0];
 
@@ -14,8 +20,6 @@ fn gsl_test_linear() {
     let ytest = [0.0, 0.5, 1.0, 1.5, 2.5, 3.0];
     let dytest = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0];
     let iytest = [0.0, 0.125, 0.5, 9.0 / 8.0, 25.0 / 8.0, 9.0 / 2.0];
-
-    let data_table = XYTable { x: &xa, y: &ya };
 
     let test_e_table = XYTable {
         x: &xtest,
@@ -39,5 +43,10 @@ fn gsl_test_linear() {
         0.0
     );
 
-    test_interp(data_table, test_e_table, test_d_table, test_i_table, interp);
+    test_interp(
+        test_e_table,
+        test_d_table,
+        test_i_table,
+        Spline::new(Box::new(interp), &xa, &ya),
+    );
 }

@@ -1,6 +1,6 @@
 #[derive(thiserror::Error, Debug)]
 /// The error type for Interpolator creation and data checking.
-pub enum InterpolatorError {
+pub enum InterpolationError {
     /// x points dataset is not sorted.
     #[error("x values must be strictly increasing.")]
     UnsortedDataset,
@@ -13,8 +13,8 @@ pub enum InterpolatorError {
     #[error("Supplied array size is less than the interpolation type's minimum size.")]
     NotEnoughPoints,
 
-    /// Suppled z-grid dataset must be 1D with length of `xsize*ysize`.
-    #[error("Suppled z-grid dataset must be 1D with length of `xsize*ysize`.")]
+    /// Supplied z-grid dataset must be 1D with length of `xsize*ysize`.
+    #[error("Supplied z-grid dataset must be 1D with length of `xsize*ysize`.")]
     ZGridMismatch,
 
     /// BLAS error solving Tridiagonal linear system.

@@ -3,9 +3,15 @@ mod common;
 use common::*;
 use rsl_interpolation::*;
 
+#[test]
+fn send_sync() {
+    fn assert_send_sync<T: Send + Sync + Clone>() {}
+    assert_send_sync::<BicubicInterpolator>();
+}
+
 /// Linear case
 #[test]
-fn gsl_test_bicubic1() {
+fn gsl_bicubic1() {
     let xa = [0.0, 1.0, 2.0, 3.0];
     let ya = [0.0, 1.0, 2.0, 3.0];
     #[rustfmt::skip]
@@ -20,12 +26,6 @@ fn gsl_test_bicubic1() {
     let ytest = [1.0, 1.5, 2.0];
     let ztest = [1.2, 1.3, 1.4];
 
-    let data_table = XYZTable {
-        x: &xa,
-        y: &ya,
-        z: &za,
-    };
-
     let test_e_table = XYZTable {
         x: &xtest,
         y: &ytest,
@@ -33,12 +33,12 @@ fn gsl_test_bicubic1() {
     };
 
     let interp = BicubicInterpolator::build(&xa, &ya, &za).unwrap();
-    test_interp2d(data_table, test_e_table, interp);
+    test_interp2d(test_e_table, Spline2d::new(Box::new(interp), &xa, &ya, &za));
 }
 
 /// Nonlinear case
 #[test]
-fn gsl_test_bicubic2() {
+fn gsl_bicubic2() {
     let xa = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
     let ya = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
 
@@ -68,12 +68,6 @@ fn gsl_test_bicubic2() {
         17.28553080971182,
     ];
 
-    let data_table = XYZTable {
-        x: &xa,
-        y: &ya,
-        z: &za,
-    };
-
     let test_e_table = XYZTable {
         x: &xtest,
         y: &ytest,
@@ -81,13 +75,13 @@ fn gsl_test_bicubic2() {
     };
 
     let interp = BicubicInterpolator::build(&xa, &ya, &za).unwrap();
-    test_interp2d(data_table, test_e_table, interp);
+    test_interp2d(test_e_table, Spline2d::new(Box::new(interp), &xa, &ya, &za));
 }
 
 /// Nonlinear case non-square
 /// This function contributed by Andrew W. Steiner <awsteiner@gmail.com>
 #[test]
-fn gsl_test_bicubic3() {
+fn gsl_bicubic3() {
     let xa = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
     let ya = [1.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0];
     #[rustfmt::skip]
@@ -116,12 +110,6 @@ fn gsl_test_bicubic3() {
         9.00168877916872567,
     ];
 
-    let data_table = XYZTable {
-        x: &xa,
-        y: &ya,
-        z: &za,
-    };
-
     let test_e_table = XYZTable {
         x: &xtest,
         y: &ytest,
@@ -129,12 +117,12 @@ fn gsl_test_bicubic3() {
     };
 
     let interp = BicubicInterpolator::build(&xa, &ya, &za).unwrap();
-    test_interp2d(data_table, test_e_table, interp);
+    test_interp2d(test_e_table, Spline2d::new(Box::new(interp), &xa, &ya, &za));
 }
 
 /// Extra test that includes all derivatives, and iterates through all (x, y) pairs.
 #[test]
-fn extra_test_bicubic() {
+fn extra_bicubic() {
     let xa = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
     let ya = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
     #[rustfmt::skip]
@@ -281,12 +269,6 @@ fn extra_test_bicubic() {
         -231.820076561959922,
     ];
 
-    let data_table = XYZTable {
-        x: &xa,
-        y: &ya,
-        z: &za,
-    };
-
     let test_e_table = XYZTable {
         x: &xtest,
         y: &ytest,
@@ -325,14 +307,13 @@ fn extra_test_bicubic() {
 
     let interp = BicubicInterpolator::build(&xa, &ya, &za).unwrap();
     test_interp2d_extra(
-        data_table,
         test_e_table,
         test_dx_table,
         test_dy_table,
         test_dxx_table,
         test_dyy_table,
         test_dxy_table,
-        interp,
+        Spline2d::new(Box::new(interp), &xa, &ya, &za),
         "bicubic",
     );
 }
@@ -344,7 +325,7 @@ fn extra_test_bicubic() {
 ///
 /// This caused the interpolator to believe that the Accelerator2d is updated, causing NaNs to bubble up.
 #[test]
-fn test_uninit_cache_00eval() {
+fn uninit_cache_00eval() {
     let xa = [0.0, 1.0, 2.0, 3.0];
     let ya = [0.0, 1.0, 2.0, 3.0];
     #[rustfmt::skip]

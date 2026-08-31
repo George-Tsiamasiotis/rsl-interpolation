@@ -23,7 +23,7 @@
 /// ```
 /// [`GSL's Acceleration section`]: https://www.gnu.org/software/gsl/doc/html/interp.html#d-index-look-up-and-acceleration
 #[doc(alias = "gsl_interp_accel")]
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone)]
 pub struct Accelerator {
     /// The current cached index.
     pub(crate) cache: usize,
@@ -33,8 +33,26 @@ pub struct Accelerator {
     pub(crate) misses: usize,
 }
 
+/// This function returns the index i of the array `xarray` such that
+/// `xarray[i] <= x <= xarray[i+1]`. The index is searched for in the range [ilo, ihi].
+#[doc(alias = "gsl_interp_bsearch")]
+fn bsearch(xarray: &[f64], x: f64, ilo: usize, ihi: usize) -> usize {
+    let mut ilo = ilo;
+    let mut ihi = ihi;
+    while ihi > ilo + 1 {
+        let i = ihi.midpoint(ilo);
+        if xarray[i] > x {
+            ihi = i;
+        } else {
+            ilo = i;
+        }
+    }
+    ilo
+}
+
 impl Accelerator {
-    /// Creates a new Accelerator.
+    /// Creates a new `Accelerator`.
+    #[must_use]
     pub fn new() -> Self {
         Accelerator {
             cache: 0,
@@ -43,40 +61,23 @@ impl Accelerator {
         }
     }
 
-    /// This function returns the index i of the array `xarray` such that
-    /// `xarray[i] <= x <= xarray[i+1]`. The index is searched for in the range [ilo, ihi].
-    #[doc(alias = "gsl_interp_bsearch")]
-    pub(crate) fn bsearch(&self, xarray: &[f64], x: f64, ilo: usize, ihi: usize) -> usize {
-        let mut ilo = ilo;
-        let mut ihi = ihi;
-        while ihi > ilo + 1 {
-            let i = (ihi + ilo) / 2;
-            if xarray[i] > x {
-                ihi = i;
-            } else {
-                ilo = i;
-            }
-        }
-        ilo
-    }
-
     /// Performs a lookup action on the data array. Returns an index i such that
     /// xarray[i] <= x < xarray[i+1].
     #[doc(alias = "gsl_interp_accel_find")]
     pub(crate) fn find(&mut self, xarray: &[f64], x: f64) -> usize {
         if x < xarray[self.cache] {
             self.misses += 1;
-            self.cache = self.bsearch(xarray, x, 0, self.cache);
+            self.cache = bsearch(xarray, x, 0, self.cache);
         } else if x >= xarray[self.cache + 1] {
             self.misses += 1;
-            self.cache = self.bsearch(xarray, x, self.cache, xarray.len() - 1);
+            self.cache = bsearch(xarray, x, self.cache, xarray.len() - 1);
         } else {
             self.hits += 1;
         }
         self.cache
     }
 
-    /// Resets the Accelerator's stats to 0.
+    /// Resets the `Accelerator`'s stats to 0.
     #[doc(alias = "gsl_interp_accel_reset")]
     pub fn reset(&mut self) {
         self.cache = 0;
@@ -84,17 +85,20 @@ impl Accelerator {
         self.misses = 0;
     }
 
-    /// Returns the total cache hits of the Accelerator.
+    /// Returns the total cache hits of the `Accelerator`.
+    #[must_use]
     pub fn hits(&self) -> usize {
         self.hits
     }
 
-    /// Returns the total cache misses of the Accelerator.
+    /// Returns the total cache misses of the `Accelerator`.
+    #[must_use]
     pub fn misses(&self) -> usize {
         self.misses
     }
 
-    /// Returns the cached index of the Accelerator.
+    /// Returns the cached index of the `Accelerator`.
+    #[must_use]
     pub fn cache(&self) -> usize {
         self.cache
     }
@@ -136,49 +140,49 @@ mod test {
 
     #[test]
     fn bsearch_interior_point() {
-        let (acc, xarray) = (setup_acc(), setup_xarray());
+        let (_, xarray) = (setup_acc(), setup_xarray());
 
-        let res = acc.bsearch(&xarray, 1.5, 0, 4);
+        let res = bsearch(&xarray, 1.5, 0, 4);
         assert_eq!(res, 1);
     }
 
     #[test]
     fn search_last_value() {
-        let (acc, xarray) = (setup_acc(), setup_xarray());
+        let (_, xarray) = (setup_acc(), setup_xarray());
 
-        let res = acc.bsearch(&xarray, 4.0, 0, 4);
+        let res = bsearch(&xarray, 4.0, 0, 4);
         assert_eq!(res, 3);
     }
 
     #[test]
     fn search_first_value() {
-        let (acc, xarray) = (setup_acc(), setup_xarray());
+        let (_, xarray) = (setup_acc(), setup_xarray());
 
-        let res = acc.bsearch(&xarray, 0.0, 0, 4);
+        let res = bsearch(&xarray, 0.0, 0, 4);
         assert_eq!(res, 0);
     }
 
     #[test]
     fn bsearch_boundary() {
-        let (acc, xarray) = (setup_acc(), setup_xarray());
+        let (_, xarray) = (setup_acc(), setup_xarray());
 
-        let res = acc.bsearch(&xarray, 2.0, 0, 4);
+        let res = bsearch(&xarray, 2.0, 0, 4);
         assert_eq!(res, 2);
     }
 
     #[test]
     fn bsearch_above_bounds() {
-        let (acc, xarray) = (setup_acc(), setup_xarray());
+        let (_, xarray) = (setup_acc(), setup_xarray());
 
-        let res = acc.bsearch(&xarray, 10.0, 0, 4);
+        let res = bsearch(&xarray, 10.0, 0, 4);
         assert_eq!(res, 3);
     }
 
     #[test]
     fn bsearch_below_bounds() {
-        let (acc, xarray) = (setup_acc(), setup_xarray());
+        let (_, xarray) = (setup_acc(), setup_xarray());
 
-        let res = acc.bsearch(&xarray, -10.0, 0, 4);
+        let res = bsearch(&xarray, -10.0, 0, 4);
         assert_eq!(res, 0);
     }
 
@@ -206,7 +210,7 @@ mod test {
             }
 
             let i = acc.find(&xarray, x);
-            let j = acc.bsearch(&xarray, x, 0, 4);
+            let j = bsearch(&xarray, x, 0, 4);
             assert_eq!(i, j);
         }
     }

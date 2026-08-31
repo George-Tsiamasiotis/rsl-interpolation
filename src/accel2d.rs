@@ -3,8 +3,7 @@
 use crate::Accelerator;
 use crate::z_idx;
 
-#[derive(Debug, Clone, Copy)]
-/// 2D Index Look-up Acceleration
+/// 2D Index Look-up Acceleration.
 ///
 /// This object caches the values extracted from the `za` array, which are more likely to be used
 /// again, either by evaluating the spline to a nearby point, or/and by evaluating it's derivates
@@ -18,6 +17,7 @@ use crate::z_idx;
 ///
 /// The overhead of cache misses should be truly negligible, since the process just falls back to
 /// calculating the values in the usual manner.
+#[derive(Debug, Clone)]
 pub struct Accelerator2d {
     xacc: Accelerator,
     yacc: Accelerator,
@@ -32,7 +32,8 @@ pub struct Accelerator2d {
 }
 
 impl Accelerator2d {
-    /// Creates a new empty [`Accelerator2d`]
+    /// Creates a new empty `Accelerator2d`.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             xacc: Accelerator::new(),
@@ -48,16 +49,9 @@ impl Accelerator2d {
         }
     }
 
-    /// Resets the Accelerator.
+    /// Resets the `Accelerator2d`.
     pub fn reset(&mut self) {
         *self = Self::new()
-    }
-
-    /// Resets the indices. Useful for benchmarking, to avoid the overhead of resetting all the
-    /// fields at each iteration.
-    pub fn soft_reset(&mut self) {
-        self.xacc.cache = 0;
-        self.yacc.cache = 0;
     }
 
     /// Returns a mutable reference to the x-data 1D [`Accelerator`].
@@ -102,7 +96,7 @@ impl Accelerator2d {
         self.update_partials();
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments, reason = "unavoidable")]
     pub(crate) fn update_step2(
         &mut self,
         xa: &[f64],
@@ -170,7 +164,7 @@ impl Accelerator2d {
     }
 }
 
-/// Getter methods for grid point quantities
+/// Getter methods for grid point quantities.
 impl Accelerator2d {
     pub(crate) fn get_xy_grid_values(&self) -> (f64, f64, f64, f64) {
         (

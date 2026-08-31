@@ -1,19 +1,21 @@
-use crate::{Domain1dError, Domain2dError, InterpolatorError};
+//! Common utility methods for the Interpolators.
+
+use crate::{Domain1dError, Domain2dError, InterpolationError};
 
 /// Checks that supplied datasets are valid.
 pub(crate) fn check1d_data(
     xa: &[f64],
     ya: &[f64],
     min_size: usize,
-) -> Result<(), InterpolatorError> {
+) -> Result<(), InterpolationError> {
     if !xa.iter().is_sorted() {
-        return Err(InterpolatorError::UnsortedDataset);
+        return Err(InterpolationError::UnsortedDataset);
     }
     if xa.len() != ya.len() {
-        return Err(InterpolatorError::DatasetMismatch);
+        return Err(InterpolationError::DatasetMismatch);
     }
     if xa.len() < min_size {
-        return Err(InterpolatorError::NotEnoughPoints);
+        return Err(InterpolationError::NotEnoughPoints);
     }
     Ok(())
 }
@@ -24,15 +26,15 @@ pub(crate) fn check2d_data(
     ya: &[f64],
     za: &[f64],
     min_size: usize,
-) -> Result<(), InterpolatorError> {
-    if (!xa.iter().is_sorted()) | (!ya.iter().is_sorted()) {
-        return Err(InterpolatorError::UnsortedDataset);
+) -> Result<(), InterpolationError> {
+    if xa.len() * ya.len() != za.len() {
+        return Err(InterpolationError::ZGridMismatch);
     }
     if (xa.len() < min_size) | (ya.len() < min_size) {
-        return Err(InterpolatorError::NotEnoughPoints);
+        return Err(InterpolationError::NotEnoughPoints);
     }
-    if xa.len() * ya.len() != za.len() {
-        Err(InterpolatorError::ZGridMismatch)
+    if (!xa.iter().is_sorted()) | (!ya.iter().is_sorted()) {
+        Err(InterpolationError::UnsortedDataset)
     } else {
         Ok(())
     }
@@ -53,7 +55,7 @@ pub(crate) fn check_if_inbounds2d(
 ) -> Result<(), Domain2dError> {
     match (check_if_inbounds(xa, x), check_if_inbounds(ya, y)) {
         (Ok(_), Ok(_)) => Ok(()),
-        _ => return Err(Domain2dError { x, y }),
+        _ => Err(Domain2dError { x, y }),
     }
 }
 
@@ -85,32 +87,33 @@ pub(crate) fn integ_eval(ai: f64, bi: f64, ci: f64, di: f64, xi: f64, a: f64, b:
 #[cfg(test)]
 mod test {
     use super::*;
+    use approx::assert_relative_eq;
 
     #[test]
-    fn test_check_data() {
+    fn check_data() {
         let ya = [0.0, 1.0, 2.0];
 
         let xa = [0.0, 1.0, 2.0];
         assert!(check1d_data(&xa, &ya, 2).is_ok());
         assert!(matches!(
             check1d_data(&xa, &ya, 4).unwrap_err(),
-            InterpolatorError::NotEnoughPoints
+            InterpolationError::NotEnoughPoints
         ));
 
         let xa = [2.0, 1.0, 2.0];
         assert!(matches!(
             check1d_data(&xa, &ya, 2).unwrap_err(),
-            InterpolatorError::UnsortedDataset
+            InterpolationError::UnsortedDataset
         ));
 
         let xa = [0.0, 1.0, 2.0, 3.0];
         assert!(matches!(
             check1d_data(&xa, &ya, 2).unwrap_err(),
-            InterpolatorError::DatasetMismatch
+            InterpolationError::DatasetMismatch
         ));
     }
     #[test]
-    fn test_check_if_inbounds() {
+    fn inbounds() {
         let xa = [0.0, 1.0, 2.0];
 
         assert!(check_if_inbounds(&xa, 0.0).is_ok());
@@ -127,6 +130,9 @@ mod test {
         let s = [0.0, 1.0, -2.0, 3.0];
         let sdiff = diff(&s);
 
-        assert_eq!(sdiff, vec![1.0, -3.0, 5.0]);
+        let expected = [1.0, -3.0, 5.0];
+        for i in 0..sdiff.len() {
+            assert_relative_eq!(sdiff[i], expected[i]);
+        }
     }
 }

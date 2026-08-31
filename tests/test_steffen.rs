@@ -4,7 +4,13 @@ use common::*;
 use rsl_interpolation::*;
 
 #[test]
-fn gsl_test_steffen1() {
+fn send_sync() {
+    fn assert_send_sync<T: Send + Sync + Clone>() {}
+    assert_send_sync::<SteffenInterpolator>();
+}
+
+#[test]
+fn gsl_steffen1() {
     let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     let ya = [0.0, 1.0, 2.0, 3.0, 4.0];
 
@@ -12,8 +18,6 @@ fn gsl_test_steffen1() {
     let ytest = [0.0, 0.5, 1.0, 2.0, 2.5, 3.95];
     let dytest = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0];
     let iytest = [0.0, 0.125, 0.5, 2.0, 3.125, 7.80125];
-
-    let data_table = XYTable { x: &xa, y: &ya };
 
     let test_e_table = XYTable {
         x: &xtest,
@@ -31,11 +35,16 @@ fn gsl_test_steffen1() {
     };
 
     let interp = SteffenInterpolator::build(&xa, &ya).unwrap();
-    test_interp(data_table, test_e_table, test_d_table, test_i_table, interp);
+    test_interp(
+        test_e_table,
+        test_d_table,
+        test_i_table,
+        Spline::new(Box::new(interp), &xa, &ya),
+    );
 }
 
 #[test]
-fn gsl_test_steffen2() {
+fn gsl_steffen2() {
     #[rustfmt::skip]
     let xa = [
         4.673405471947611, 4.851675778029557, 6.185473620119991, 7.066003430727031, 7.236222118389267,
@@ -186,8 +195,6 @@ fn gsl_test_steffen2() {
         -1.1777647142370817, -1.0483932372566702, -0.32646483194908105, -0.88612247621927298,
     ];
 
-    let data_table = XYTable { x: &xa, y: &ya };
-
     let test_e_table = XYTable {
         x: &xtest,
         y: &ytest,
@@ -204,12 +211,17 @@ fn gsl_test_steffen2() {
     };
 
     let interp = SteffenInterpolator::build(&xa, &ya).unwrap();
-    test_interp(data_table, test_e_table, test_d_table, test_i_table, interp);
+    test_interp(
+        test_e_table,
+        test_d_table,
+        test_i_table,
+        Spline::new(Box::new(interp), &xa, &ya),
+    );
 }
 
 /// Custom against GSL, for f(x) = 1 + x^2.
 #[test]
-fn extra_test_steffen() {
+fn extra_steffen() {
     let xa = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0];
 
     #[rustfmt::skip]
@@ -263,8 +275,6 @@ fn extra_test_steffen() {
         1.041850083000182, 1.115446980916353, 1.192281177502731, 1.272415532927669,
     ];
 
-    let data_table = XYTable { x: &xa, y: &ya };
-
     let test_e_table = XYTable {
         x: &xtest,
         y: &ytest,
@@ -287,11 +297,10 @@ fn extra_test_steffen() {
 
     let interp = SteffenInterpolator::build(&xa, &ya).unwrap();
     test_interp_extra(
-        data_table,
         test_e_table,
         test_d_table,
         test_d2_table,
         test_i_table,
-        interp,
+        Spline::new(Box::new(interp), &xa, &ya),
     );
 }

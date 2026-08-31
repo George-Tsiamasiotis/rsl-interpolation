@@ -1,30 +1,27 @@
-//! Definition of Linear Interpolator.
+//! Definition of `Linear` Interpolator.
 
-use crate::Accelerator;
-use crate::{Domain1dError, InterpolatorError};
-use crate::{Interpolation, Interpolator};
-
+use crate::{Accelerator, Domain1dError, Interpolation, InterpolationError};
 use crate::{check_if_inbounds, check1d_data};
-
-const MIN_SIZE: usize = 2;
 
 /// Linear Interpolator.
 ///
 /// This interpolation method does not require any additional memory.
 #[doc(alias = "gsl_interp_linear")]
 #[derive(Debug, Clone)]
-#[non_exhaustive]
 pub struct LinearInterpolator;
 
-impl Interpolator for LinearInterpolator {
+impl LinearInterpolator {
+    /// The minimum required number of points.
+    #[doc(alias = "gsl_interp_min_size")]
+    const MIN_SIZE: usize = 2;
+
     /// Constructs a Linear Interpolator.
     ///
     /// # Example
     ///
     /// ```
     /// # use rsl_interpolation::*;
-    /// #
-    /// # fn main() -> Result<(), InterpolatorError>{
+    /// # fn main() -> Result<(), InterpolationError>{
     /// let xa = [0.0, 1.0, 2.0];
     /// let ya = [0.0, 2.0, 4.0];
     /// let interp = LinearInterpolator::build(&xa, &ya)?;
@@ -34,20 +31,13 @@ impl Interpolator for LinearInterpolator {
     ///
     /// # Errors
     ///
-    /// - [`InterpolatorError::UnsortedDataset`]: `xa` is not monotonically increasing.
-    /// - [`InterpolatorError::DatasetMismatch`]: `xa` and `ya` do not have the same length.
-    /// - [`InterpolatorError::NotEnoughPoints`]: length of `xa` is less that 2.
-    fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolatorError> {
-        check1d_data(xa, ya, MIN_SIZE)?;
+    /// - [`InterpolationError::UnsortedDataset`]: `xa` is not monotonically increasing.
+    /// - [`InterpolationError::DatasetMismatch`]: `xa` and `ya` do not have the same length.
+    /// - [`InterpolationError::NotEnoughPoints`]: length of `xa` is less that 2.
+    #[doc(alias = "gsl_interp_init")]
+    pub fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolationError> {
+        check1d_data(xa, ya, Self::MIN_SIZE)?;
         Ok(Self)
-    }
-
-    fn name(&self) -> &str {
-        "Linear"
-    }
-
-    fn min_size(&self) -> usize {
-        MIN_SIZE
     }
 }
 

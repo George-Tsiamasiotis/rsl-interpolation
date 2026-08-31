@@ -16,7 +16,7 @@ fn test_z_idx() {
 #[should_panic]
 fn test_z_idx_panic() {
     let shape = (4, 3);
-    z_idx(10, 200, shape.0, shape.1);
+    let _ = z_idx(10, 200, shape.0, shape.1);
 }
 
 #[test]
@@ -93,5 +93,5 @@ fn test_z_get_panic() {
         3.0, 4.0,
         6.0, 5.0,
     ];
-    z_get(&za, 10, 2000, xa.len(), ya.len());
+    let _ = z_get(&za, 10, 2000, xa.len(), ya.len());
 }

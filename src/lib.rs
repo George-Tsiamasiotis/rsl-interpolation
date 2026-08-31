@@ -1,17 +1,44 @@
 //! A re-write of [`GSL's Interpolation`] in Rust.
 //!
-//! [`GSL's Interpolation`]: https://www.gnu.org/software/gsl/doc/html/interp.html
+//! ## Notes
 //!
-//! # Example - 1D lower level interface
+//! 1. `rsl-interpolation` requires LAPACK FFI, so you must use **just one** of the corresponding
+//! [`ndarray_linalg features`]:
+//!
+//! ```text
+//! [dependencies]
+//! rsl-interpolation = { version = "0.1.19", features = ["ndarray-linalg/openblas-system"]}
+//! ```
+//!
+//! 2. In 2d Interpolation, the `za` array must be defined in **column-major (Fortran)** style.
+//! This is done to comply with GSL's interface.
+//!
+//!
+//! # 1D Interpolation Types
+//!
+//! + [`LinearInterpolator`]
+//! + [`CubicInterpolator`]
+//! + [`CubicPeriodicInterpolator`]
+//! + [`AkimaInterpolator`]
+//! + [`AkimaPeriodicInterpolator`]
+//! + [`SteffenInterpolator`]
+//!
+//! # 2D Interpolation Types
+//!
+//! + [`BilinearInterpolator`]
+//! + [`BicubicInterpolator`]
+//!
+//! # Lower level interface
 //!
 //! + Interpolation type must be known at compilation time.
-//! + The [`Interpolator`] object does not store the arrays it was constructed with; they must be
-//! passed as arguments at each evaluation.
+//! + The [`Interpolation`]/[`Interpolation2d`] objects do not store the arrays they were
+//! constructed with; they must be passed as arguments at each evaluation.
+//!
+//! ## 1D Interpolation
 //!
 //! ```
 //! # use rsl_interpolation::*;
-//! #
-//! # fn main() -> Result<(), InterpolatorError>{
+//! # fn main() -> Result<(), InterpolationError>{
 //! let xa = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
 //! let ya = [0.0, 2.0, 4.0, 6.0, 8.0, 10.0];
 //! let interp = CubicInterpolator::build(&xa, &ya)?;
@@ -26,16 +53,11 @@
 //! # }
 //! ```
 //!
-//! # Example - 2D lower level interface
-//!
-//! + Interpolation type must be known at compilation time.
-//! + The [`Interpolator2d`] object does not store the arrays it was constructed with; they must be
-//! passed as arguments at each evaluation.
+//! ## 2D Interpolation
 //!
 //! ```
 //! # use rsl_interpolation::*;
-//! #
-//! # fn main() -> Result<(), InterpolatorError>{
+//! # fn main() -> Result<(), InterpolationError>{
 //! let xa = [0.0, 1.0, 2.0, 3.0];
 //! let ya = [0.0, 2.0, 4.0, 6.0];
 //! // z = x + y, in column-major order
@@ -59,60 +81,22 @@
 //! # }
 //! ```
 //!
-//! # Example - Dynamically determined interpolation type
+//! # Higher level interface
 //!
 //! + Interpolation type can be determined at runtime.
-//! + The [`DynInterpolator`] and [`DynInterpolator2d`] objects do not store the arrays they were
-//! constructed with; they must be passed as arguments at each evaluation.
+//! + The [`Spline`]/[`Spline2d`] objects own the data they was constructed with, and provide
+//! the same evaluation methods as the lower-level [`Interpolation`]/[`Interpolation2d`] object,
+//! without needing to provide the data arrays in every call.
+//!
+//! ## 1D Interpolation
 //!
 //! ```
 //! # use rsl_interpolation::*;
-//! #
-//! # fn main() -> Result<(), InterpolatorError>{
-//! let xa = [0.0, 1.0, 2.0, 3.0];
-//! let ya = [0.0, 2.0, 4.0, 6.0];
-//! // z = x + y, in column-major order
-//! let za = [
-//!     0.0, 1.0, 2.0, 3.0,
-//!     2.0, 3.0, 4.0, 5.0,
-//!     4.0, 5.0, 6.0, 7.0,
-//!     6.0, 7.0, 8.0, 9.0,
-//! ];
-//!
-//! // 1D Interpolation
-//! let typ = Interpolation1dType::Cubic;
-//! let dyn_interp = DynInterpolator::build(typ, &xa, &ya)?;
-//!
-//! let x = 1.8;
-//! let acc = &mut Accelerator::new();
-//! let y = dyn_interp.eval(&xa, &ya, x, acc)?;
-//!
-//! // 2D Interpolation
-//! let typ2d = Interpolation2dType::Bicubic;
-//! let dyn_interp2d = DynInterpolator2d::build(typ2d, &xa, &ya, &za)?;
-//!
-//! let (x, y) = (1.2, 2.8);
-//! let acc = &mut Accelerator2d::new();
-//! let z = dyn_interp2d.eval(&xa, &ya, &za, x, y, acc)?;
-//! # Ok(())
-//! # }
-//! ```
-//!
-//! # Example - 1D higher level interface
-//!
-//! + Interpolation type can be determined at runtime.
-//! + The [`Spline`] object owns the data it was constructed with, and provides the same evaluation
-//! methods as the lower-level [`Interpolation`] object, without needing to provide the data arrays
-//! in every call.
-//!
-//! ```
-//! # use rsl_interpolation::*;
-//! #
-//! # fn main() -> Result<(), InterpolatorError>{
+//! # fn main() -> Result<(), InterpolationError>{
 //! let xa = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
 //! let ya = [0.0, 2.0, 4.0, 6.0, 8.0, 10.0];
-//! let interp = DynInterpolator::build(Interpolation1dType::Cubic, &xa, &ya)?;
-//! let spline = Spline::new(interp, &xa, &ya);
+//! let interp = CubicInterpolator::build(&xa, &ya)?;
+//! let spline = Spline::new(Box::new(interp), &xa, &ya);
 //!
 //! let x = 3.9;
 //! let acc = &mut Accelerator::new();
@@ -124,17 +108,11 @@
 //! # }
 //! ```
 //!
-//! # Example - 2D higher level interface
-//!
-//! + Interpolation type can be determined at runtime.
-//! + The [`Spline2d`] object owns the data it was constructed with, and provides the same evaluation
-//! methods as the lower-level [`Interpolation2d`] object, without needing to provide the data arrays
-//! in every call.
+//! ## 2D Interpolation
 //!
 //! ```
 //! # use rsl_interpolation::*;
-//! #
-//! # fn main() -> Result<(), InterpolatorError>{
+//! # fn main() -> Result<(), InterpolationError>{
 //! let xa = [0.0, 1.0, 2.0, 3.0];
 //! let ya = [0.0, 2.0, 4.0, 6.0];
 //! // z = x + y, in column-major order
@@ -144,8 +122,8 @@
 //!     4.0, 5.0, 6.0, 7.0,
 //!     6.0, 7.0, 8.0, 9.0,
 //! ];
-//! let interp = DynInterpolator2d::build(Interpolation2dType::Bicubic, &xa, &ya, &za)?;
-//! let spline = Spline2d::new(interp, &xa, &ya, &za);
+//! let interp = BicubicInterpolator::build(&xa, &ya, &za)?;
+//! let spline = Spline2d::new(Box::new(interp), &xa, &ya, &za);
 //!
 //! let (x, y) = (1.2, 2.8);
 //! let acc = &mut Accelerator2d::new();
@@ -159,33 +137,16 @@
 //! # }
 //! ```
 //!
-//! # 1D Interpolation Types
-//!
-//! + [LinearInterpolator]
-//! + [CubicInterpolator]
-//! + [CubicPeriodicInterpolator]
-//! + [AkimaInterpolator]
-//! + [AkimaPeriodicInterpolator]
-//! + [SteffenInterpolator]
-//! + [DynInterpolator] - Dynamically determined interpolation type
-//!
-//! # 2D Interpolation Types
-//!
-//! + [BilinearInterpolator]
-//! + [BicubicInterpolator]
-//!
-//! # Higher level Interface
-//!
-//! + [Spline] - Dynamically determined 1D interpolator that owns the data it was constructed with.
-//! + [Spline2d] - Dynamically determined 2D interpolator that owns the data it was constructed with.
-//!
-#![allow(rustdoc::broken_intra_doc_links)]
-#![doc = include_str!("../TODO.md")]
+#![expect(rustdoc::broken_intra_doc_links, reason = "simple markdown")]
+#![doc = include_str!("../gsl_features.md")]
 //!
 //! # Extra features
 //!
 //! + [`Accelerator2d`]: 2D Index Look-up accelerator. The generalization of the [`Accelerator`]
 //! object for two dimensional interpolation.
+//!
+//! [`GSL's Interpolation`]: https://www.gnu.org/software/gsl/doc/html/interp.html
+//! [`ndarray_linalg features`]: https://github.com/rust-ndarray/ndarray-linalg?tab=readme-ov-file#backend-features
 
 mod accel;
 mod accel2d;
@@ -207,9 +168,8 @@ pub use accel::Accelerator;
 pub use accel2d::Accelerator2d;
 
 pub use error::*;
-pub use interp::{DynInterpolator, Interpolation, Interpolation1dType, Interpolator};
-pub use interp2d::{DynInterpolator2d, Interpolation2d, Interpolation2dType, Interpolator2d};
-pub use interp2d::{z_get, z_idx, z_set};
+pub use interp::Interpolation;
+pub use interp2d::{Interpolation2d, z_get, z_idx, z_set};
 pub use spline::Spline;
 pub use spline2d::Spline2d;
 

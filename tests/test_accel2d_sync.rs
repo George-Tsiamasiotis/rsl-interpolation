@@ -2,12 +2,13 @@
 
 mod common;
 
-use common::*;
+use approx::assert_relative_eq;
+use common::EPS;
 use rsl_interpolation::*;
 
 #[test]
 #[rustfmt::skip]
-fn test_cache_accelerator_update() {
+fn cache_accelerator_update() {
     let xa = [0.0, 1.0, 2.0, 3.0];
     let ya = [0.0, 1.0, 2.0, 3.0];
     #[rustfmt::skip]
@@ -51,7 +52,7 @@ fn test_cache_accelerator_update() {
 /// are the only ones using the cache.
 #[test]
 #[rustfmt::skip]
-fn test_cache_accelerator_update_bilinear_first_deriv() {
+fn cache_accelerator_update_bilinear_first_deriv() {
     // Results from GSL's tests.
     let xa = [0.0, 1.0, 2.0, 3.0];
     let ya = [0.0, 1.0, 2.0, 3.0];
@@ -66,10 +67,8 @@ fn test_cache_accelerator_update_bilinear_first_deriv() {
     let interp = BilinearInterpolator::build(&xa, &ya, &za).unwrap();
     let acc = &mut Accelerator2d::new();
 
-    let comp = build_comparator();
-
     let dzdy = interp.eval(&xa, &ya, &za, 0.5, 0.5, acc).unwrap();
-    assert!(comp.is_close(dzdy, 1.2));
+    assert_relative_eq!(dzdy, 1.2, epsilon=EPS);
     assert_eq!(acc.xacc().hits(), 1);
     assert_eq!(acc.yacc().hits(), 1);
     assert_eq!(acc.xacc().misses() , 0);
@@ -78,7 +77,7 @@ fn test_cache_accelerator_update_bilinear_first_deriv() {
     assert_eq!(acc.yacc().cache(), 0);
 
     let dzdy = interp.eval_deriv_y(&xa, &ya, &za, 1.5, 1.5, acc).unwrap();
-    assert!(comp.is_close(dzdy, 0.2));
+    assert_relative_eq!(dzdy, 0.2, epsilon=EPS);
     assert_eq!(acc.xacc().hits(), 1);
     assert_eq!(acc.yacc().hits(), 1);
     assert_eq!(acc.xacc().misses() , 1);
@@ -87,7 +86,7 @@ fn test_cache_accelerator_update_bilinear_first_deriv() {
     assert_eq!(acc.yacc().cache(), 1);
 
     let dzdy = interp.eval_deriv_y(&xa, &ya, &za, 1.5, 3.0, acc).unwrap();
-    assert!(comp.is_close(dzdy, 0.4));
+    assert_relative_eq!(dzdy, 0.4, epsilon=EPS);
     assert_eq!(acc.xacc().hits(), 2);
     assert_eq!(acc.yacc().hits(), 1);
     assert_eq!(acc.xacc().misses() , 1);
