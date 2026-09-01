@@ -4,12 +4,6 @@ use common::*;
 use rsl_interpolation::*;
 
 #[test]
-fn send_sync() {
-    fn assert_send_sync<T: Send + Sync + Clone>() {}
-    assert_send_sync::<SteffenInterpolator>();
-}
-
-#[test]
 fn gsl_steffen1() {
     let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     let ya = [0.0, 1.0, 2.0, 3.0, 4.0];
@@ -34,13 +28,8 @@ fn gsl_steffen1() {
         y: &iytest,
     };
 
-    let interp = SteffenInterpolator::build(&xa, &ya).unwrap();
-    test_interp(
-        test_e_table,
-        test_d_table,
-        test_i_table,
-        Spline::new(Box::new(interp), &xa, &ya),
-    );
+    let spline = Spline::build::<SteffenInterpolator>(&xa, &ya).unwrap();
+    test_spline(test_e_table, test_d_table, test_i_table, spline);
 }
 
 #[test]
@@ -210,13 +199,8 @@ fn gsl_steffen2() {
         y: &iytest,
     };
 
-    let interp = SteffenInterpolator::build(&xa, &ya).unwrap();
-    test_interp(
-        test_e_table,
-        test_d_table,
-        test_i_table,
-        Spline::new(Box::new(interp), &xa, &ya),
-    );
+    let spline = Spline::build::<SteffenInterpolator>(&xa, &ya).unwrap();
+    test_spline(test_e_table, test_d_table, test_i_table, spline);
 }
 
 /// Custom against GSL, for f(x) = 1 + x^2.
@@ -295,12 +279,12 @@ fn extra_steffen() {
         y: &iytest,
     };
 
-    let interp = SteffenInterpolator::build(&xa, &ya).unwrap();
-    test_interp_extra(
+    let spline = Spline::build::<SteffenInterpolator>(&xa, &ya).unwrap();
+    test_spline_extra(
         test_e_table,
         test_d_table,
         test_d2_table,
         test_i_table,
-        Spline::new(Box::new(interp), &xa, &ya),
+        spline,
     );
 }

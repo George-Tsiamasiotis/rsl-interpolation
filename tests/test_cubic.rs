@@ -4,13 +4,6 @@ use common::*;
 use rsl_interpolation::*;
 
 #[test]
-fn send_sync() {
-    fn assert_send_sync<T: Send + Sync + Clone>() {}
-    assert_send_sync::<CubicInterpolator>();
-    assert_send_sync::<CubicPeriodicInterpolator>();
-}
-
-#[test]
 fn gsl_cubic1() {
     let xa = [0.0, 1.0, 2.0];
     let ya = [0.0, 1.0, 2.0];
@@ -35,13 +28,8 @@ fn gsl_cubic1() {
         y: &iytest,
     };
 
-    let interp = CubicInterpolator::build(&xa, &ya).unwrap();
-    test_interp(
-        test_e_table,
-        test_d_table,
-        test_i_table,
-        Spline::new(Box::new(interp), &xa, &ya),
-    );
+    let spline = Spline::build::<CubicInterpolator>(&xa, &ya).unwrap();
+    test_spline(test_e_table, test_d_table, test_i_table, spline);
 }
 
 /// Test taken from Young & Gregory, A Survey of Numerical Mathematics, Vol 1 Chapter 6.8
@@ -121,13 +109,8 @@ fn gsl_cubic2() {
         y: &iytest,
     };
 
-    let interp = CubicInterpolator::build(&xa, &ya).unwrap();
-    test_interp(
-        test_e_table,
-        test_d_table,
-        test_i_table,
-        Spline::new(Box::new(interp), &xa, &ya),
-    );
+    let spline = Spline::build::<CubicInterpolator>(&xa, &ya).unwrap();
+    test_spline(test_e_table, test_d_table, test_i_table, spline);
 }
 
 #[test]
@@ -195,13 +178,8 @@ fn gsl_cubic3() {
         y: &iytest,
     };
 
-    let interp = CubicInterpolator::build(&xa, &ya).unwrap();
-    test_interp(
-        test_e_table,
-        test_d_table,
-        test_i_table,
-        Spline::new(Box::new(interp), &xa, &ya),
-    );
+    let spline = Spline::build::<CubicInterpolator>(&xa, &ya).unwrap();
+    test_spline(test_e_table, test_d_table, test_i_table, spline);
 }
 
 // Not implemented: Cubic Periodic Splines with more than 3 points require a solver for cyclically
@@ -298,13 +276,8 @@ fn gsl_cubic_periodic1() {
         y: &iytest,
     };
 
-    let interp = CubicPeriodicInterpolator::build(&xa, &ya).unwrap();
-    test_interp(
-        test_e_table,
-        test_d_table,
-        test_i_table,
-        Spline::new(Box::new(interp), &xa, &ya),
-    );
+    let spline = Spline::build::<CubicPeriodicInterpolator>(&xa, &ya).unwrap();
+    test_spline(test_e_table, test_d_table, test_i_table, spline);
 }
 
 /// This data tests the periodic case n=3
@@ -400,11 +373,6 @@ fn gsl_cubic_periodic2() {
         y: &iytest,
     };
 
-    let interp = CubicPeriodicInterpolator::build(&xa, &ya).unwrap();
-    test_interp(
-        test_e_table,
-        test_d_table,
-        test_i_table,
-        Spline::new(Box::new(interp), &xa, &ya),
-    );
+    let spline = Spline::build::<CubicPeriodicInterpolator>(&xa, &ya).unwrap();
+    test_spline(test_e_table, test_d_table, test_i_table, spline);
 }

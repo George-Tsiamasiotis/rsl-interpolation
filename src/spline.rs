@@ -1,15 +1,16 @@
 //! Definition of the higher level `Spline` object.
 
-use crate::{Accelerator, Domain1dError, Interpolation};
+use crate::{Accelerator, BuildInterpolator, Domain1dError, Interpolation, InterpolationError};
 
 /// 1D Higher level interface.
 ///
 /// A Spline owns the data it is constructed with, and provides the same evaluation methods as the
 /// lower-level Interpolator object, without needing to provide the data arrays in every call.
 #[doc(alias = "gsl_spline")]
+#[derive(Clone)]
 pub struct Spline {
     /// The lower-level [`Interpolation`] object.
-    interpolator: Box<dyn Interpolation>,
+    interpolator: Box<dyn InterpolationClone>,
     /// The owned x data.
     xa: Box<[f64]>,
     /// The owned y data.
@@ -17,7 +18,36 @@ pub struct Spline {
 }
 
 impl Spline {
-    /// Constructs a `Spline` from a [`Box<dyn Interpolation>`] and its `xa`, `ya` arrays.
+    /// Constructs a `Spline` of type `T` from the `xa`, `ya` arrays.
+    ///
+    /// # Example
+    /// ```
+    /// # use rsl_interpolation::*;
+    /// # fn main() -> Result<(), InterpolationError>{
+    /// let mut acc = Accelerator::new();
+    ///
+    /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
+    /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
+    ///
+    /// let spline = Spline::build::<CubicInterpolator>(&xa, &ya)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`InterpolationError`] if `T::build` fails. See implementor's documentation for
+    /// possible errors.
+    #[doc(alias = "gsl_spline_init")]
+    pub fn build<T: BuildInterpolator + Clone>(
+        xa: &[f64],
+        ya: &[f64],
+    ) -> Result<Self, InterpolationError> {
+        let interp = T::build(xa, ya)?;
+        Ok(Self::from_interpolator(interp, xa, ya))
+    }
+
+    /// Constructs a `Spline` from an Interpolator and its `xa`, `ya` arrays.
     ///
     /// # Example
     /// ```
@@ -29,17 +59,21 @@ impl Spline {
     /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
     ///
     /// let interp = CubicInterpolator::build(&xa, &ya)?;
-    /// let spline = Spline::new(Box::new(interp), &xa, &ya);
+    /// let spline = Spline::from_interpolator(interp, &xa, &ya);
     /// # Ok(())
     /// # }
     /// ```
     #[doc(alias = "gsl_spline_init")]
     #[must_use]
-    pub fn new(interpolator: Box<dyn Interpolation>, xa: &[f64], ya: &[f64]) -> Self {
+    pub fn from_interpolator(
+        interpolator: impl Interpolation + Clone,
+        xa: &[f64],
+        ya: &[f64],
+    ) -> Self {
         Self {
             xa: xa.to_owned().into_boxed_slice(),
             ya: ya.to_owned().into_boxed_slice(),
-            interpolator,
+            interpolator: Box::new(interpolator),
         }
     }
 
@@ -67,9 +101,7 @@ impl Spline {
     ///
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
-    ///
-    /// let interp = CubicInterpolator::build(&xa, &ya)?;
-    /// let spline = Spline::new(Box::new(interp), &xa, &ya);
+    /// let spline = Spline::build::<CubicInterpolator>(&xa, &ya)?;
     ///
     /// let y = spline.eval(1.5, &mut acc)?;
     /// assert_relative_eq!(y, 3.0);
@@ -100,8 +132,7 @@ impl Spline {
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
     ///
-    /// let interp = CubicInterpolator::build(&xa, &ya)?;
-    /// let spline = Spline::new(Box::new(interp), &xa, &ya);
+    /// let spline = Spline::build::<CubicInterpolator>(&xa, &ya)?;
     ///
     /// let dydx = spline.eval_deriv(1.5, &mut acc)?;
     /// assert_relative_eq!(dydx, 2.0);
@@ -131,8 +162,7 @@ impl Spline {
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
     ///
-    /// let interp = CubicInterpolator::build(&xa, &ya)?;
-    /// let spline = Spline::new(Box::new(interp), &xa, &ya);
+    /// let spline = Spline::build::<CubicInterpolator>(&xa, &ya)?;
     ///
     /// let dydx = spline.eval_deriv2(1.5, &mut acc)?;
     /// assert_relative_eq!(dydx, 0.0);
@@ -162,8 +192,7 @@ impl Spline {
     /// let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     /// let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
     ///
-    /// let interp = CubicInterpolator::build(&xa, &ya)?;
-    /// let spline = Spline::new(Box::new(interp), &xa, &ya);
+    /// let spline = Spline::build::<CubicInterpolator>(&xa, &ya)?;
     ///
     /// let int = spline.eval_integ(0.0, 2.0, &mut acc)?;
     /// assert_relative_eq!(int, 4.0);
@@ -181,18 +210,54 @@ impl Spline {
     }
 }
 
+/// [`Box<dyn Interpolation>`] with Clone.
+///
+/// HACK: from
+/// <https://stackoverflow.com/questions/30353462/how-to-clone-a-struct-storing-a-boxed-trait-object>.
+trait InterpolationClone: Interpolation + Send + Sync {
+    fn clone_box(&self) -> Box<dyn InterpolationClone>;
+}
+
+impl<T> InterpolationClone for T
+where
+    T: Clone + Interpolation,
+{
+    fn clone_box(&self) -> Box<dyn InterpolationClone> {
+        Box::new(self.clone())
+    }
+}
+
+impl Clone for Box<dyn InterpolationClone> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::*;
 
     #[test]
-    fn arrays() {
+    fn build() {
         let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
         let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
 
-        let interp: Box<dyn Interpolation> = Box::new(LinearInterpolator::build(&xa, &ya).unwrap());
-        let spline = Spline::new(interp, &xa, &ya);
+        let spline = Spline::build::<CubicInterpolator>(&xa, &ya).unwrap();
+        let spline = spline.clone();
+
+        assert_eq!(spline.xa(), xa);
+        assert_eq!(spline.ya(), ya);
+    }
+
+    #[test]
+    fn from_interpolator() {
+        let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
+        let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
+
+        let interp = CubicInterpolator::build(&xa, &ya).unwrap();
+        let spline = Spline::from_interpolator(interp, &xa, &ya);
+        let spline = spline.clone();
 
         assert_eq!(spline.xa(), xa);
         assert_eq!(spline.ya(), ya);

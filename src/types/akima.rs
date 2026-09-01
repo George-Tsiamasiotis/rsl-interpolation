@@ -2,7 +2,7 @@
 
 use std::collections::VecDeque;
 
-use crate::{Accelerator, Domain1dError, Interpolation, InterpolationError};
+use crate::{Accelerator, BuildInterpolator, Domain1dError, Interpolation, InterpolationError};
 use crate::{check_if_inbounds, check1d_data, integ_eval};
 
 /// Akima Interpolator.
@@ -17,9 +17,7 @@ pub struct AkimaInterpolator {
     d: Box<[f64]>,
 }
 
-impl AkimaInterpolator {
-    /// The minimum required number of points.
-    #[doc(alias = "gsl_interp_min_size")]
+impl BuildInterpolator for AkimaInterpolator {
     const MIN_SIZE: usize = 5;
 
     /// Constructs an Akima Interpolator.
@@ -41,8 +39,7 @@ impl AkimaInterpolator {
     /// - [`InterpolationError::UnsortedDataset`]: `xa` is not monotonically increasing.
     /// - [`InterpolationError::DatasetMismatch`]: `xa` and `ya` do not have the same length.
     /// - [`InterpolationError::NotEnoughPoints`]: length of `xa` is less that 5.
-    #[doc(alias = "gsl_interp_init")]
-    pub fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolationError> {
+    fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolationError> {
         check1d_data(xa, ya, Self::MIN_SIZE)?;
 
         let size = xa.len();
@@ -125,9 +122,7 @@ pub struct AkimaPeriodicInterpolator {
     d: Box<[f64]>,
 }
 
-impl AkimaPeriodicInterpolator {
-    /// The minimum required number of points.
-    #[doc(alias = "gsl_interp_min_size")]
+impl BuildInterpolator for AkimaPeriodicInterpolator {
     const MIN_SIZE: usize = 5;
 
     /// Constructs an Akima Periodic Interpolator.
@@ -149,8 +144,7 @@ impl AkimaPeriodicInterpolator {
     /// - [`InterpolationError::UnsortedDataset`]: `xa` is not monotonically increasing.
     /// - [`InterpolationError::DatasetMismatch`]: `xa` and `ya` do not have the same length.
     /// - [`InterpolationError::NotEnoughPoints`]: length of `xa` is less that 5.
-    #[doc(alias = "gsl_interp_init")]
-    pub fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolationError> {
+    fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolationError> {
         check1d_data(xa, ya, Self::MIN_SIZE)?;
 
         let size = xa.len();

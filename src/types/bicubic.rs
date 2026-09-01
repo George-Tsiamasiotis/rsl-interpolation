@@ -1,8 +1,8 @@
 //! Definition of `Bicubic` Interpolator.
 
 use crate::{
-    Accelerator, Accelerator2d, CubicInterpolator, Domain2dError, Interpolation, Interpolation2d,
-    InterpolationError,
+    Accelerator, Accelerator2d, BuildInterpolator, BuildInterpolator2d, CubicInterpolator,
+    Domain2dError, Interpolation, Interpolation2d, InterpolationError,
 };
 use crate::{check_if_inbounds2d, check2d_data, z_idx};
 
@@ -15,9 +15,7 @@ pub struct BicubicInterpolator {
     pub(crate) zxy: Box<[f64]>,
 }
 
-impl BicubicInterpolator {
-    /// The minimum required number of points.
-    #[doc(alias = "gsl_interp2d_min_size")]
+impl BuildInterpolator2d for BicubicInterpolator {
     const MIN_SIZE: usize = 4;
 
     /// Constructs a Bicubic Interpolator.
@@ -49,10 +47,8 @@ impl BicubicInterpolator {
     /// - [`InterpolationError::BLASTridiagError`]: Error when solving the tridiagonal system.
     /// - [`InterpolationError::ZGridMismatch`]: `xa.len()*ya.len() != za.len()`.
     #[expect(clippy::needless_range_loop, reason = "Much cleaner this way")]
-    #[expect(clippy::missing_panics_doc, reason = "`xa` and `ya` are checked")]
     #[expect(clippy::unwrap_in_result, reason = "`xa` and `ya` are checked")]
-    #[doc(alias = "gsl_interp2d_init")]
-    pub fn build(xa: &[f64], ya: &[f64], za: &[f64]) -> Result<Self, InterpolationError> {
+    fn build(xa: &[f64], ya: &[f64], za: &[f64]) -> Result<Self, InterpolationError> {
         check2d_data(xa, ya, za, Self::MIN_SIZE)?;
 
         let xsize = xa.len();

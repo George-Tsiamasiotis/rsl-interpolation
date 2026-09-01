@@ -95,8 +95,7 @@
 //! # fn main() -> Result<(), InterpolationError>{
 //! let xa = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
 //! let ya = [0.0, 2.0, 4.0, 6.0, 8.0, 10.0];
-//! let interp = CubicInterpolator::build(&xa, &ya)?;
-//! let spline = Spline::new(Box::new(interp), &xa, &ya);
+//! let spline = Spline::build::<CubicInterpolator>(&xa, &ya)?;
 //!
 //! let x = 3.9;
 //! let acc = &mut Accelerator::new();
@@ -122,8 +121,7 @@
 //!     4.0, 5.0, 6.0, 7.0,
 //!     6.0, 7.0, 8.0, 9.0,
 //! ];
-//! let interp = BicubicInterpolator::build(&xa, &ya, &za)?;
-//! let spline = Spline2d::new(Box::new(interp), &xa, &ya, &za);
+//! let spline = Spline2d::build::<BicubicInterpolator>(&xa, &ya, &za)?;
 //!
 //! let (x, y) = (1.2, 2.8);
 //! let acc = &mut Accelerator2d::new();
@@ -168,8 +166,8 @@ pub use accel::Accelerator;
 pub use accel2d::Accelerator2d;
 
 pub use error::*;
-pub use interp::Interpolation;
-pub use interp2d::{Interpolation2d, z_get, z_idx, z_set};
+pub use interp::{BuildInterpolator, Interpolation};
+pub use interp2d::{BuildInterpolator2d, Interpolation2d, z_get, z_idx, z_set};
 pub use spline::Spline;
 pub use spline2d::Spline2d;
 

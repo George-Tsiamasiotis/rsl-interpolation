@@ -4,13 +4,6 @@ use common::*;
 use rsl_interpolation::*;
 
 #[test]
-fn send_sync() {
-    fn assert_send_sync<T: Send + Sync + Clone>() {}
-    assert_send_sync::<AkimaInterpolator>();
-    assert_send_sync::<AkimaPeriodicInterpolator>();
-}
-
-#[test]
 fn gsl_akima() {
     let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
     let ya = [0.0, 1.0, 2.0, 3.0, 4.0];
@@ -35,13 +28,8 @@ fn gsl_akima() {
         y: &iytest,
     };
 
-    let interp = AkimaInterpolator::build(&xa, &ya).unwrap();
-    test_interp(
-        test_e_table,
-        test_d_table,
-        test_i_table,
-        Spline::new(Box::new(interp), &xa, &ya),
-    );
+    let spline = Spline::build::<AkimaInterpolator>(&xa, &ya).unwrap();
+    test_spline(test_e_table, test_d_table, test_i_table, spline);
 }
 
 /// Custom against GSL, for f(x) = 1 + x^2.
@@ -109,13 +97,13 @@ fn extra_akima() {
         y: &iytest,
     };
 
-    let interp = AkimaInterpolator::build(&xa, &ya).unwrap();
-    test_interp_extra(
+    let spline = Spline::build::<AkimaInterpolator>(&xa, &ya).unwrap();
+    test_spline_extra(
         test_e_table,
         test_d_table,
         test_d2_table,
         test_i_table,
-        Spline::new(Box::new(interp), &xa, &ya),
+        spline,
     );
 }
 
@@ -190,12 +178,12 @@ fn extra_akima_periodic() {
         y: &iytest,
     };
 
-    let interp = AkimaPeriodicInterpolator::build(&xa, &ya).unwrap();
-    test_interp_extra(
+    let spline = Spline::build::<AkimaPeriodicInterpolator>(&xa, &ya).unwrap();
+    test_spline_extra(
         test_e_table,
         test_d_table,
         test_d2_table,
         test_i_table,
-        Spline::new(Box::new(interp), &xa, &ya),
+        spline,
     );
 }

@@ -3,12 +3,6 @@ mod common;
 use common::*;
 use rsl_interpolation::*;
 
-#[test]
-fn send_sync() {
-    fn assert_send_sync<T: Send + Sync + Clone>() {}
-    assert_send_sync::<BilinearInterpolator>();
-}
-
 /// Tests bilinear interpolation using a symmetric function, f(x,y)=f(y,x), and diagonal
 /// interpolation points (x,y) where x=y. If these tests don't pass, something is seriously broken.
 #[test]
@@ -33,8 +27,8 @@ fn gsl_bilinear_symmetric() {
         z: &ztest,
     };
 
-    let interp = BilinearInterpolator::build(&xa, &ya, &za).unwrap();
-    test_interp2d(test_e_table, Spline2d::new(Box::new(interp), &xa, &ya, &za));
+    let spline = Spline2d::build::<BilinearInterpolator>(&xa, &ya, &za).unwrap();
+    test_spline2d(test_e_table, spline);
 }
 
 #[test]
@@ -69,8 +63,8 @@ fn gsl_bilinear_asymmetric_z() {
         z: &ztest,
     };
 
-    let interp = BilinearInterpolator::build(&xa, &ya, &za).unwrap();
-    test_interp2d(test_e_table, Spline2d::new(Box::new(interp), &xa, &ya, &za));
+    let spline = Spline2d::build::<BilinearInterpolator>(&xa, &ya, &za).unwrap();
+    test_spline2d(test_e_table, spline);
 }
 
 /// Extra test that includes all derivatives, and iterates through all (x, y) pairs.
@@ -169,15 +163,15 @@ fn extra_bilinear() {
         z: &dxytest,
     };
 
-    let interp = BilinearInterpolator::build(&xa, &ya, &za).unwrap();
-    test_interp2d_extra(
+    let spline = Spline2d::build::<BilinearInterpolator>(&xa, &ya, &za).unwrap();
+    test_spline2d_extra(
         test_e_table,
         test_dx_table,
         test_dy_table,
         test_dxx_table,
         test_dyy_table,
         test_dxy_table,
-        Spline2d::new(Box::new(interp), &xa, &ya, &za),
+        spline,
         "bilinear",
     );
 }

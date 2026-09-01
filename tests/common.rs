@@ -15,7 +15,7 @@ pub(crate) struct XYTable<'a> {
 
 /// Test function for eval(), eval_deriv() and eval_integ() for 1d interpolation. Corresponds to
 /// the transferred GSL tests.
-pub(crate) fn test_interp(
+pub(crate) fn test_spline(
     test_e_table: XYTable,
     test_d_table: XYTable,
     test_i_table: XYTable,
@@ -36,7 +36,7 @@ pub(crate) fn test_interp(
 }
 
 /// Test function for extra tests with GSL data. Includes eval_deriv2() testing.
-pub(crate) fn test_interp_extra(
+pub(crate) fn test_spline_extra(
     test_e_table: XYTable,
     test_d_table: XYTable,
     test_d2_table: XYTable,
@@ -68,7 +68,7 @@ pub(crate) struct XYZTable<'a> {
 }
 
 /// Test function for eval(), for 2d interpolation. Corresponds to the transferred GSL tests.
-pub(crate) fn test_interp2d(test_e_table: XYZTable, spline: Spline2d) {
+pub(crate) fn test_spline2d(test_e_table: XYZTable, spline: Spline2d) {
     let acc = &mut Accelerator2d::new();
 
     for (i, x) in test_e_table.x.iter().enumerate() {
@@ -83,7 +83,7 @@ pub(crate) fn test_interp2d(test_e_table: XYZTable, spline: Spline2d) {
 
 /// Test function including all derivatives and iteration over all (x, y) pairs,  for use with extra
 /// 2d testing.
-pub(crate) fn test_interp2d_extra(
+pub(crate) fn test_spline2d_extra(
     test_e_table: XYZTable,
     test_dx_table: XYZTable,
     test_dy_table: XYZTable,

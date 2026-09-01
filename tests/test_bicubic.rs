@@ -3,12 +3,6 @@ mod common;
 use common::*;
 use rsl_interpolation::*;
 
-#[test]
-fn send_sync() {
-    fn assert_send_sync<T: Send + Sync + Clone>() {}
-    assert_send_sync::<BicubicInterpolator>();
-}
-
 /// Linear case
 #[test]
 fn gsl_bicubic1() {
@@ -32,8 +26,8 @@ fn gsl_bicubic1() {
         z: &ztest,
     };
 
-    let interp = BicubicInterpolator::build(&xa, &ya, &za).unwrap();
-    test_interp2d(test_e_table, Spline2d::new(Box::new(interp), &xa, &ya, &za));
+    let spline = Spline2d::build::<BicubicInterpolator>(&xa, &ya, &za).unwrap();
+    test_spline2d(test_e_table, spline);
 }
 
 /// Nonlinear case
@@ -74,8 +68,8 @@ fn gsl_bicubic2() {
         z: &ztest,
     };
 
-    let interp = BicubicInterpolator::build(&xa, &ya, &za).unwrap();
-    test_interp2d(test_e_table, Spline2d::new(Box::new(interp), &xa, &ya, &za));
+    let spline = Spline2d::build::<BicubicInterpolator>(&xa, &ya, &za).unwrap();
+    test_spline2d(test_e_table, spline);
 }
 
 /// Nonlinear case non-square
@@ -116,8 +110,8 @@ fn gsl_bicubic3() {
         z: &ztest,
     };
 
-    let interp = BicubicInterpolator::build(&xa, &ya, &za).unwrap();
-    test_interp2d(test_e_table, Spline2d::new(Box::new(interp), &xa, &ya, &za));
+    let spline = Spline2d::build::<BicubicInterpolator>(&xa, &ya, &za).unwrap();
+    test_spline2d(test_e_table, spline);
 }
 
 /// Extra test that includes all derivatives, and iterates through all (x, y) pairs.
@@ -305,15 +299,15 @@ fn extra_bicubic() {
         z: &dxytest,
     };
 
-    let interp = BicubicInterpolator::build(&xa, &ya, &za).unwrap();
-    test_interp2d_extra(
+    let spline = Spline2d::build::<BicubicInterpolator>(&xa, &ya, &za).unwrap();
+    test_spline2d_extra(
         test_e_table,
         test_dx_table,
         test_dy_table,
         test_dxx_table,
         test_dyy_table,
         test_dxy_table,
-        Spline2d::new(Box::new(interp), &xa, &ya, &za),
+        spline,
         "bicubic",
     );
 }

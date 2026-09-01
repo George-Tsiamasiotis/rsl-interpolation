@@ -3,7 +3,7 @@
 use ndarray::Array1;
 use ndarray_linalg::{MatrixLayout, SolveTridiagonal, Tridiagonal};
 
-use crate::{Accelerator, Domain1dError, Interpolation, InterpolationError};
+use crate::{Accelerator, BuildInterpolator, Domain1dError, Interpolation, InterpolationError};
 use crate::{check_if_inbounds, check1d_data, diff, integ_eval};
 
 /// Cubic Interpolator.
@@ -22,10 +22,8 @@ pub struct CubicInterpolator {
     c: Box<[f64]>,
 }
 
-impl CubicInterpolator {
-    /// The minimum required number of points.
-    #[doc(alias = "gsl_interp_min_size")]
-    pub const MIN_SIZE: usize = 3;
+impl BuildInterpolator for CubicInterpolator {
+    const MIN_SIZE: usize = 3;
 
     /// Constructs a Cubic Interpolator.
     ///
@@ -47,8 +45,7 @@ impl CubicInterpolator {
     /// - [`InterpolationError::DatasetMismatch`]: `xa` and `ya` do not have the same length.
     /// - [`InterpolationError::NotEnoughPoints`]: length of `xa` is less that 3.
     /// - [`InterpolationError::BLASTridiagError`]: Error when solving the tridiagonal system.
-    #[doc(alias = "gsl_interp_init")]
-    pub fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolationError> {
+    fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolationError> {
         check1d_data(xa, ya, Self::MIN_SIZE)?;
 
         // Engeln-Mullges G. - Uhlig F.: Algorithm 10.1, pg 254
@@ -172,10 +169,8 @@ pub struct CubicPeriodicInterpolator {
     c: Box<[f64]>,
 }
 
-impl CubicPeriodicInterpolator {
-    /// The minimum required number of points.
-    #[doc(alias = "gsl_interp_min_size")]
-    pub const MIN_SIZE: usize = 3;
+impl BuildInterpolator for CubicPeriodicInterpolator {
+    const MIN_SIZE: usize = 3;
 
     /// Constructs a Cubic Periodic Interpolator.
     ///
@@ -204,8 +199,7 @@ impl CubicPeriodicInterpolator {
     /// - [`InterpolationError::NotEnoughPoints`]: length of `xa` is less that 3.
     /// - [`InterpolationError::BLASTridiagError`]: Error when solving the tridiagonal system.
     #[expect(clippy::panic_in_result_fn, reason = "unimplemented solver")]
-    #[doc(alias = "gsl_interp_init")]
-    pub fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolationError> {
+    fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolationError> {
         check1d_data(xa, ya, Self::MIN_SIZE)?;
 
         // Engeln-Mullges G. - Uhlig F.: Algorithm 10.2, pg 255

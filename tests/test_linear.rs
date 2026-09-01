@@ -4,17 +4,11 @@ use common::*;
 use rsl_interpolation::*;
 
 #[test]
-fn send_sync() {
-    fn assert_send_sync<T: Send + Sync + Clone>() {}
-    assert_send_sync::<LinearInterpolator>();
-}
-
-#[test]
 fn gsl_linear() {
     let xa = [0.0, 1.0, 2.0, 3.0];
     let ya = [0.0, 1.0, 2.0, 3.0];
 
-    let interp = LinearInterpolator::build(&xa, &ya).unwrap();
+    let spline = Spline::build::<LinearInterpolator>(&xa, &ya).unwrap();
 
     let xtest = [0.0, 0.5, 1.0, 1.5, 2.5, 3.0];
     let ytest = [0.0, 0.5, 1.0, 1.5, 2.5, 3.0];
@@ -37,16 +31,9 @@ fn gsl_linear() {
     };
 
     assert_eq!(
-        interp
-            .eval_deriv2(&xa, &ya, 1.5, &mut Accelerator::new())
-            .unwrap(),
+        spline.eval_deriv2(1.5, &mut Accelerator::new()).unwrap(),
         0.0
     );
 
-    test_interp(
-        test_e_table,
-        test_d_table,
-        test_i_table,
-        Spline::new(Box::new(interp), &xa, &ya),
-    );
+    test_spline(test_e_table, test_d_table, test_i_table, spline);
 }

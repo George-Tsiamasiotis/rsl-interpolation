@@ -1,9 +1,21 @@
-//! `Interpolation2d` trait definition.
+//! `Interpolation2d` and `BuildInterpolator2d` traits definition.
 
-use crate::{Accelerator2d, Domain2dError, check_if_inbounds2d};
+use crate::{Accelerator2d, Domain2dError, InterpolationError, check_if_inbounds2d};
+
+/// 2D Interpolator build method.
+pub trait BuildInterpolator2d: Interpolation2d + Sized {
+    /// The minimum required number of data points.
+    #[doc(alias = "gsl_interp2d_min_size")]
+    const MIN_SIZE: usize;
+
+    /// Builds the Interpolator.
+    #[doc(alias = "gsl_interp2d_init")]
+    #[expect(clippy::missing_errors_doc, reason = "documented on the implementors")]
+    fn build(xa: &[f64], ya: &[f64], za: &[f64]) -> Result<Self, InterpolationError>;
+}
 
 /// Defines the required evaluation methods.
-pub trait Interpolation2d {
+pub trait Interpolation2d: Send + Sync + 'static {
     /// Returns the interpolated value of `z` for a given point (`x`, `y`), using the data arrays
     /// `xa`, `ya`, `za` and the [`Accelerator2d`] `acc`.
     ///

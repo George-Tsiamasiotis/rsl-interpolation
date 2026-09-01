@@ -1,6 +1,8 @@
 //! Definition of `Bilinear` Interpolator.
 
-use crate::{Accelerator2d, Domain2dError, Interpolation2d, InterpolationError};
+use crate::{
+    Accelerator2d, BuildInterpolator2d, Domain2dError, Interpolation2d, InterpolationError,
+};
 use crate::{check_if_inbounds2d, check2d_data};
 
 /// Bilinear Interpolator.
@@ -10,9 +12,7 @@ use crate::{check_if_inbounds2d, check2d_data};
 #[derive(Debug, Clone)]
 pub struct BilinearInterpolator;
 
-impl BilinearInterpolator {
-    /// The minimum required number of points.
-    #[doc(alias = "gsl_interp2d_min_size")]
+impl BuildInterpolator2d for BilinearInterpolator {
     const MIN_SIZE: usize = 2;
 
     /// Constructs a Bilinear Interpolator.
@@ -40,8 +40,7 @@ impl BilinearInterpolator {
     /// - [`InterpolationError::UnsortedDataset`]: `xa` or `ya` are not monotonically increasing.
     /// - [`InterpolationError::NotEnoughPoints`]: length of `xa` or `ya` is less that 2.
     /// - [`InterpolationError::ZGridMismatch`]: `xa.len()*ya.len() != za.len()`.
-    #[doc(alias = "gsl_interp2d_init")]
-    pub fn build(xa: &[f64], ya: &[f64], za: &[f64]) -> Result<Self, InterpolationError> {
+    fn build(xa: &[f64], ya: &[f64], za: &[f64]) -> Result<Self, InterpolationError> {
         check2d_data(xa, ya, za, Self::MIN_SIZE)?;
         Ok(Self)
     }

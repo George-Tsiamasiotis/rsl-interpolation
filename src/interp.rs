@@ -1,9 +1,21 @@
-//! `Interpolation` trait definition.
+//! `Interpolation` and `BuildInterpolator` traits definition.
 
-use crate::{Accelerator, Domain1dError};
+use crate::{Accelerator, Domain1dError, InterpolationError};
+
+/// 1D Interpolator build method.
+pub trait BuildInterpolator: Interpolation + Sized {
+    /// The minimum required number of data points.
+    #[doc(alias = "gsl_interp_min_size")]
+    const MIN_SIZE: usize;
+
+    /// Builds the Interpolator.
+    #[doc(alias = "gsl_interp_init")]
+    #[expect(clippy::missing_errors_doc, reason = "documented on the implementors")]
+    fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolationError>;
+}
 
 /// Defines the available interpolation methods.
-pub trait Interpolation {
+pub trait Interpolation: Send + Sync + 'static {
     /// Returns the interpolated value `y` for a given point `x`, using the data arrays `xa` and `ya` and
     /// the [`Accelerator`] `acc`.
     ///

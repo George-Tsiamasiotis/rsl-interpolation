@@ -1,6 +1,6 @@
 //! Definition of `Linear` Interpolator.
 
-use crate::{Accelerator, Domain1dError, Interpolation, InterpolationError};
+use crate::{Accelerator, BuildInterpolator, Domain1dError, Interpolation, InterpolationError};
 use crate::{check_if_inbounds, check1d_data};
 
 /// Linear Interpolator.
@@ -10,9 +10,7 @@ use crate::{check_if_inbounds, check1d_data};
 #[derive(Debug, Clone)]
 pub struct LinearInterpolator;
 
-impl LinearInterpolator {
-    /// The minimum required number of points.
-    #[doc(alias = "gsl_interp_min_size")]
+impl BuildInterpolator for LinearInterpolator {
     const MIN_SIZE: usize = 2;
 
     /// Constructs a Linear Interpolator.
@@ -34,8 +32,7 @@ impl LinearInterpolator {
     /// - [`InterpolationError::UnsortedDataset`]: `xa` is not monotonically increasing.
     /// - [`InterpolationError::DatasetMismatch`]: `xa` and `ya` do not have the same length.
     /// - [`InterpolationError::NotEnoughPoints`]: length of `xa` is less that 2.
-    #[doc(alias = "gsl_interp_init")]
-    pub fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolationError> {
+    fn build(xa: &[f64], ya: &[f64]) -> Result<Self, InterpolationError> {
         check1d_data(xa, ya, Self::MIN_SIZE)?;
         Ok(Self)
     }
