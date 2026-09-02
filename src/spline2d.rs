@@ -12,7 +12,7 @@ use crate::{
 #[derive(Clone)]
 pub struct Spline2d {
     /// The lower-level [`Interpolation2d`] object.
-    interpolator: Box<dyn Interpolation2dClone>,
+    interpolator: Box<dyn Interpolation2d>,
     /// The owned x data.
     xa: Box<[f64]>,
     /// The owned y data.
@@ -420,29 +420,6 @@ impl Spline2d {
     ) -> Result<f64, Domain2dError> {
         self.interpolator
             .eval_deriv_xy(&self.xa, &self.ya, &self.za, x, y, acc)
-    }
-}
-
-/// [`Box<dyn Interpolation2d>`] with Clone.
-///
-/// HACK: from
-/// <https://stackoverflow.com/questions/30353462/how-to-clone-a-struct-storing-a-boxed-trait-object>.
-trait Interpolation2dClone: Interpolation2d + Send + Sync {
-    fn clone_box(&self) -> Box<dyn Interpolation2dClone>;
-}
-
-impl<T> Interpolation2dClone for T
-where
-    T: Clone + Interpolation2d,
-{
-    fn clone_box(&self) -> Box<dyn Interpolation2dClone> {
-        Box::new(self.clone())
-    }
-}
-
-impl Clone for Box<dyn Interpolation2dClone> {
-    fn clone(&self) -> Self {
-        self.clone_box()
     }
 }
 

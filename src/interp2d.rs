@@ -15,7 +15,8 @@ pub trait BuildInterpolator2d: Interpolation2d + Sized {
 }
 
 /// Defines the required evaluation methods.
-pub trait Interpolation2d: Send + Sync + 'static {
+#[expect(private_bounds, reason = "needed to make Box<dyn Interpolation> Clone")]
+pub trait Interpolation2d: DynInterpolation2dClone + Send + Sync + 'static {
     /// Returns the interpolated value of `z` for a given point (`x`, `y`), using the data arrays
     /// `xa`, `ya`, `za` and the [`Accelerator2d`] `acc`.
     ///
@@ -427,4 +428,48 @@ pub fn z_get(za: &[f64], i: usize, j: usize, xlen: usize, ylen: usize) -> f64 {
     };
 
     za[z_idx(i, j, xlen, ylen)]
+}
+
+/// HACK: to make [`Box<dyn Interpolation2d>`] Clone.
+/// <https://stackoverflow.com/questions/30353462/how-to-clone-a-struct-storing-a-boxed-trait-object>.
+trait DynInterpolation2dClone {
+    fn clone_box(&self) -> Box<dyn Interpolation2d>;
+}
+
+impl<T> DynInterpolation2dClone for T
+where
+    T: 'static + Interpolation2d + Clone,
+{
+    fn clone_box(&self) -> Box<dyn Interpolation2d> {
+        Box::new(self.clone())
+    }
+}
+
+impl Clone for Box<dyn Interpolation2d> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::*;
+
+    #[test]
+    fn dyn_clone() {
+        let xa = [0.0, 1.0, 2.0];
+        let ya = [0.0, 2.0, 4.0];
+        #[rustfmt::skip]
+        let za = [
+            0.0, 1.0, 2.0,
+            2.0, 3.0, 4.0,
+            4.0, 5.0, 6.0,
+        ];
+
+        let interp: Box<dyn Interpolation2d> =
+            Box::new(BilinearInterpolator::build(&xa, &ya, &za).unwrap());
+
+        let _ = interp.clone();
+    }
 }

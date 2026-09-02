@@ -10,7 +10,7 @@ use crate::{Accelerator, BuildInterpolator, Domain1dError, Interpolation, Interp
 #[derive(Clone)]
 pub struct Spline {
     /// The lower-level [`Interpolation`] object.
-    interpolator: Box<dyn InterpolationClone>,
+    interpolator: Box<dyn Interpolation>,
     /// The owned x data.
     xa: Box<[f64]>,
     /// The owned y data.
@@ -207,29 +207,6 @@ impl Spline {
     #[doc(alias = "gsl_spline_eval_integ_e")]
     pub fn eval_integ(&self, a: f64, b: f64, acc: &mut Accelerator) -> Result<f64, Domain1dError> {
         self.interpolator.eval_integ(&self.xa, &self.ya, a, b, acc)
-    }
-}
-
-/// [`Box<dyn Interpolation>`] with Clone.
-///
-/// HACK: from
-/// <https://stackoverflow.com/questions/30353462/how-to-clone-a-struct-storing-a-boxed-trait-object>.
-trait InterpolationClone: Interpolation + Send + Sync {
-    fn clone_box(&self) -> Box<dyn InterpolationClone>;
-}
-
-impl<T> InterpolationClone for T
-where
-    T: Clone + Interpolation,
-{
-    fn clone_box(&self) -> Box<dyn InterpolationClone> {
-        Box::new(self.clone())
-    }
-}
-
-impl Clone for Box<dyn InterpolationClone> {
-    fn clone(&self) -> Self {
-        self.clone_box()
     }
 }
 

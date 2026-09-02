@@ -15,7 +15,8 @@ pub trait BuildInterpolator: Interpolation + Sized {
 }
 
 /// Defines the available interpolation methods.
-pub trait Interpolation: Send + Sync + 'static {
+#[expect(private_bounds, reason = "needed to make Box<dyn Interpolation> Clone")]
+pub trait Interpolation: DynInterpolationClone + Send + Sync + 'static {
     /// Returns the interpolated value `y` for a given point `x`, using the data arrays `xa` and `ya` and
     /// the [`Accelerator`] `acc`.
     ///
@@ -148,4 +149,41 @@ pub trait Interpolation: Send + Sync + 'static {
         b: f64,
         acc: &mut Accelerator,
     ) -> Result<f64, Domain1dError>;
+}
+
+/// HACK: to make [`Box<dyn Interpolation>`] Clone.
+/// <https://stackoverflow.com/questions/30353462/how-to-clone-a-struct-storing-a-boxed-trait-object>.
+trait DynInterpolationClone {
+    fn clone_box(&self) -> Box<dyn Interpolation>;
+}
+
+impl<T> DynInterpolationClone for T
+where
+    T: 'static + Interpolation + Clone,
+{
+    fn clone_box(&self) -> Box<dyn Interpolation> {
+        Box::new(self.clone())
+    }
+}
+
+impl Clone for Box<dyn Interpolation> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::*;
+
+    #[test]
+    fn dyn_clone() {
+        let xa = [0.0, 1.0, 2.0, 3.0, 4.0];
+        let ya = [0.0, 2.0, 4.0, 6.0, 8.0];
+
+        let interp: Box<dyn Interpolation> = Box::new(CubicInterpolator::build(&xa, &ya).unwrap());
+
+        let _ = interp.clone();
+    }
 }
