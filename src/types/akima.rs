@@ -12,9 +12,7 @@ use crate::{check_if_inbounds, check1d_data, integ_eval};
 #[doc(alias = "gsl_akima_interp")]
 #[derive(Debug, Clone)]
 pub struct AkimaInterpolator {
-    b: Box<[f64]>,
-    c: Box<[f64]>,
-    d: Box<[f64]>,
+    coef: Box<[(f64, f64, f64)]>,
 }
 
 impl BuildInterpolator for AkimaInterpolator {
@@ -59,7 +57,14 @@ impl BuildInterpolator for AkimaInterpolator {
 
         let (b, c, d) = akima_calc(xa, m);
 
-        Ok(AkimaInterpolator { b, c, d })
+        let mut coef: Vec<(f64, f64, f64)> = Vec::with_capacity(size - 1);
+        for i in 0..size - 1 {
+            coef.push((b[i], c[i], d[i]));
+        }
+
+        Ok(AkimaInterpolator {
+            coef: coef.into_boxed_slice(),
+        })
     }
 }
 
@@ -73,7 +78,7 @@ impl Interpolation for AkimaInterpolator {
         x: f64,
         acc: &mut Accelerator,
     ) -> Result<f64, Domain1dError> {
-        akima_eval(xa, ya, (&self.b, &self.c, &self.d), x, acc)
+        akima_eval(xa, ya, &self.coef, x, acc)
     }
 
     fn eval_deriv(
@@ -83,7 +88,7 @@ impl Interpolation for AkimaInterpolator {
         x: f64,
         acc: &mut Accelerator,
     ) -> Result<f64, Domain1dError> {
-        akima_eval_deriv(xa, (&self.b, &self.c, &self.d), x, acc)
+        akima_eval_deriv(xa, &self.coef, x, acc)
     }
 
     fn eval_deriv2(
@@ -93,7 +98,7 @@ impl Interpolation for AkimaInterpolator {
         x: f64,
         acc: &mut Accelerator,
     ) -> Result<f64, Domain1dError> {
-        akima_eval_deriv2(xa, (&self.c, &self.d), x, acc)
+        akima_eval_deriv2(xa, &self.coef, x, acc)
     }
 
     fn eval_integ(
@@ -104,7 +109,7 @@ impl Interpolation for AkimaInterpolator {
         b: f64,
         acc: &mut Accelerator,
     ) -> Result<f64, Domain1dError> {
-        akima_eval_integ(xa, ya, (&self.b, &self.c, &self.d), a, b, acc)
+        akima_eval_integ(xa, ya, &self.coef, a, b, acc)
     }
 }
 
@@ -117,9 +122,7 @@ impl Interpolation for AkimaInterpolator {
 #[doc(alias = "gsl_interp_akima_periodic")]
 #[derive(Debug, Clone)]
 pub struct AkimaPeriodicInterpolator {
-    c: Box<[f64]>,
-    b: Box<[f64]>,
-    d: Box<[f64]>,
+    coef: Box<[(f64, f64, f64)]>,
 }
 
 impl BuildInterpolator for AkimaPeriodicInterpolator {
@@ -164,7 +167,14 @@ impl BuildInterpolator for AkimaPeriodicInterpolator {
 
         let (b, c, d) = akima_calc(xa, m);
 
-        Ok(AkimaPeriodicInterpolator { b, c, d })
+        let mut coef: Vec<(f64, f64, f64)> = Vec::with_capacity(size - 1);
+        for i in 0..size - 1 {
+            coef.push((b[i], c[i], d[i]));
+        }
+
+        Ok(AkimaPeriodicInterpolator {
+            coef: coef.into_boxed_slice(),
+        })
     }
 }
 
@@ -178,7 +188,7 @@ impl Interpolation for AkimaPeriodicInterpolator {
         x: f64,
         acc: &mut Accelerator,
     ) -> Result<f64, Domain1dError> {
-        akima_eval(xa, ya, (&self.b, &self.c, &self.d), x, acc)
+        akima_eval(xa, ya, &self.coef, x, acc)
     }
 
     fn eval_deriv(
@@ -188,7 +198,7 @@ impl Interpolation for AkimaPeriodicInterpolator {
         x: f64,
         acc: &mut Accelerator,
     ) -> Result<f64, Domain1dError> {
-        akima_eval_deriv(xa, (&self.b, &self.c, &self.d), x, acc)
+        akima_eval_deriv(xa, &self.coef, x, acc)
     }
 
     fn eval_deriv2(
@@ -198,7 +208,7 @@ impl Interpolation for AkimaPeriodicInterpolator {
         x: f64,
         acc: &mut Accelerator,
     ) -> Result<f64, Domain1dError> {
-        akima_eval_deriv2(xa, (&self.c, &self.d), x, acc)
+        akima_eval_deriv2(xa, &self.coef, x, acc)
     }
 
     fn eval_integ(
@@ -209,7 +219,7 @@ impl Interpolation for AkimaPeriodicInterpolator {
         b: f64,
         acc: &mut Accelerator,
     ) -> Result<f64, Domain1dError> {
-        akima_eval_integ(xa, ya, (&self.b, &self.c, &self.d), a, b, acc)
+        akima_eval_integ(xa, ya, &self.coef, a, b, acc)
     }
 }
 
@@ -218,7 +228,7 @@ impl Interpolation for AkimaPeriodicInterpolator {
 fn akima_eval(
     xa: &[f64],
     ya: &[f64],
-    state: (&[f64], &[f64], &[f64]),
+    coef: &[(f64, f64, f64)],
     x: f64,
     acc: &mut Accelerator,
 ) -> Result<f64, Domain1dError> {
@@ -227,16 +237,14 @@ fn akima_eval(
 
     let xlo = xa[index];
     let delx = x - xlo;
-    let b = state.0[index];
-    let c = state.1[index];
-    let d = state.2[index];
+    let (b, c, d) = coef[index];
 
     Ok(ya[index] + delx * (b + delx * (c + d * delx)))
 }
 
 fn akima_eval_deriv(
     xa: &[f64],
-    state: (&[f64], &[f64], &[f64]),
+    coef: &[(f64, f64, f64)],
     x: f64,
     acc: &mut Accelerator,
 ) -> Result<f64, Domain1dError> {
@@ -246,16 +254,14 @@ fn akima_eval_deriv(
 
     let xlo = xa[index];
     let delx = x - xlo;
-    let b = state.0[index];
-    let c = state.1[index];
-    let d = state.2[index];
+    let (b, c, d) = coef[index];
 
     Ok(b + delx * (2.0 * c + 3.0 * d * delx))
 }
 
 fn akima_eval_deriv2(
     xa: &[f64],
-    state: (&[f64], &[f64]),
+    coef: &[(f64, f64, f64)],
     x: f64,
     acc: &mut Accelerator,
 ) -> Result<f64, Domain1dError> {
@@ -265,8 +271,7 @@ fn akima_eval_deriv2(
 
     let xlo = xa[index];
     let delx = x - xlo;
-    let c = state.0[index];
-    let d = state.1[index];
+    let (_, c, d) = coef[index];
 
     Ok(2.0 * c + 6.0 * d * delx)
 }
@@ -274,7 +279,7 @@ fn akima_eval_deriv2(
 fn akima_eval_integ(
     xa: &[f64],
     ya: &[f64],
-    state: (&[f64], &[f64], &[f64]),
+    coef: &[(f64, f64, f64)],
     a: f64,
     b: f64,
     acc: &mut Accelerator,
@@ -283,9 +288,6 @@ fn akima_eval_integ(
     check_if_inbounds(xa, b)?;
     let index_a = acc.find(xa, a);
     let index_b = acc.find(xa, b);
-    let bs = state.0;
-    let cs = state.1;
-    let ds = state.2;
 
     let mut result = 0.0;
 
@@ -301,13 +303,13 @@ fn akima_eval_integ(
             continue;
         }
 
+        let (bs, cs, ds) = coef[i];
         if (i == index_a) | (i == index_b) {
             let x1 = if i == index_a { a } else { xlo };
             let x2 = if i == index_b { b } else { xhi };
-            result += integ_eval(ylo, bs[i], cs[i], ds[i], xlo, x1, x2);
+            result += integ_eval(ylo, bs, cs, ds, xlo, x1, x2);
         } else {
-            result +=
-                dx * (ylo + dx * (0.5 * bs[i] + dx * ((1.0 / 3.0) * cs[i] + 0.25 * ds[i] * dx)))
+            result += dx * (ylo + dx * (0.5 * bs + dx * ((1.0 / 3.0) * cs + 0.25 * ds * dx)))
         }
     }
     Ok(result)
