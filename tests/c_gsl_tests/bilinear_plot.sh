@@ -1,8 +1,8 @@
 echo """
-set terminal png size 1920,1080
+set terminal png size 1920, 540
 set output 'out/bilinear.png'
 
-set multiplot layout 2,3 rowsfirst
+set multiplot layout 1,3 rowsfirst
 
 
 set pm3d map
@@ -30,20 +30,4 @@ splot 'out/bilinear.dat' us 1:2:4
 
 set title 'eval y' font ',25'
 splot 'out/bilinear.dat' us 1:2:5
-
-# ----- EVAL xx graph -----
-
-set title 'eval xx' font ',25'
-splot 'out/bilinear.dat' us 1:2:6
-
-# ----- EVAL yy graph -----
-
-set title 'eval yy' font ',25'
-splot 'out/bilinear.dat' us 1:2:7
-
-# ----- EVAL xy graph -----
-
-set title 'eval xy' font ',25'
-splot 'out/bilinear.dat' us 1:2:8
-
 """ | gnuplot
