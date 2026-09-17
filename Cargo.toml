@@ -1,7 +1,7 @@
 [package]
 name = "rsl-interpolation"
 authors = ["George Tsiamasiotis"]
-version = "0.1.20-pre.1"
+version = "0.1.20"
 edition = "2024"
 keywords = ["math", "science", "interpolation"]
 readme = "README.md"
@@ -35,6 +35,14 @@ debug = true
 
 [lib] # Needed for Criterion to detect extra command line options
 bench = false
+
+[[bench]]
+name = "akima"
+harness = false
+
+[[bench]]
+name = "steffen"
+harness = false
 
 [[bench]]
 name = "evaluations"

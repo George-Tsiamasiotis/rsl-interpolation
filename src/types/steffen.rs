@@ -13,10 +13,7 @@ use crate::{check_if_inbounds, check1d_data};
 #[doc(alias = "gsl_steffen_interp")]
 #[derive(Debug, Clone)]
 pub struct SteffenInterpolator {
-    a: Box<[f64]>,
-    b: Box<[f64]>,
-    c: Box<[f64]>,
-    d: Box<[f64]>,
+    coef: Box<[(f64, f64, f64, f64)]>,
 }
 
 impl BuildInterpolator for SteffenInterpolator {
@@ -96,11 +93,13 @@ impl BuildInterpolator for SteffenInterpolator {
             d.push(ya[i]);
         }
 
+        let mut coef: Vec<(f64, f64, f64, f64)> = Vec::with_capacity(size - 1);
+        for i in 0..size - 1 {
+            coef.push((a[i], b[i], c[i], d[i]));
+        }
+
         Ok(SteffenInterpolator {
-            a: a.into_boxed_slice(),
-            b: b.into_boxed_slice(),
-            c: c.into_boxed_slice(),
-            d: d.into_boxed_slice(),
+            coef: coef.into_boxed_slice(),
         })
     }
 }
@@ -120,10 +119,7 @@ impl Interpolation for SteffenInterpolator {
 
         let xlo = xa[index];
         let delx = x - xlo;
-        let a = self.a[index];
-        let b = self.b[index];
-        let c = self.c[index];
-        let d = self.d[index];
+        let (a, b, c, d) = self.coef[index];
 
         Ok(d + delx * (c + delx * (b + delx * a)))
     }
@@ -140,9 +136,7 @@ impl Interpolation for SteffenInterpolator {
 
         let xlo = xa[index];
         let delx = x - xlo;
-        let a = self.a[index];
-        let b = self.b[index];
-        let c = self.c[index];
+        let (a, b, c, _) = self.coef[index];
 
         Ok(c + delx * (2.0 * b + delx * 3.0 * a))
     }
@@ -159,8 +153,7 @@ impl Interpolation for SteffenInterpolator {
 
         let xlo = xa[index];
         let delx = x - xlo;
-        let a = self.a[index];
-        let b = self.b[index];
+        let (a, b, _, _) = self.coef[index];
 
         Ok(6.0 * delx * a + 2.0 * b)
     }
@@ -197,10 +190,12 @@ impl Interpolation for SteffenInterpolator {
             let x12 = x1.powi(2);
             let x22 = x2.powi(2);
 
-            result += 0.25 * self.a[i] * (x22.powi(2) - x12.powi(2));
-            result += (1.0 / 3.0) * self.b[i] * (x22 * x2 - x12 * x1);
-            result += 0.5 * self.c[i] * (x22 - x12);
-            result += self.d[i] * (x2 - x1);
+            let (a, b, c, d) = self.coef[i];
+
+            result += 0.25 * a * (x22.powi(2) - x12.powi(2));
+            result += (1.0 / 3.0) * b * (x22 * x2 - x12 * x1);
+            result += 0.5 * c * (x22 - x12);
+            result += d * (x2 - x1);
         }
 
         Ok(result)
