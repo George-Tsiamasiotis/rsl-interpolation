@@ -58,10 +58,7 @@ impl Interpolation2d for BilinearInterpolator {
         y: f64,
         acc: &mut Accelerator2d,
     ) -> f64 {
-        let is_uptodate = acc.is_uptodate(xa, ya, x, y);
-        if !is_uptodate {
-            acc.update_step1(xa, ya, za);
-        }
+        acc.find(xa, ya, za, x, y);
 
         let (xlo, _, ylo, _) = acc.get_xy_grid_values();
         let (zminmin, zminmax, zmaxmin, zmaxmax) = acc.get_z_grid_values();
@@ -89,11 +86,7 @@ impl Interpolation2d for BilinearInterpolator {
         acc: &mut Accelerator2d,
     ) -> Result<f64, Domain2dError> {
         check_if_inbounds2d(xa, ya, x, y)?;
-
-        let is_uptodate = acc.is_uptodate(xa, ya, x, y);
-        if !is_uptodate {
-            acc.update_step1(xa, ya, za);
-        }
+        acc.find(xa, ya, za, x, y);
 
         let (_, _, ylo, _) = acc.get_xy_grid_values();
         let (zminmin, zminmax, zmaxmin, zmaxmax) = acc.get_z_grid_values();
@@ -119,11 +112,7 @@ impl Interpolation2d for BilinearInterpolator {
         acc: &mut Accelerator2d,
     ) -> Result<f64, Domain2dError> {
         check_if_inbounds2d(xa, ya, x, y)?;
-
-        let is_uptodate = acc.is_uptodate(xa, ya, x, y);
-        if !is_uptodate {
-            acc.update_step1(xa, ya, za);
-        }
+        acc.find(xa, ya, za, x, y);
 
         let (xlo, _, _, _) = acc.get_xy_grid_values();
         let (zminmin, zminmax, zmaxmin, zmaxmax) = acc.get_z_grid_values();
@@ -176,11 +165,7 @@ impl Interpolation2d for BilinearInterpolator {
         acc: &mut Accelerator2d,
     ) -> Result<f64, Domain2dError> {
         check_if_inbounds2d(xa, ya, x, y)?;
-
-        let is_uptodate = acc.is_uptodate(xa, ya, x, y);
-        if !is_uptodate {
-            acc.update_step1(xa, ya, za);
-        }
+        acc.find(xa, ya, za, x, y);
 
         let (zminmin, zminmax, zmaxmin, zmaxmax) = acc.get_z_grid_values();
         let (dx, dy) = acc.get_partials();

@@ -25,7 +25,6 @@ pub struct Accelerator2d {
     ygrid_values: (f64, f64),
     zgrid_values: (f64, f64, f64, f64),
     partials: (f64, f64),
-    uninit: bool,
 }
 
 impl Accelerator2d {
@@ -39,7 +38,6 @@ impl Accelerator2d {
             ygrid_values: (f64::NAN, f64::NAN),
             zgrid_values: (f64::NAN, f64::NAN, f64::NAN, f64::NAN),
             partials: (f64::NAN, f64::NAN),
-            uninit: true,
         }
     }
 
@@ -58,58 +56,42 @@ impl Accelerator2d {
         &mut self.yacc
     }
 
-    /// Checks if the Accelerator's cached values are up to date.
-    pub(crate) fn is_uptodate(&mut self, xa: &[f64], ya: &[f64], x: f64, y: f64) -> bool {
-        // The first time that the Cache is being called, the values are uninitialized, but the
-        // interpolator does not know that. This forces the Cache to be updated the first time it
-        // is called after initialization.
-        //
-        // It is also necessary to setup the indices and the Accelerators for the next evaluation.
-        //
-        // Every evaluation after that is not affected.
-
+    /// Checks if the Accelerator's cached values are up to date, updating them if not.
+    ///
+    /// If the 1D Accelerators are up-to-date and `self`'s fields have been initialized, then `self`
+    /// is up-to-date.
+    pub(crate) fn find(&mut self, xa: &[f64], ya: &[f64], za: &[f64], x: f64, y: f64) {
         let old_xi = self.xacc.cache;
         let old_yi = self.yacc.cache;
         self.xacc.find(xa, x);
         self.yacc.find(ya, y);
 
-        if self.uninit {
-            self.uninit = false;
-            return false;
+        // Make sure fields are initialized
+        if self.zgrid_values.0.is_nan() {
+            std::hint::cold_path();
+            self.update(xa, ya, za);
         }
 
-        // If xa landed on the same interval (cache hit), `find()` simply returns the the cached
-        // index, otherwise it recalculates it.
-
-        (old_xi == self.xacc.cache) && (old_yi == self.yacc.cache)
-    }
-
-    pub(crate) fn update_step1(&mut self, xa: &[f64], ya: &[f64], za: &[f64]) {
-        self.update_xy_grid_values(xa, ya);
-        self.update_z_grid_values(za, xa.len(), ya.len());
-        self.update_partials();
+        if (old_xi == self.xacc.cache) && (old_yi == self.yacc.cache) {
+            return;
+        }
+        self.update(xa, ya, za);
     }
 }
 
-/// Methods for updating the cache's fields. Should be called in a specific order.
+/// Update the cache's fields. Should be called in a specific order.
 impl Accelerator2d {
-    fn update_xy_grid_values(&mut self, xa: &[f64], ya: &[f64]) {
+    fn update(&mut self, xa: &[f64], ya: &[f64], za: &[f64]) {
         let xi = self.xacc.cache;
         let yi = self.yacc.cache;
+        let xlen = xa.len();
+        let ylen = ya.len();
         self.xgrid_values = (xa[xi], xa[xi + 1]);
         self.ygrid_values = (ya[yi], ya[yi + 1]);
-    }
-
-    fn update_z_grid_values(&mut self, za: &[f64], xlen: usize, ylen: usize) {
-        let xi = self.xacc.cache;
-        let yi = self.yacc.cache;
         self.zgrid_values.0 = za[z_idx(xi, yi, xlen, ylen)];
         self.zgrid_values.1 = za[z_idx(xi, yi + 1, xlen, ylen)];
         self.zgrid_values.2 = za[z_idx(xi + 1, yi, xlen, ylen)];
         self.zgrid_values.3 = za[z_idx(xi + 1, yi + 1, xlen, ylen)];
-    }
-
-    fn update_partials(&mut self) {
         self.partials.0 = self.xgrid_values.1 - self.xgrid_values.0;
         self.partials.1 = self.ygrid_values.1 - self.ygrid_values.0;
     }
