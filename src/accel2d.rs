@@ -24,9 +24,6 @@ pub struct Accelerator2d {
     xgrid_values: (f64, f64),
     ygrid_values: (f64, f64),
     zgrid_values: (f64, f64, f64, f64),
-    zx_values: (f64, f64, f64, f64),
-    zy_values: (f64, f64, f64, f64),
-    zxy_values: (f64, f64, f64, f64),
     partials: (f64, f64),
     uninit: bool,
 }
@@ -41,9 +38,6 @@ impl Accelerator2d {
             xgrid_values: (f64::NAN, f64::NAN),
             ygrid_values: (f64::NAN, f64::NAN),
             zgrid_values: (f64::NAN, f64::NAN, f64::NAN, f64::NAN),
-            zx_values: (f64::NAN, f64::NAN, f64::NAN, f64::NAN),
-            zy_values: (f64::NAN, f64::NAN, f64::NAN, f64::NAN),
-            zxy_values: (f64::NAN, f64::NAN, f64::NAN, f64::NAN),
             partials: (f64::NAN, f64::NAN),
             uninit: true,
         }
@@ -95,22 +89,6 @@ impl Accelerator2d {
         self.update_z_grid_values(za, xa.len(), ya.len());
         self.update_partials();
     }
-
-    #[expect(clippy::too_many_arguments, reason = "unavoidable")]
-    pub(crate) fn update_step2(
-        &mut self,
-        xa: &[f64],
-        ya: &[f64],
-        zx: &[f64],
-        zy: &[f64],
-        zxy: &[f64],
-        dt: f64,
-        du: f64,
-    ) {
-        self.update_zxminmaxing(zx, xa.len(), ya.len(), dt);
-        self.update_zyminmaxing(zy, xa.len(), ya.len(), du);
-        self.update_zxyminmaxing(zxy, xa.len(), ya.len(), dt * du);
-    }
 }
 
 /// Methods for updating the cache's fields. Should be called in a specific order.
@@ -135,33 +113,6 @@ impl Accelerator2d {
         self.partials.0 = self.xgrid_values.1 - self.xgrid_values.0;
         self.partials.1 = self.ygrid_values.1 - self.ygrid_values.0;
     }
-
-    fn update_zxminmaxing(&mut self, zx: &[f64], xsize: usize, ysize: usize, d: f64) {
-        let xi = self.xacc.cache;
-        let yi = self.yacc.cache;
-        self.zx_values.0 = zx[z_idx(xi, yi, xsize, ysize)] / d;
-        self.zx_values.1 = zx[z_idx(xi, yi + 1, xsize, ysize)] / d;
-        self.zx_values.2 = zx[z_idx(xi + 1, yi, xsize, ysize)] / d;
-        self.zx_values.3 = zx[z_idx(xi + 1, yi + 1, xsize, ysize)] / d;
-    }
-
-    fn update_zyminmaxing(&mut self, zy: &[f64], xsize: usize, ysize: usize, d: f64) {
-        let xi = self.xacc.cache;
-        let yi = self.yacc.cache;
-        self.zy_values.0 = zy[z_idx(xi, yi, xsize, ysize)] / d;
-        self.zy_values.1 = zy[z_idx(xi, yi + 1, xsize, ysize)] / d;
-        self.zy_values.2 = zy[z_idx(xi + 1, yi, xsize, ysize)] / d;
-        self.zy_values.3 = zy[z_idx(xi + 1, yi + 1, xsize, ysize)] / d;
-    }
-
-    fn update_zxyminmaxing(&mut self, zxy: &[f64], xsize: usize, ysize: usize, d: f64) {
-        let xi = self.xacc.cache;
-        let yi = self.yacc.cache;
-        self.zxy_values.0 = zxy[z_idx(xi, yi, xsize, ysize)] / d;
-        self.zxy_values.1 = zxy[z_idx(xi, yi + 1, xsize, ysize)] / d;
-        self.zxy_values.2 = zxy[z_idx(xi + 1, yi, xsize, ysize)] / d;
-        self.zxy_values.3 = zxy[z_idx(xi + 1, yi + 1, xsize, ysize)] / d;
-    }
 }
 
 /// Getter methods for grid point quantities.
@@ -181,18 +132,6 @@ impl Accelerator2d {
 
     pub(crate) fn get_partials(&self) -> (f64, f64) {
         self.partials
-    }
-
-    pub(crate) fn get_zxminmaxxing(&self) -> (f64, f64, f64, f64) {
-        self.zx_values
-    }
-
-    pub(crate) fn get_zyminmaxxing(&self) -> (f64, f64, f64, f64) {
-        self.zy_values
-    }
-
-    pub(crate) fn get_zxyminmaxxing(&self) -> (f64, f64, f64, f64) {
-        self.zxy_values
     }
 }
 

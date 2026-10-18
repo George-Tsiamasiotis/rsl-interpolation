@@ -358,9 +358,8 @@ pub trait Interpolation2d: DynInterpolation2dClone + Send + Sync + 'static {
 pub fn z_idx(i: usize, j: usize, xlen: usize, ylen: usize) -> usize {
     if (i >= xlen) | (j >= ylen) {
         panic!("z-index out of range")
-    } else {
-        j * xlen + i
     }
+    j * xlen + i
 }
 
 /// Sets the value `z` of grid point (`i`, `j`) of the array `za` to `z`.

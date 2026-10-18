@@ -139,13 +139,20 @@ impl Interpolation2d for BicubicInterpolator {
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
-        if !is_uptodate {
-            acc.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du);
-        };
-
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = acc.get_zxminmaxxing();
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = acc.get_zyminmaxxing();
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = acc.get_zxyminmaxxing();
+        let (
+            zxminmin,
+            zxminmax,
+            zxmaxmin,
+            zxmaxmax,
+            zyminmin,
+            zyminmax,
+            zymaxmin,
+            zymaxmax,
+            zxyminmin,
+            zxyminmax,
+            zxymaxmin,
+            zxymaxmax,
+        ) = self.z_minmax_values(xa, ya, acc, dt, du);
 
         let t2 = t * t;
         let (t0, t1, t2, t3) = (1.0, t, t2, t * t2);
@@ -228,13 +235,20 @@ impl Interpolation2d for BicubicInterpolator {
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
-        if !is_uptodate {
-            acc.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du);
-        };
-
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = acc.get_zxminmaxxing();
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = acc.get_zyminmaxxing();
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = acc.get_zxyminmaxxing();
+        let (
+            zxminmin,
+            zxminmax,
+            zxmaxmin,
+            zxmaxmax,
+            zyminmin,
+            zyminmax,
+            zymaxmin,
+            zymaxmax,
+            zxyminmin,
+            zxyminmax,
+            zxymaxmin,
+            zxymaxmax,
+        ) = self.z_minmax_values(xa, ya, acc, dt, du);
 
         let (t0, t1, t2) = (1.0, t, t * t);
 
@@ -309,13 +323,20 @@ impl Interpolation2d for BicubicInterpolator {
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
-        if !is_uptodate {
-            acc.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du);
-        };
-
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = acc.get_zxminmaxxing();
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = acc.get_zyminmaxxing();
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = acc.get_zxyminmaxxing();
+        let (
+            zxminmin,
+            zxminmax,
+            zxmaxmin,
+            zxmaxmax,
+            zyminmin,
+            zyminmax,
+            zymaxmin,
+            zymaxmax,
+            zxyminmin,
+            zxyminmax,
+            zxymaxmin,
+            zxymaxmax,
+        ) = self.z_minmax_values(xa, ya, acc, dt, du);
 
         let t2 = t * t;
         let (t0, t1, t2, t3) = (1.0, t, t2, t * t2);
@@ -390,13 +411,20 @@ impl Interpolation2d for BicubicInterpolator {
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
-        if !is_uptodate {
-            acc.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du);
-        };
-
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = acc.get_zxminmaxxing();
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = acc.get_zyminmaxxing();
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = acc.get_zxyminmaxxing();
+        let (
+            zxminmin,
+            zxminmax,
+            zxmaxmin,
+            zxmaxmax,
+            zyminmin,
+            zyminmax,
+            zymaxmin,
+            zymaxmax,
+            zxyminmin,
+            zxyminmax,
+            zxymaxmin,
+            zxymaxmax,
+        ) = self.z_minmax_values(xa, ya, acc, dt, du);
 
         let (t0, t1) = (1.0, t);
 
@@ -463,13 +491,20 @@ impl Interpolation2d for BicubicInterpolator {
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
-        if !is_uptodate {
-            acc.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du);
-        };
-
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = acc.get_zxminmaxxing();
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = acc.get_zyminmaxxing();
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = acc.get_zxyminmaxxing();
+        let (
+            zxminmin,
+            zxminmax,
+            zxmaxmin,
+            zxmaxmax,
+            zyminmin,
+            zyminmax,
+            zymaxmin,
+            zymaxmax,
+            zxyminmin,
+            zxyminmax,
+            zxymaxmin,
+            zxymaxmax,
+        ) = self.z_minmax_values(xa, ya, acc, dt, du);
 
         let t2 = t * t;
         let (t0, t1, t2, t3) = (1.0, t, t2, t * t2);
@@ -536,13 +571,20 @@ impl Interpolation2d for BicubicInterpolator {
 
         let (t, u, dt, du) = tu_cubic_values(x, y, xlo, ylo, dx, dy);
 
-        if !is_uptodate {
-            acc.update_step2(xa, ya, &self.zx, &self.zy, &self.zxy, dt, du);
-        };
-
-        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = acc.get_zxminmaxxing();
-        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = acc.get_zyminmaxxing();
-        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = acc.get_zxyminmaxxing();
+        let (
+            zxminmin,
+            zxminmax,
+            zxmaxmin,
+            zxmaxmax,
+            zyminmin,
+            zyminmax,
+            zymaxmin,
+            zymaxmax,
+            zxyminmin,
+            zxyminmax,
+            zxymaxmin,
+            zxymaxmax,
+        ) = self.z_minmax_values(xa, ya, acc, dt, du);
 
         let (t0, t1, t2) = (1.0, t, t * t);
 
@@ -587,6 +629,46 @@ impl Interpolation2d for BicubicInterpolator {
         dd = dd * dt * du;
 
         Ok(dd)
+    }
+}
+
+impl BicubicInterpolator {
+    /// Intermediate values used in all evaluation methods.
+    fn z_minmax_values(
+        &self,
+        xa: &[f64],
+        ya: &[f64],
+        acc: &mut Accelerator2d,
+        dt: f64,
+        du: f64,
+    ) -> (f64, f64, f64, f64, f64, f64, f64, f64, f64, f64, f64, f64) {
+        let xi = acc.xacc().cache();
+        let yi = acc.yacc().cache();
+        let xsize = xa.len();
+        let ysize = ya.len();
+        let dtdu = dt * du;
+        let (zxminmin, zxminmax, zxmaxmin, zxmaxmax) = (
+            self.zx[z_idx(xi, yi, xsize, ysize)] / dt,
+            self.zx[z_idx(xi, yi + 1, xsize, ysize)] / dt,
+            self.zx[z_idx(xi + 1, yi, xsize, ysize)] / dt,
+            self.zx[z_idx(xi + 1, yi + 1, xsize, ysize)] / dt,
+        );
+        let (zyminmin, zyminmax, zymaxmin, zymaxmax) = (
+            self.zy[z_idx(xi, yi, xsize, ysize)] / du,
+            self.zy[z_idx(xi, yi + 1, xsize, ysize)] / du,
+            self.zy[z_idx(xi + 1, yi, xsize, ysize)] / du,
+            self.zy[z_idx(xi + 1, yi + 1, xsize, ysize)] / du,
+        );
+        let (zxyminmin, zxyminmax, zxymaxmin, zxymaxmax) = (
+            self.zxy[z_idx(xi, yi, xsize, ysize)] / dtdu,
+            self.zxy[z_idx(xi, yi + 1, xsize, ysize)] / dtdu,
+            self.zxy[z_idx(xi + 1, yi, xsize, ysize)] / dtdu,
+            self.zxy[z_idx(xi + 1, yi + 1, xsize, ysize)] / dtdu,
+        );
+        (
+            zxminmin, zxminmax, zxmaxmin, zxmaxmax, zyminmin, zyminmax, zymaxmin, zymaxmax,
+            zxyminmin, zxyminmax, zxymaxmin, zxymaxmax,
+        )
     }
 }
 
