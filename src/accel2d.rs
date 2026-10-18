@@ -21,6 +21,8 @@ use crate::z_idx;
 pub struct Accelerator2d {
     xacc: Accelerator,
     yacc: Accelerator,
+    xi: usize,
+    yi: usize,
     xgrid_values: (f64, f64),
     ygrid_values: (f64, f64),
     zgrid_values: (f64, f64, f64, f64),
@@ -34,6 +36,8 @@ impl Accelerator2d {
         Self {
             xacc: Accelerator::new(),
             yacc: Accelerator::new(),
+            xi: usize::MAX,
+            yi: usize::MAX,
             xgrid_values: (f64::NAN, f64::NAN),
             ygrid_values: (f64::NAN, f64::NAN),
             zgrid_values: (f64::NAN, f64::NAN, f64::NAN, f64::NAN),
@@ -55,35 +59,29 @@ impl Accelerator2d {
     pub fn yacc(&mut self) -> &mut Accelerator {
         &mut self.yacc
     }
-
-    /// Checks if the Accelerator's cached values are up to date, updating them if not.
-    ///
-    /// If the 1D Accelerators are up-to-date and `self`'s fields have been initialized, then `self`
-    /// is up-to-date.
-    pub(crate) fn find(&mut self, xa: &[f64], ya: &[f64], za: &[f64], x: f64, y: f64) {
-        let old_xi = self.xacc.cache;
-        let old_yi = self.yacc.cache;
-        self.xacc.find(xa, x);
-        self.yacc.find(ya, y);
-
-        // Make sure fields are initialized
-        if self.zgrid_values.0.is_nan() {
-            std::hint::cold_path();
-            self.update(xa, ya, za);
-        }
-
-        if (old_xi == self.xacc.cache) && (old_yi == self.yacc.cache) {
-            return;
-        }
-        self.update(xa, ya, za);
-    }
 }
 
 /// Update the cache's fields. Should be called in a specific order.
 impl Accelerator2d {
-    fn update(&mut self, xa: &[f64], ya: &[f64], za: &[f64]) {
-        let xi = self.xacc.cache;
-        let yi = self.yacc.cache;
+    pub(crate) fn update(&mut self, xa: &[f64], ya: &[f64], za: &[f64], x: f64, y: f64) {
+        let old_xi = self.xi;
+        let old_yi = self.yi;
+        self.xi = self.xacc.find(xa, x);
+        self.yi = self.yacc.find(ya, y);
+
+        // Update grid values only if acc indices changed
+        if (self.xi == old_xi) && (self.yi == old_yi) {
+            // Make sure that grid values are initialized. Uninitialized fields may appear when 1D
+            // interpolators use the Accelerator before a 2D interpolator does.
+            #[expect(clippy::redundant_else, reason = "clearer")]
+            if self.zgrid_values.0.is_finite() {
+                return;
+            } else {
+                std::hint::cold_path();
+            }
+        }
+        let xi = self.xi;
+        let yi = self.yi;
         let xlen = xa.len();
         let ylen = ya.len();
         self.xgrid_values = (xa[xi], xa[xi + 1]);
